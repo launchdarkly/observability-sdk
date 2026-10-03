@@ -1,6 +1,21 @@
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.commons.ClassRemapper
+import org.objectweb.asm.commons.Remapper
+
+// ASM powers the package relocation performed by BundleOtelJarsTask. It is only
+// needed on the build classpath; nothing from it is shipped.
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.ow2.asm:asm-commons:9.9")
+    }
+}
 
 plugins {
     id("com.android.library")
@@ -40,6 +55,32 @@ configurations {
     create("copyDependencies")
 }
 
+// Mirrors the pins in observability-android: OTel Android 1.7 drags in kotlinx-coroutines 1.11.0
+// (Kotlin 2.2 metadata, unreadable by the 2.0.21 compiler) and androidx.core 1.19.0 (needs AGP 9.1
+// / compileSdk 37). Both are held back to the newest releases this toolchain can build against.
+configurations.all {
+    resolutionStrategy.eachDependency {
+        val name = requested.name
+        // OTel Android 1.7 depends on kotlin-stdlib 2.4.10, whose metadata this module's 2.0.21
+        // compiler cannot read. Hold the Kotlin runtime at the compiler's own version.
+        val isKotlinRuntime = name.startsWith("kotlin-stdlib") ||
+            name == "kotlin-reflect" ||
+            name.startsWith("kotlin-test")
+        if (requested.group == "org.jetbrains.kotlin" && isKotlinRuntime) {
+            useVersion("2.0.21")
+        }
+        if (requested.group == "org.jetbrains.kotlinx" && name.startsWith("kotlinx-coroutines")) {
+            useVersion("1.10.2")
+        }
+        if (requested.group == "androidx.core" && (name == "core" || name == "core-ktx")) {
+            useVersion("1.16.0")
+        }
+        if (requested.group == "com.squareup.okhttp3") {
+            useVersion("5.2.1")
+        }
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     "copyDependencies"("androidx.core:core-ktx:1.15.0")
@@ -52,45 +93,52 @@ dependencies {
 
     // TODO: revise these versions to be as old as usable for compatibility
     // OpenTelemetry JARs copied here are filtered for NuGet in observability/LDObservability.Fat.csproj (autoconfigure vs autoconfigure-spi).
-    implementation("io.opentelemetry:opentelemetry-api:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-api:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-api:1.66.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-api:1.66.0")
 
-    implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-sdk:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-sdk:1.66.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-sdk:1.66.0")
 
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.66.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-otlp:1.66.0")
 
-    implementation("io.opentelemetry:opentelemetry-exporter-sender-okhttp:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-sender-okhttp:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-sender-okhttp:1.66.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-sender-okhttp:1.66.0")
 
-    implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.66.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.66.0")
 
-    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.66.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-sdk-metrics:1.66.0")
 
-    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.66.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-sdk-logs:1.66.0")
 
     // TODO: Evaluate risks associated with incubator APIs
-    implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
-    "copyDependencies"("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
+    implementation("io.opentelemetry:opentelemetry-api-incubator:1.66.0-alpha")
+    "copyDependencies"("io.opentelemetry:opentelemetry-api-incubator:1.66.0-alpha")
 
     // OTEL Android
-    implementation("io.opentelemetry.android:core:0.11.0-alpha")
-    "copyDependencies"("io.opentelemetry.android:core:0.11.0-alpha")
+    implementation("io.opentelemetry.android:core:1.7.0-alpha")
+    "copyDependencies"("io.opentelemetry.android:core:1.7.0-alpha")
 
-    implementation("io.opentelemetry.android:session:0.11.0-alpha")
-    "copyDependencies"("io.opentelemetry.android:session:0.11.0-alpha")
+    implementation("io.opentelemetry.android:session:1.7.0")
+    "copyDependencies"("io.opentelemetry.android:session:1.7.0")
+
+    // `OpenTelemetryRum` and `AndroidInstrumentation` moved out of :core in 1.x.
+    implementation("io.opentelemetry.android:agent-api:1.7.0")
+    "copyDependencies"("io.opentelemetry.android:agent-api:1.7.0")
+
+    implementation("io.opentelemetry.android.instrumentation:android-instrumentation:1.7.0")
+    "copyDependencies"("io.opentelemetry.android.instrumentation:android-instrumentation:1.7.0")
 
 
     // OTEL Android Instrumentations
-    implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
-    "copyDependencies"("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:crash:1.7.0-alpha")
+    "copyDependencies"("io.opentelemetry.android.instrumentation:crash:1.7.0-alpha")
 
-    implementation("io.opentelemetry.android:android-agent:0.11.0-alpha")
-    "copyDependencies"("io.opentelemetry.android:android-agent:0.11.0-alpha")
+    implementation("io.opentelemetry.android:android-agent:1.7.0")
+    "copyDependencies"("io.opentelemetry.android:android-agent:1.7.0")
 }
 
 // Custom task: merges all transitive JARs (OTel + okhttp + okio + ...) into a
@@ -151,6 +199,97 @@ abstract class BundleOtelJarsTask : DefaultTask() {
     @get:org.gradle.api.tasks.OutputDirectory
     abstract val outputServicesDir: org.gradle.api.file.DirectoryProperty
 
+    // Okio and OkHttp are moved under a private prefix before being written to
+    // the bundle.
+    //
+    // They have to be shipped: the OTLP exporters resolve their transport at
+    // runtime through ServiceLoader, the only HttpSenderProvider we register is
+    // the OkHttp one, and OkHttp's entire I/O layer is Okio (its disk-buffering
+    // and protobuf code depends on okio.ByteString directly too). Drop either and
+    // the provider fails to initialise, which is the "No HttpSenderProvider found
+    // on classpath" crash.
+    //
+    // But apps routinely acquire their own copy from unrelated bindings --
+    // Square.OkIO arrives transitively through AndroidX DataStore, which Firebase
+    // depends on -- and two definitions of the same class is a hard R8 failure in
+    // Release. Relocating ours makes the collision impossible instead of relying
+    // on the app's graph to stay clear.
+    private val shadedPrefix = "com/launchdarkly/sessionreplay/shaded/"
+    private val relocatedPackages = listOf("okio", "okhttp3")
+
+    private val pathRelocations: List<Pair<String, String>> =
+        relocatedPackages.map { "$it/" to "$shadedPrefix$it/" }
+    private val nameRelocations: List<Pair<String, String>> =
+        relocatedPackages.map { "$it." to "${shadedPrefix.replace('/', '.')}$it." }
+
+    /** Relocates a JAR entry path. Anchored at the start, so only the owning package moves. */
+    private fun relocateEntryName(name: String): String {
+        pathRelocations.forEach { (from, to) ->
+            if (name.startsWith(from)) return to + name.removePrefix(from)
+        }
+        return name
+    }
+
+    /**
+     * Relocates package references inside a string constant.
+     *
+     * Needed because some references never appear as bytecode class references.
+     * OkHttp builds the path of its public-suffix resource by concatenating the
+     * literal "okhttp3/internal/publicsuffix/" with a simple class name, so a
+     * remapper that only rewrote class references would relocate the resource but
+     * leave the lookup pointing at the old path.
+     *
+     * Slashed forms are matched at a delimiter so JVM descriptors embedded in
+     * strings ("Lokio/Path;") relocate too; dotted forms are matched only at the
+     * start, where Kotlin's @JvmName and ReplaceWith metadata put them, since an
+     * unanchored "okio." would be too eager.
+     */
+    private fun relocateString(value: String): String {
+        var result = value
+        pathRelocations.forEach { (from, to) ->
+            if (!result.contains(from)) return@forEach
+            val sb = StringBuilder(result.length)
+            var cursor = 0
+            while (true) {
+                val at = result.indexOf(from, cursor)
+                if (at < 0) {
+                    sb.append(result, cursor, result.length)
+                    break
+                }
+                // 'L' and '[' precede a type in a descriptor; the rest are plain separators.
+                val preceding = if (at == 0) null else result[at - 1]
+                val atBoundary = preceding == null || preceding in "L[(;,/ <>"
+                sb.append(result, cursor, at)
+                sb.append(if (atBoundary) to else from)
+                cursor = at + from.length
+            }
+            result = sb.toString()
+        }
+        nameRelocations.forEach { (from, to) ->
+            if (result.startsWith(from)) result = to + result.removePrefix(from)
+        }
+        return result
+    }
+
+    /** Rewrites class references, descriptors, signatures and string constants. */
+    private fun relocateClass(bytes: ByteArray): ByteArray {
+        // The no-arg constructor is deprecated in ASM 9.9 but is the only one that
+        // exists in the older ASM that Gradle/AGP put on the runtime classpath.
+        @Suppress("DEPRECATION")
+        val remapper = object : Remapper() {
+            override fun map(internalName: String): String = relocateEntryName(internalName)
+
+            override fun mapValue(value: Any?): Any? =
+                if (value is String) relocateString(value) else super.mapValue(value)
+        }
+        val writer = ClassWriter(0)
+        // Flag 0: frames are copied through and remapped rather than recomputed.
+        // COMPUTE_FRAMES would need to load the referenced types, which are not
+        // on this build's classpath.
+        ClassReader(bytes).accept(ClassRemapper(writer, remapper), 0)
+        return writer.toByteArray()
+    }
+
     @org.gradle.api.tasks.TaskAction
     fun bundle() {
         val out = outputJar.get().asFile
@@ -190,9 +329,12 @@ abstract class BundleOtelJarsTask : DefaultTask() {
                         continue
                     }
 
-                    if (!classOrResourceEntries.containsKey(name)) {
+                    val outName = relocateEntryName(name)
+                    if (!classOrResourceEntries.containsKey(outName)) {
                         zip.getInputStream(entry).use { input ->
-                            classOrResourceEntries[name] = input.readBytes()
+                            val raw = input.readBytes()
+                            classOrResourceEntries[outName] =
+                                if (name.endsWith(".class")) relocateClass(raw) else raw
                         }
                     }
                 }
@@ -201,11 +343,15 @@ abstract class BundleOtelJarsTask : DefaultTask() {
 
         // Merge once, write twice: the same content goes into both the
         // bundle JAR and the standalone files on disk.
+        // Provider names are relocated as well. None of the SPIs we ship live in a
+        // relocated package today (they are all io.opentelemetry.*), so this is a
+        // no-op now, but it keeps the registrations correct if that ever changes.
         val mergedServiceFiles = serviceFiles.mapValues { (_, contents) ->
             contents
                 .flatMap { it.lineSequence() }
                 .map { it.trim() }
                 .filter { it.isNotEmpty() && !it.startsWith("#") }
+                .map { relocateString(it) }
                 .distinct()
                 .joinToString("\n") + "\n"
         }
@@ -249,6 +395,8 @@ abstract class BundleOtelJarsTask : DefaultTask() {
 
         logger.lifecycle(
             "ldobserve-otel-bundle: ${classOrResourceEntries.size} class/resource entries, " +
+                "${classOrResourceEntries.keys.count { it.startsWith(shadedPrefix) }} relocated " +
+                "under $shadedPrefix, " +
                 "${mergedServiceFiles.size} merged service files (in-JAR + standalone), " +
                 "${inputJars.files.size} input JARs"
         )

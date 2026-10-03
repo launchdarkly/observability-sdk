@@ -81,8 +81,9 @@ public class ObservabilityBridge(
                 backendUrl = observability.backendUrl,
                 tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = true),
                 metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.enabled(),
-                // Page views rely on the OTel `activity` instrumentation AAR, which MAUI no longer ships.
-                analytics = com.launchdarkly.observability.api.ObservabilityOptions.Analytics(pageViews = false),
+                // Screen views are reported from the MAUI layer, so the Android-side span is left off
+                // to avoid double-reporting navigation.
+                analytics = com.launchdarkly.observability.api.ObservabilityOptions.Analytics(screenViews = false),
                 instrumentations = com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations(
                     crashReporting = false, launchTime = observability.launchTime
                 ),
