@@ -36,7 +36,7 @@ import * as packageJson from '../package.json'
 import { OTLPMetricExporterFetch, OTLPTraceExporterFetch } from './exporter'
 
 const HIGHLIGHT_PROJECT_ENV = 'HIGHLIGHT_PROJECT_ID'
-const HIGHLIGHT_REQUEST_HEADER = 'X-Highlight-Request'
+const HIGHLIGHT_REQUEST_HEADER = 'x-highlight-request'
 const HIGHLIGHT_OTLP_BASE = 'https://otel.highlight.io:4318'
 
 export const RECORDED_CONSOLE_METHODS = [
