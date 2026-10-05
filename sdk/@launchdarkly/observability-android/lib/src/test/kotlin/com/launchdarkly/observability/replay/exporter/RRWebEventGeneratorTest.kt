@@ -15,11 +15,7 @@ import com.launchdarkly.observability.replay.capture.ImageSignature
 import com.launchdarkly.observability.replay.capture.IntRect
 import com.launchdarkly.observability.replay.capture.IntSize
 import com.launchdarkly.observability.replay.capture.TileSignature
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.double
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -159,15 +155,15 @@ class RRWebEventGeneratorTest {
 
         assertEquals(EventType.CUSTOM, event.type)
         val custom = event.data as EventDataUnion.CustomEventDataWrapper
-        val obj = custom.data.jsonObject
-        assertEquals("Track", obj["tag"]!!.jsonPrimitive.content)
+        val obj = custom.data
+        assertEquals("Track", obj["tag"])
         // payload is a stringified JSON, matching the web `addCustomEvent('Track', stringify(...))`
-        val payloadJson = Json.parseToJsonElement(obj["payload"]!!.jsonPrimitive.content).jsonObject
-        assertEquals("purchase", payloadJson["event"]!!.jsonPrimitive.content)
-        assertEquals(9.99, payloadJson["value"]!!.jsonPrimitive.double)
-        val data = payloadJson["data"]!!.jsonObject
-        assertEquals("USD", data["currency"]!!.jsonPrimitive.content)
-        assertEquals("2", data["count"]!!.jsonPrimitive.content)
+        val payloadJson = JSONObject(obj["payload"] as String)
+        assertEquals("purchase", payloadJson.getString("event"))
+        assertEquals(9.99, payloadJson.getDouble("value"))
+        val data = payloadJson.getJSONObject("data")
+        assertEquals("USD", data.getString("currency"))
+        assertEquals("2", data.getString("count"))
     }
 
     @Test
@@ -184,9 +180,9 @@ class RRWebEventGeneratorTest {
         val event = generator.generateTrackEvent(payload)!!
 
         val custom = event.data as EventDataUnion.CustomEventDataWrapper
-        val payloadJson = Json.parseToJsonElement(custom.data.jsonObject["payload"]!!.jsonPrimitive.content).jsonObject
-        assertEquals("login", payloadJson["event"]!!.jsonPrimitive.content)
-        assertFalse(payloadJson.containsKey("value"))
+        val payloadJson = JSONObject(custom.data["payload"] as String)
+        assertEquals("login", payloadJson.getString("event"))
+        assertFalse(payloadJson.has("value"))
     }
 
     @Test
@@ -203,10 +199,10 @@ class RRWebEventGeneratorTest {
         assertEquals(EventType.CUSTOM, event.type)
         assertEquals(7L, event.timestamp)
         val custom = event.data as EventDataUnion.CustomEventDataWrapper
-        val obj = custom.data.jsonObject
-        assertEquals("Navigate", obj["tag"]!!.jsonPrimitive.content)
+        val obj = custom.data
+        assertEquals("Navigate", obj["tag"])
         // payload is the route as a plain string, matching web `addCustomEvent('Navigate', url)`
-        assertEquals("Profile", obj["payload"]!!.jsonPrimitive.content)
+        assertEquals("Profile", obj["payload"])
     }
 
     @Test
@@ -224,11 +220,11 @@ class RRWebEventGeneratorTest {
         assertEquals(EventType.CUSTOM, event.type)
         assertEquals(11L, event.timestamp)
         val custom = event.data as EventDataUnion.CustomEventDataWrapper
-        val obj = custom.data.jsonObject
-        assertEquals("Foreground", obj["tag"]!!.jsonPrimitive.content)
+        val obj = custom.data
+        assertEquals("Foreground", obj["tag"])
         // payload is a stringified JSON object, matching the web/Swift rrweb Custom event contract.
-        val payloadJson = Json.parseToJsonElement(obj["payload"]!!.jsonPrimitive.content).jsonObject
-        assertEquals("foreground", payloadJson["lifecycle_state"]!!.jsonPrimitive.content)
+        val payloadJson = JSONObject(obj["payload"] as String)
+        assertEquals("foreground", payloadJson.getString("lifecycle_state"))
     }
 
     @Test
@@ -244,10 +240,10 @@ class RRWebEventGeneratorTest {
         val event = generator.generateAppLifecycleEvent(payload)!!
 
         val custom = event.data as EventDataUnion.CustomEventDataWrapper
-        val obj = custom.data.jsonObject
-        assertEquals("Background", obj["tag"]!!.jsonPrimitive.content)
-        val payloadJson = Json.parseToJsonElement(obj["payload"]!!.jsonPrimitive.content).jsonObject
-        assertEquals("background", payloadJson["lifecycle_state"]!!.jsonPrimitive.content)
+        val obj = custom.data
+        assertEquals("Background", obj["tag"])
+        val payloadJson = JSONObject(obj["payload"] as String)
+        assertEquals("background", payloadJson.getString("lifecycle_state"))
     }
 
     @Test
@@ -264,10 +260,10 @@ class RRWebEventGeneratorTest {
         // The trail snapshot replay needs to draw the pointer is untouched.
         assertEquals(1, events.size)
         assertEquals(EventType.INCREMENTAL_SNAPSHOT, events.single().type)
-        val data = (events.single().data as EventDataUnion.CustomEventDataWrapper).data.jsonObject
+        val data = (events.single().data as EventDataUnion.CustomEventDataWrapper).data
         assertEquals(
             RRWebMouseInteraction.TOUCH_START.code,
-            data["type"]!!.jsonPrimitive.int,
+            data["type"],
         )
         // A touch-down is not a click: it may still become a drag or a long press, and this stream
         // cannot see clicks an embedder resolves in its own UI tree. Clicks come from the funnel.
@@ -294,15 +290,15 @@ class RRWebEventGeneratorTest {
         // asynchronous bridge and must still order against the touch snapshots around it.
         assertEquals(21L, event.timestamp)
         val custom = event.data as EventDataUnion.CustomEventDataWrapper
-        val obj = custom.data.jsonObject
-        assertEquals("Click", obj["tag"]!!.jsonPrimitive.content)
-        val clickPayload = obj["payload"]!!.jsonObject
-        assertEquals("ElevatedButton", clickPayload["clickTarget"]!!.jsonPrimitive.content)
-        assertEquals("Pay", clickPayload["clickTextContent"]!!.jsonPrimitive.content)
+        val obj = custom.data
+        assertEquals("Click", obj["tag"])
+        val clickPayload = obj["payload"] as Map<*, *>
+        assertEquals("ElevatedButton", clickPayload["clickTarget"])
+        assertEquals("Pay", clickPayload["clickTextContent"])
         // Prefers the stable id, mirroring the web `#id` selector.
-        assertEquals("checkout.pay", clickPayload["clickSelector"]!!.jsonPrimitive.content)
-        assertEquals("cart-1", clickPayload["screenId"]!!.jsonPrimitive.content)
-        assertEquals("Cart", clickPayload["screenName"]!!.jsonPrimitive.content)
+        assertEquals("checkout.pay", clickPayload["clickSelector"])
+        assertEquals("cart-1", clickPayload["screenId"])
+        assertEquals("Cart", clickPayload["screenName"])
     }
 
     @Test
@@ -321,9 +317,9 @@ class RRWebEventGeneratorTest {
         val event = generator.generateClickEvent(payload)
 
         val custom = event.data as EventDataUnion.CustomEventDataWrapper
-        val clickPayload = custom.data.jsonObject["payload"]!!.jsonObject
-        assertEquals("InkWell", clickPayload["clickSelector"]!!.jsonPrimitive.content)
-        assertEquals("", clickPayload["clickTextContent"]!!.jsonPrimitive.content)
+        val clickPayload = custom.data["payload"] as Map<*, *>
+        assertEquals("InkWell", clickPayload["clickSelector"])
+        assertEquals("", clickPayload["clickTextContent"])
         // Screen fields are omitted rather than sent empty when the stack has no screen.
         assertFalse(clickPayload.containsKey("screenId"))
         assertFalse(clickPayload.containsKey("screenName"))

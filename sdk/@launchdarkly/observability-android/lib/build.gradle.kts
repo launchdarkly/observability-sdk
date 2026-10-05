@@ -6,7 +6,6 @@ plugins {
 
     // Apply the Kotlin Android plugin for Android-compatible Kotlin support.
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.serialization)
 
     // Apply Dokka plugin for documentation generation
     id("org.jetbrains.dokka") version "2.1.0"
@@ -73,9 +72,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
-    // Kotlinx serialization for JSON parsing
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-
     // TODO: revise these versions to be as old as usable for compatibility
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
@@ -103,6 +99,8 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+    // android.jar only ships org.json stubs, so JVM unit tests need a real implementation.
+    testImplementation("org.json:json:20260814")
     testImplementation("io.mockk:mockk:1.14.5")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 

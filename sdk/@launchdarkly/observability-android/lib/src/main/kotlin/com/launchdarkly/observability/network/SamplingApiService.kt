@@ -1,7 +1,6 @@
 package com.launchdarkly.observability.network
 
 import com.launchdarkly.observability.sampling.SamplingConfig
-import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Service for fetching sampling configuration
@@ -75,12 +74,12 @@ class SamplingApiService(
      */
     suspend fun getSamplingConfig(organizationVerboseId: String): SamplingConfig? {
         try {
-            val variables = mapOf("organization_verbose_id" to JsonPrimitive(organizationVerboseId))
+            val variables = mapOf("organization_verbose_id" to organizationVerboseId)
 
             return graphqlClient.execute(
                 query = GET_SAMPLING_CONFIG_QUERY,
                 variables = variables,
-                dataSerializer = SamplingResponse.serializer()
+                dataParser = SamplingResponse::fromJson
             ).mapToEntity()
         } catch (e: Exception) {
             // Sampling falls back to "sample everything" when the config cannot be read, so every failure

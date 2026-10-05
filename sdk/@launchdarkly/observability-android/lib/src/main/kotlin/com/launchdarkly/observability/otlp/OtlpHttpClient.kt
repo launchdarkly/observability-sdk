@@ -5,15 +5,13 @@ import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.network.GzipUtil
 import com.launchdarkly.observability.network.UrlConnectionProvider
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.time.Duration
 
 /**
- * Thin OTLP/HTTP+JSON client. Encodes a payload with kotlinx-serialization, optionally
+ * Thin OTLP/HTTP+JSON client. Takes an already encoded OTLP/JSON payload, optionally
  * gzip-compresses it, and POSTs it to the configured endpoint.
  *
  * Mirrors the Swift `OtlpHttpClient`. Non-2xx HTTP statuses surface as [IOException] so
@@ -23,26 +21,22 @@ class OtlpHttpClient(
     private val endpoint: String,
     private val config: OtlpConfiguration = OtlpConfiguration(),
     private val connectionProvider: UrlConnectionProvider = DEFAULT_CONNECTION_PROVIDER,
-    private val json: Json = DEFAULT_JSON,
 ) {
     /**
-     * Encodes [body] as OTLP/JSON and sends it to the configured endpoint.
+     * Sends an OTLP/JSON payload to the configured endpoint.
      *
-     * @param body The payload to serialize and send.
-     * @param serializer Explicit serializer for [T] (required for generic `T`).
+     * @param body The UTF-8 encoded OTLP/JSON payload.
      * @param explicitTimeout Optional timeout override; the effective timeout is
      *   `min(explicitTimeout, config.timeout)`.
      *
      * @throws IOException if the HTTP response status is not 2xx, or any IO error occurs.
      */
-    suspend fun <T> send(
-        body: T,
-        serializer: KSerializer<T>,
+    suspend fun send(
+        body: ByteArray,
         explicitTimeout: Duration? = null,
     ) = withContext(DispatcherProviderHolder.current.io) {
-        val rawBytes = json.encodeToString(serializer, body).toByteArray(Charsets.UTF_8)
         val useGzip = config.compression == OtlpCompression.GZIP
-        val payloadBytes = if (useGzip) GzipUtil.gzip(rawBytes) else rawBytes
+        val payloadBytes = if (useGzip) GzipUtil.gzip(body) else body
 
         val effectiveTimeoutMs = minOf(
             explicitTimeout?.inWholeMilliseconds ?: Long.MAX_VALUE,
@@ -94,11 +88,6 @@ class OtlpHttpClient(
         internal val userAgent: String = run {
             val sdk = BuildConfig.OBSERVABILITY_SDK_VERSION.removePrefix("v")
             "OTel-OTLP-Exporter-Kotlin/$OTLP_VERSION LaunchDarkly-Observability-Android/$sdk"
-        }
-
-        internal val DEFAULT_JSON: Json = Json {
-            encodeDefaults = false
-            explicitNulls = false
         }
 
         internal val DEFAULT_CONNECTION_PROVIDER: UrlConnectionProvider =
