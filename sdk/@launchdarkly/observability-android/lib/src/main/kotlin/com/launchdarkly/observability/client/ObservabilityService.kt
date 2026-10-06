@@ -37,7 +37,6 @@ import com.launchdarkly.observability.traces.OtlpTraceExporter
 import com.launchdarkly.observability.util.requireMainThread
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
-import io.opentelemetry.android.RumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.session.Session
 import io.opentelemetry.android.session.SessionObserver
@@ -243,7 +242,7 @@ class ObservabilityService(
         }
         val otelRumConfig = createOtelRumConfig()
 
-        val rumBuilder = RumBuilder.builder(application, otelRumConfig)
+        val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
                 return@addLoggerProviderCustomizer configureLoggerProvider(sdkLoggerProviderBuilder)
             }
@@ -269,12 +268,12 @@ class ObservabilityService(
         // previous_screen against the prior session, and a re-appearing first screen would be
         // deduped instead of emitting a fresh navigation.
         //
-        // Only reset on an actual session *change*. The initial session start carries the "none"
-        // session (empty id) as the previous session; resetting on it would clobber a first
+        // Only reset on an actual session *change*. The initial session start carries Session.NONE
+        // (empty id) as the previous session; resetting on it would clobber a first
         // screen that may already have been recorded by the time this notification fires.
         ldSessionManager.addObserver(object : SessionObserver {
             override fun onSessionStarted(newSession: Session, previousSession: Session) {
-                if (previousSession.id.isNotEmpty()) {
+                if (previousSession.getId().isNotEmpty()) {
                     screenStack.reset()
                     // Re-seed the new session with the screen the user is still viewing. No
                     // onActivityResumed fires for an already-resumed activity, so without this the

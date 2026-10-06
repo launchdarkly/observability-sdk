@@ -14,6 +14,7 @@ import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Ignore
 import org.junit.Test
@@ -264,16 +265,20 @@ class DisablingConfigOptionsE2ETest {
     private fun requestsContainsUrl(url: String): Boolean {
         while (true) {
             val request = application.mockWebServer?.takeRequest(100, TimeUnit.MILLISECONDS) ?: return false
-            if (request.requestUrl.toString() == url) return true
+            if (recordedUrl(request) == url) return true
         }
     }
 
     private fun requestsStartWith(prefix: String): Boolean {
         while (true) {
             val request = application.mockWebServer?.takeRequest(100, TimeUnit.MILLISECONDS) ?: return false
-            if (request.requestUrl.toString().startsWith(prefix)) return true
+            if (recordedUrl(request).startsWith(prefix)) return true
         }
     }
+
+    // MockWebServer 5 records the host as 127.0.0.1, while the expected URLs use `localhost`.
+    private fun recordedUrl(request: RecordedRequest): String =
+        request.requestUrl?.newBuilder()?.host("localhost")?.build().toString()
 
     private fun triggerTestLog(severity: Severity = Severity.INFO) {
         LDObserve.recordLog(

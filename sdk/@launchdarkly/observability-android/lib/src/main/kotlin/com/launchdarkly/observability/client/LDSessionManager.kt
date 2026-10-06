@@ -107,7 +107,7 @@ internal class LDSessionManager(
                 observer.onSessionStarted(newSession, previousSession)
             }
         }
-        return newSession.id
+        return newSession.getId()
     }
 
     /** Marks the app as transitioning to the foreground; the next event settles it to foreground. */
@@ -121,7 +121,7 @@ internal class LDSessionManager(
     }
 
     private fun sessionHasExpired(): Boolean {
-        val elapsed = clock.now() - session.startTimestamp
+        val elapsed = clock.now() - session.getStartTimestamp()
         return elapsed >= maxLifetime.inWholeNanoseconds
     }
 
@@ -149,9 +149,13 @@ internal class LDSessionManager(
     }
 
     private class LDSession(
-        override val id: String,
-        override val startTimestamp: Long,
-    ) : Session
+        private val id: String,
+        private val startTimestamp: Long,
+    ) : Session {
+        override fun getId(): String = id
+
+        override fun getStartTimestamp(): Long = startTimestamp
+    }
 
     private companion object {
         /**
