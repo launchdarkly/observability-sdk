@@ -18,20 +18,39 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- OTel Android AARs -->
+		<!--
+			OTel Android AARs.
+
+			`deps` also contains the AndroidX artifacts MAUI already provides, and several OTel
+			module names collide with them (activity, core, fragment, startup). The `-alpha`
+			suffix is what keeps those patterns from matching the AndroidX copies, so do not
+			relax it for modules that still publish as alpha. Modules that went stable in 1.x
+			(agent-api, android-agent, android-instrumentation, session) have no AndroidX
+			namesake and are matched on the module name alone.
+		-->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)agent-api-*.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)android-agent-*.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)android-instrumentation-*.aar" />
-		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-0*.aar" />
+		<!-- `common-1*` rather than `common-*` so it does not also pick up common-api. -->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-1*.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-api-*.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)core-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)anr-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)activity-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)fragment-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)network-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)screen-orientation-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)services-*-alpha.aar" />
-		<_LDNativeAAR Include="$(_LDNativeDepsDir)session-*-alpha.aar" />
+		<!-- `session` (the API) is stable in 1.x; `sessions` is the instrumentation module. -->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)session-*.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)sessions-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)slowrendering-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)startup-*-alpha.aar" />
+		<!-- io.opentelemetry.android:semconv, new in 1.x. -->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)semconv-*-alpha.aar" />
+		<!-- io.opentelemetry.kotlin:semconv-android, which :core now requires. Published without
+		     a version in the file name. -->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)semconv.aar" />
 
 		<!-- Observability Android library AAR -->
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)lib-release.aar" />
