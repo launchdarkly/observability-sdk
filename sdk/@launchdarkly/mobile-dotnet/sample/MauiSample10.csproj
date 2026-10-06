@@ -136,6 +136,13 @@
 		<LD_INCLUDE_NATIVE_DEPS>true</LD_INCLUDE_NATIVE_DEPS>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<!-- The Android SDK defaults this to false in every configuration and the iOS SDK in Release.
+		     When false, the trimmer hard-wires System.Net.Http diagnostics off and LDObserve records
+		     no HTTP spans, whatever networkRequests is set to. -->
+		<HttpActivityPropagationSupport>true</HttpActivityPropagationSupport>
+	</PropertyGroup>
+
 	<PropertyGroup Condition="$(TargetFramework.Contains('android'))">
 		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
 		<!-- Use SocketsHttpHandler so System.Net.Http emits Activity diagnostics
