@@ -454,6 +454,23 @@ You can control what information is captured during a session using `PrivacyOpti
 *   `MaskLabels`: (Default: `false`) Masks all text labels.
 *   `MaskImages`: (Default: `false`) Masks all images.
 *   `MinimumAlpha`: (Default: `0.02`) Opacity below which a view is treated as invisible and not masked.
+*   `MaskViewTypes`: MAUI view types to mask wherever they appear.
+*   `UnmaskViewTypes`: MAUI view types to reveal from the global masking settings above.
+*   `IgnoreViewTypes`: MAUI view types to leave out of recordings. On Android they are masked instead, because the native Android SDK has no per-view ignore.
+
+View types match exactly, so a subclass must be listed separately from its base type:
+
+```csharp
+var replayOptions = new SessionReplayOptions(
+    isEnabled: true,
+    privacy: new SessionReplayOptions.PrivacyOptions(
+        maskLabels: true,
+        maskViewTypes: new List<Type> { typeof(CreditCardView) },
+        unmaskViewTypes: new List<Type> { typeof(PriceLabel) },
+        ignoreViewTypes: new List<Type> { typeof(VideoPlayerView) }
+    )
+);
+```
 
 ### Manual Masking
 
