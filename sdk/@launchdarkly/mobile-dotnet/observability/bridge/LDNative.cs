@@ -60,7 +60,6 @@ internal class LDNative
 #endif
 
         CurrentNativeVersion = ldNative.NativeVersion;
-        PrivacyTypeRules.Install(replay.Privacy);
 
         return ldNative;
     }

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace LaunchDarkly.SessionReplay;
 
@@ -13,24 +12,6 @@ public class SessionReplayOptions
         public bool MaskImages { get; set; } = false;
         public double MinimumAlpha { get; set; } = 0.02;
 
-        /// <summary>
-        /// MAUI view types (e.g. <c>typeof(Label)</c> or your own <c>ContentView</c> subclass)
-        /// to mask wherever they appear. Types match exactly; subclasses must be listed separately.
-        /// </summary>
-        public IList<Type> MaskViewTypes { get; set; } = new List<Type>();
-
-        /// <summary>
-        /// MAUI view types to reveal from global masking (e.g. <see cref="MaskLabels"/>).
-        /// Types match exactly.
-        /// </summary>
-        public IList<Type> UnmaskViewTypes { get; set; } = new List<Type>();
-
-        /// <summary>
-        /// MAUI view types to leave out of recordings. On Android, where the native SDK has no
-        /// per-view ignore, these are masked instead. Types match exactly.
-        /// </summary>
-        public IList<Type> IgnoreViewTypes { get; set; } = new List<Type>();
-
         public PrivacyOptions()
         {
         }
@@ -40,19 +21,13 @@ public class SessionReplayOptions
             bool maskWebViews = false,
             bool maskLabels = false,
             bool maskImages = false,
-            double minimumAlpha = 0.02,
-            IList<Type>? maskViewTypes = null,
-            IList<Type>? unmaskViewTypes = null,
-            IList<Type>? ignoreViewTypes = null)
+            double minimumAlpha = 0.02)
         {
             MaskTextInputs = maskTextInputs;
             MaskWebViews = maskWebViews;
             MaskLabels = maskLabels;
             MaskImages = maskImages;
             MinimumAlpha = minimumAlpha;
-            MaskViewTypes = maskViewTypes ?? new List<Type>();
-            UnmaskViewTypes = unmaskViewTypes ?? new List<Type>();
-            IgnoreViewTypes = ignoreViewTypes ?? new List<Type>();
         }
     }
 
