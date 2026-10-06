@@ -11,19 +11,33 @@ The LaunchDarkly Observability SDK for .NET MAUI provides automatic and manual i
 ### Automatic Instrumentation
 
 The .NET MAUI observability plugin automatically instruments:
-- **HTTP Requests**: Outgoing HTTP requests
-- **Crash Reporting**: Automatic crash reporting and stack traces
+- **HTTP Requests**: Outgoing HTTP requests made through `HttpClient` (`instrumentation.networkRequests`; requires `HttpActivityPropagationSupport`, see [Enabling HTTP request tracing](#enabling-http-request-tracing))
+- **Launch Times**: App launch performance (`instrumentation.launchTimes`)
 - **Feature Flag Evaluations**: Evaluation events added to your spans
 - **Session Management**: User session tracking and background timeout handling
 
+Automatic crash reporting is not enabled yet; use `LDObserve.RecordError` to report exceptions.
+
 ## Prerequisites
 
-*   **.NET 9.0** or higher is required.
-*   MAUI support for **iOS** and **Android**.
+*   **.NET 9** or **.NET 10** with the MAUI workload.
+*   **Android** API 23 or later and **iOS** 15 or later.
+
+### Enabling HTTP request tracing
+
+HTTP tracing needs one setting in your app's project file:
+
+```xml
+<PropertyGroup>
+  <HttpActivityPropagationSupport>true</HttpActivityPropagationSupport>
+</PropertyGroup>
+```
+
+The Android SDK sets this to `false` by default in every configuration, and the iOS SDK sets it to `false` in Release builds. While it is `false`, the trimmer removes the `System.Net.Http` diagnostics that the SDK listens to, so no HTTP spans are recorded even with `networkRequests: true`. The SDK cannot turn it back on at runtime.
 
 ## Example Application
 
-A complete example application is available in the [sample](./sample) directory.
+A complete example application is available in the [sample](./sample) directory. `MauiSample9.csproj` builds it for .NET 9 and `MauiSample10.csproj` for .NET 10; both share the same sources.
 
 ## Usage
 
@@ -62,6 +76,21 @@ public static class MauiProgram
         return builder.Build();
     }
 }
+```
+
+Alternatively, register the plugin yourself when building the client configuration. `ObservabilityPlugin` takes the same options, including optional `SessionReplayOptions` as its second argument:
+
+```csharp
+using LaunchDarkly.Sdk.Client.Integrations;
+using LaunchDarkly.SessionReplay;
+
+var ldConfig = Configuration.Builder(mobileKey, ConfigurationBuilder.AutoEnvAttributes.Enabled)
+    .Plugins(new PluginConfigurationBuilder()
+        .Add(new ObservabilityPlugin(
+            new ObservabilityOptions(isEnabled: true, serviceName: "maui-sample-app"),
+            new SessionReplayOptions(isEnabled: true))))
+    .Build();
+var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(10));
 ```
 
 #### Standalone (without a LaunchDarkly client)
@@ -162,7 +191,7 @@ LDObserve.RecordLog(
 );
 ```
 
-Supported severity levels: `Trace`, `Debug`, `Info`, `Warn`, `Error`, `Fatal`.
+Supported severity levels: `Trace`, `Debug`, `Info`, `Warn`, `Error`, `Fatal`, each with numbered variants (for example `Info2` to `Info4`) matching the OpenTelemetry severity numbers.
 
 ##### Logs with Span Context
 
