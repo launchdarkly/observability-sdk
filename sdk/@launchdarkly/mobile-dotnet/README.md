@@ -11,7 +11,7 @@ The LaunchDarkly Observability SDK for .NET MAUI provides automatic and manual i
 ### Automatic Instrumentation
 
 The .NET MAUI observability plugin automatically instruments:
-- **HTTP Requests**: Outgoing HTTP requests made through `HttpClient` (`instrumentation.networkRequests`)
+- **HTTP Requests**: Outgoing HTTP requests made through `HttpClient` (`instrumentation.networkRequests`; requires `HttpActivityPropagationSupport`, see [Enabling HTTP request tracing](#enabling-http-request-tracing))
 - **Launch Times**: App launch performance (`instrumentation.launchTimes`)
 - **Feature Flag Evaluations**: Evaluation events added to your spans
 - **Session Management**: User session tracking and background timeout handling
@@ -22,6 +22,18 @@ Automatic crash reporting is not enabled yet; use `LDObserve.RecordError` to rep
 
 *   **.NET 9** or **.NET 10** with the MAUI workload.
 *   **Android** API 23 or later and **iOS** 15 or later.
+
+### Enabling HTTP request tracing
+
+HTTP tracing needs one setting in your app's project file:
+
+```xml
+<PropertyGroup>
+  <HttpActivityPropagationSupport>true</HttpActivityPropagationSupport>
+</PropertyGroup>
+```
+
+The Android SDK sets this to `false` by default in every configuration, and the iOS SDK sets it to `false` in Release builds. While it is `false`, the trimmer removes the `System.Net.Http` diagnostics that the SDK listens to, so no HTTP spans are recorded even with `networkRequests: true`. The SDK cannot turn it back on at runtime.
 
 ## Example Application
 
