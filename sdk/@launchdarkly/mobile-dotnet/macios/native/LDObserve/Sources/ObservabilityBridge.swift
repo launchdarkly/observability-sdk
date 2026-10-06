@@ -19,6 +19,17 @@ internal func buildResourceAttributes(_ source: NSDictionary?) -> [String: Attri
     return result
 }
 
+internal func buildCustomHeaders(_ source: NSDictionary?) -> [String: String] {
+    guard let source, source.count > 0 else {
+        return [:]
+    }
+    var result = [String: String](minimumCapacity: source.count)
+    for (key, value) in source {
+        result[String(describing: key)] = (value as? String) ?? String(describing: value)
+    }
+    return result
+}
+
 @objc(ObservabilityBridge)
 public final class ObservabilityBridge: NSObject {
 
@@ -47,7 +58,7 @@ public final class ObservabilityBridge: NSObject {
                 otlpEndpoint: observability.otlpEndpoint,
                 backendUrl: observability.backendUrl,
                 resourceAttributes: buildResourceAttributes(observability.attributes),
-                customHeaders: (observability.customHeaders as? [String: String]) ?? [:],
+                customHeaders: buildCustomHeaders(observability.customHeaders),
                 logsApiLevel: .init(rawValue: observability.logsApiLevel) ?? .none,
                 crashReporting: .init(source: .none),
                 instrumentation: .init(

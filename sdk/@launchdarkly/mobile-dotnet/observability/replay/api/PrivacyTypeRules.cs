@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Microsoft.Maui;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
@@ -26,7 +27,11 @@ internal static class PrivacyTypeRules
     private enum Rule { None, Mask, Unmask, Ignore }
 
     private static readonly object Gate = new();
+    private const int MaxApplicationAttempts = 100;
+    private static readonly TimeSpan ApplicationRetryDelay = TimeSpan.FromMilliseconds(100);
+
     private static readonly ConditionalWeakTable<VisualElement, object> Watched = new();
+    private static readonly ConditionalWeakTable<Window, object> WatchedWindows = new();
     private static HashSet<Type> _mask = new();
     private static HashSet<Type> _unmask = new();
     private static HashSet<Type> _ignore = new();
@@ -67,16 +72,47 @@ internal static class PrivacyTypeRules
         // yet (the usual case when LDObserve is initialized from CreateMauiApp).
         ViewHandler.ViewMapper.AppendToMapping(MappingKey, (handler, view) => Apply(view, handler.PlatformView));
 
-        // Covers init after the UI is up: existing views now, later ones as they are added.
-        if (Application.Current is { } app)
+        // The mapper misses new instances of types whose handlers already cached their mapper keys,
+        // so the visual tree is watched as well.
+        AttachToApplication(0);
+    }
+
+    private static void AttachToApplication(int attempt)
+    {
+        // Application.Current is still null when LDObserve is initialized from CreateMauiApp.
+        if (Application.Current is not { } app)
         {
-            foreach (var window in app.Windows)
+            if (attempt < MaxApplicationAttempts)
             {
-                if (window.Page is IVisualTreeElement root)
-                    Watch(root);
+                Task.Delay(ApplicationRetryDelay).ContinueWith(
+                    _ => MainThread.BeginInvokeOnMainThread(() => AttachToApplication(attempt + 1)),
+                    TaskScheduler.Default);
             }
-            app.DescendantAdded += (_, e) => Watch(e.Element);
+            return;
         }
+
+        app.DescendantAdded += (_, e) =>
+        {
+            if (e.Element is Window window)
+                WatchWindow(window);
+            else
+                Watch(e.Element);
+        };
+        foreach (var window in app.Windows)
+            WatchWindow(window);
+    }
+
+    // DescendantAdded is not guaranteed to bubble from a window's content up to the application,
+    // so each window is watched directly too.
+    private static void WatchWindow(Window window)
+    {
+        if (WatchedWindows.TryGetValue(window, out _))
+            return;
+        WatchedWindows.Add(window, new object());
+
+        window.DescendantAdded += (_, e) => Watch(e.Element);
+        if (window.Page is IVisualTreeElement root)
+            Watch(root);
     }
 
     private static void Watch(object element)
