@@ -19,6 +19,8 @@ internal class LDNative
     public SessionReplayOptions Replay { get; set; }
     public String NativeVersion { get; set; } = string.Empty;
 
+    internal static string CurrentNativeVersion { get; private set; } = string.Empty;
+
     private LDNative(ObservabilityOptions observability, SessionReplayOptions replay)
     {
         Observability = observability;
@@ -56,6 +58,8 @@ internal class LDNative
         ldNative.NativeVersion = bridge.Version();
         bridge.Start(mobileKey, observability, replay, observabilityVersion);
 #endif
+
+        CurrentNativeVersion = ldNative.NativeVersion;
 
         return ldNative;
     }

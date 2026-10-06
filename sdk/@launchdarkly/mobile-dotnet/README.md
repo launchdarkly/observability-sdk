@@ -132,6 +132,34 @@ public static class MauiProgram
 }
 ```
 
+### Observability Options
+
+`ObservabilityOptions` accepts the following settings, all optional:
+
+| Option | Default | Description |
+|---|---|---|
+| `IsEnabled` | `true` | Whether observability telemetry is recorded. |
+| `ServiceName` | `"observability-maui"` | The `service.name` resource attribute. Set it to identify your app. |
+| `ServiceVersion` | Host app version | The `service.version` resource attribute. When not set, the app's version (`AppInfo.Current.VersionString`) is reported. |
+| `OtlpEndpoint` | LaunchDarkly collector | OTLP/HTTP endpoint telemetry is exported to. Override it to send data through a proxy. |
+| `BackendUrl` | LaunchDarkly backend | Backend used for session and replay metadata. |
+| `ContextFriendlyName` | `null` | A human-readable name for the current context, shown instead of its key. |
+| `Attributes` | `null` | Extra resource attributes attached to every exported signal, such as `deployment.environment`. |
+| `CustomHeaders` | `null` | Extra HTTP headers added to OTLP exports, for example for a proxy or authentication. |
+| `LogsApiLevel` | `ObservabilityLogLevel.Info` | Minimum severity of exported logs. `ObservabilityLogLevel.None` disables log export. |
+| `Instrumentation` | All enabled | `NetworkRequests` and `LaunchTimes` toggles. |
+
+```csharp
+var observabilityOptions = new ObservabilityOptions(
+    serviceName: "my-maui-app",
+    serviceVersion: "2.4.0",
+    customHeaders: new Dictionary<string, string> { { "X-Proxy-Token", "..." } },
+    logsApiLevel: ObservabilityLogLevel.Warn
+);
+```
+
+After initialization, `LDObserve.NativeVersion` returns the version of the underlying native observability SDK, which is useful in diagnostics and support requests.
+
 ### Recording Observability Data
 
 After initialization of the LaunchDarkly client, use `LDObserve` to record metrics, logs, and errors:
@@ -398,6 +426,25 @@ public static class MauiProgram
 
 The same third argument works with the standalone variant: `LDObserve.Init(mobileKey, observabilityOptions, sessionReplayOptions)`.
 
+### Capture Options
+
+`SessionReplayOptions` controls how often and at what quality frames are captured:
+
+*   `SampleRate`: (Default: `1.0`) Probability from `0.0` to `1.0` that a session is recorded when replay is enabled. `0.25` records about a quarter of sessions.
+*   `FrameRate`: (Default: `1.0`) Target capture rate in frames per second.
+*   `Scale`: (Default: `1.0`) Capture resolution: `1.0` is 1x (160 DPI), `2.0` is 2x, and so on. Higher values capture more detail but produce larger frames.
+*   `ImageQuality`: (Default: `0.3`) JPEG quality of exported frames, from `0.0` (smallest) to `1.0` (best).
+
+```csharp
+var replayOptions = new SessionReplayOptions(
+    isEnabled: true,
+    sampleRate: 0.25,
+    frameRate: 2.0,
+    scale: 1.5,
+    imageQuality: 0.5
+);
+```
+
 ### Privacy Options
 
 You can control what information is captured during a session using `PrivacyOptions`:
@@ -406,10 +453,11 @@ You can control what information is captured during a session using `PrivacyOpti
 *   `MaskWebViews`: (Default: `false`) Masks all web view content.
 *   `MaskLabels`: (Default: `false`) Masks all text labels.
 *   `MaskImages`: (Default: `false`) Masks all images.
+*   `MinimumAlpha`: (Default: `0.02`) Opacity below which a view is treated as invisible and not masked.
 
 ### Manual Masking
 
-You can manually mask or unmask specific UI components using the provided extension methods on any MAUI `View`.
+You can manually mask, unmask, or ignore specific UI components using the provided extension methods on any MAUI `View`. Call them once the view has been attached to the screen (its `Handler` is set), for example from `OnHandlerChanged` or a page's `OnAppearing`; before that they have no effect.
 
 ```csharp
 using LaunchDarkly.SessionReplay;
@@ -419,6 +467,9 @@ mySensitiveView.LDMask();
 
 // Unmask a specific view
 myPublicView.LDUnmask();
+
+// Leave a view out of recordings (masked instead on Android)
+myVideoView.LDIgnore();
 ```
 
 ## Contributing

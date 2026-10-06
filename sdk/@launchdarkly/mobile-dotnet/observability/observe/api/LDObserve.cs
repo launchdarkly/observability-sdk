@@ -50,6 +50,12 @@ public static partial class LDObserve
     public static void Init(LdClient client, ObservabilityOptions observability, SessionReplayOptions? replay = null)
         => client.RegisterPlugin(new ObservabilityPlugin(observability, replay));
 
+    /// <summary>
+    /// The native observability SDK version reported during startup, or an empty string
+    /// before initialization.
+    /// </summary>
+    public static string NativeVersion => LDNative.CurrentNativeVersion;
+
     // -------- Public API --------
 
     /// <summary>
