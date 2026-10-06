@@ -11,8 +11,8 @@ import android.view.View
 import android.view.ViewTreeObserver.OnDrawListener
 import androidx.activity.FullyDrawnReporterOwner
 import com.launchdarkly.observability.interfaces.Metric
-import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.instrumentation.AndroidInstrumentation
+import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.api.common.Attributes
 import java.lang.ref.WeakReference
 import java.util.WeakHashMap
@@ -44,7 +44,7 @@ internal class LaunchTimeInstrumentation(
 
     override val name: String = INSTRUMENTATION_SCOPE_NAME
 
-    override fun install(context: android.content.Context, rum: OpenTelemetryRum) {
+    override fun install(ctx: InstallationContext) {
         application.registerActivityLifecycleCallbacks(this)
     }
 

@@ -31,7 +31,7 @@ val isClientSdkProvidedByHost =
 
 // Pin Kotlin runtime artifacts on this build's classpath to match the configured Kotlin
 // compiler version (2.0.21). Without this, transitive deps such as the
-// io.opentelemetry.android:*:1.7.0 modules drag in newer kotlin-stdlib / kotlin-reflect
+// io.opentelemetry.android:*:0.11.0-alpha modules drag in newer kotlin-stdlib / kotlin-reflect
 // whose metadata version the 2.0.21 compiler cannot read, producing
 // "Module was compiled with an incompatible version of Kotlin" errors at compileDebugKotlin.
 //
@@ -49,26 +49,6 @@ configurations.all {
         if (requested.group == "org.jetbrains.kotlin" && isRuntimeArtifact) {
             useVersion("2.0.21")
             because("Align Kotlin runtime artifacts with the project's Kotlin compiler version (2.0.21).")
-        }
-        // io.opentelemetry.android:*:1.7.0 pulls androidx.lifecycle 2.11.0, which in turn requires
-        // kotlinx-coroutines 1.11.0. That release carries Kotlin metadata 2.2.0, and the 2.0.21
-        // compiler reads at most 2.1.0. 1.10.2 is the newest release still on metadata 2.1.0.
-        if (requested.group == "org.jetbrains.kotlinx" && name.startsWith("kotlinx-coroutines")) {
-            useVersion("1.10.2")
-            because("kotlinx-coroutines 1.11.0 carries Kotlin 2.2 metadata the 2.0.21 compiler cannot read.")
-        }
-        // io.opentelemetry.android:common:1.7.0-alpha pulls androidx.core 1.19.0, which refuses to
-        // build on anything below AGP 9.1 / compileSdk 37. Hold it at the newest release that still
-        // builds against compileSdk 35 with AGP 8.x.
-        if (requested.group == "androidx.core" && (name == "core" || name == "core-ktx")) {
-            useVersion("1.16.0")
-            because("androidx.core 1.17.0+ requires a compileSdk/AGP combination this project does not target yet.")
-        }
-        // Same story for okhttp: the OTel 1.66 okhttp sender asks for 5.5.0, whose Android variant
-        // requires compileSdk 37.
-        if (requested.group == "com.squareup.okhttp3") {
-            useVersion("5.2.1")
-            because("okhttp-android 5.3.0+ requires compileSdk 37, beyond what AGP 8.x supports here.")
         }
     }
 }
@@ -93,33 +73,28 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // TODO: revise these versions to be as old as usable for compatibility
-    implementation("io.opentelemetry:opentelemetry-api:1.66.0")
-    implementation("io.opentelemetry:opentelemetry-sdk:1.66.0")
-    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.66.0")
-    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.66.0")
+    implementation("io.opentelemetry:opentelemetry-api:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
 
     // Required at runtime by io.opentelemetry.android:core, which uses incubator APIs
     // internally for the logs bridge. Can be removed once the OTel Android SDK drops this dependency.
-    implementation("io.opentelemetry:opentelemetry-api-incubator:1.66.0-alpha")
+    implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
 
     // OTEL Android
-    implementation("io.opentelemetry.android:core:1.7.0-alpha")
-    implementation("io.opentelemetry.android:session:1.7.0")
-
-    // `OpenTelemetryRum` and `AndroidInstrumentation` moved out of :core in 1.x and are only
-    // runtime-scoped transitives of it, so they must be declared to be on the compile classpath.
-    implementation("io.opentelemetry.android:agent-api:1.7.0")
-    implementation("io.opentelemetry.android.instrumentation:android-instrumentation:1.7.0")
+    implementation("io.opentelemetry.android:core:0.11.0-alpha")
+    implementation("io.opentelemetry.android:session:0.11.0-alpha")
 
     // OTEL Android Instrumentations
-    implementation("io.opentelemetry.android.instrumentation:crash:1.7.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
     // NOTE: the `activity` instrumentation is intentionally NOT depended on. It is superseded by
     // LaunchDarkly's own app/screen lifecycle spans and would otherwise double-report; we also
     // defensively suppress it by name (see ObservabilityService.createOtelRumConfig).
 
     // Use JUnit Jupiter for testing.
     // Testing exporters for telemetry inspection
-    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.66.0")
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -129,7 +104,7 @@ dependencies {
     testImplementation("io.mockk:mockk:1.14.5")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 
-    testFixturesApi("io.opentelemetry:opentelemetry-sdk-testing:1.66.0")
+    testFixturesApi("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
     testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
 

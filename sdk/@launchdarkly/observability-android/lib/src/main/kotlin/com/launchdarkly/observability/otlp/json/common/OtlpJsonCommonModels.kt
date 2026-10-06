@@ -59,9 +59,6 @@ sealed class OtlpJsonAnyValue {
 
     data class BytesVal(val value: String) : OtlpJsonAnyValue()
 
-    /** An unset value, written as `{}` (proto `AnyValue` with no `oneof` member set). */
-    object EmptyVal : OtlpJsonAnyValue()
-
     data class ArrayWrapper(val values: List<OtlpJsonAnyValue> = emptyList())
 
     data class KvListWrapper(val values: List<OtlpJsonKeyValue> = emptyList())
@@ -74,6 +71,5 @@ sealed class OtlpJsonAnyValue {
         fun array(values: List<OtlpJsonAnyValue>): OtlpJsonAnyValue = ArrayVal(ArrayWrapper(values))
         fun kvlist(values: List<OtlpJsonKeyValue>): OtlpJsonAnyValue = KvListVal(KvListWrapper(values))
         fun bytes(base64: String): OtlpJsonAnyValue = BytesVal(base64)
-        fun empty(): OtlpJsonAnyValue = EmptyVal
     }
 }

@@ -3,7 +3,7 @@ package com.launchdarkly.observability.replay.capture
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.replay.ReplayOptions
 import io.mockk.mockk
-import io.opentelemetry.android.session.SessionProvider
+import io.opentelemetry.android.session.SessionManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -24,7 +24,7 @@ class CaptureManagerTest {
     }
 
     private fun captureManager(options: ReplayOptions = ReplayOptions()) = CaptureManager(
-        sessionManager = mockk<SessionProvider>(relaxed = true),
+        sessionManager = mockk<SessionManager>(relaxed = true),
         options = options,
         logger = mockk<ObserveLogger>(relaxed = true),
         imageCaptureService = mockk<ImageCaptureServicing>(relaxed = true),
