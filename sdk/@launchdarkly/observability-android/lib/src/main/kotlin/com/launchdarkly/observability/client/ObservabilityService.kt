@@ -35,13 +35,13 @@ import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
 import com.launchdarkly.observability.util.requireMainThread
+import io.opentelemetry.android.LDRumSessionManagerAccessor
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
-import io.opentelemetry.android.RumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.session.Session
+import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.android.session.SessionObserver
-import io.opentelemetry.android.session.SessionProvider
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
@@ -106,7 +106,7 @@ class ObservabilityService(
     private val otelRUM: OpenTelemetryRum
 
     // LaunchDarkly's own session manager. Owns session identity for all signals (it also backs the
-    // RUM SDK's `session.id` appenders via `setSessionProvider`) and can be seeded with
+    // RUM SDK's `session.id` appenders via LDRumSessionManagerAccessor) and can be seeded with
     // [customSessionId]. Exposed through [sessionManager] for Session Replay.
     private val ldSessionManager = LDSessionManager(
         initialSessionId = customSessionId,
@@ -114,7 +114,7 @@ class ObservabilityService(
         maxLifetime = 4.hours,
     )
 
-    var sessionManager: SessionProvider? = ldSessionManager
+    var sessionManager: SessionManager? = ldSessionManager
         private set
     private var otelMeter: Meter
     private var otelLogger: Logger
@@ -243,7 +243,7 @@ class ObservabilityService(
         }
         val otelRumConfig = createOtelRumConfig()
 
-        val rumBuilder = RumBuilder.builder(application, otelRumConfig)
+        val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
                 return@addLoggerProviderCustomizer configureLoggerProvider(sdkLoggerProviderBuilder)
             }
@@ -254,9 +254,9 @@ class ObservabilityService(
                 return@addMeterProviderCustomizer configureMeterProvider(sdkMeterProviderBuilder)
             }
 
-        // Use our own session provider (instead of the RUM SDK's default) so we can seed the session
+        // Use our own session manager (instead of the RUM SDK's default) so we can seed the session
         // id and keep a single source of session identity across spans, logs, metrics, and replay.
-        rumBuilder.setSessionProvider(ldSessionManager)
+        LDRumSessionManagerAccessor.setSessionManager(rumBuilder, ldSessionManager)
 
         if (observabilityOptions.enabled && observabilityOptions.instrumentations.launchTime) {
             addLaunchTimeInstrumentation(rumBuilder)
@@ -269,12 +269,12 @@ class ObservabilityService(
         // previous_screen against the prior session, and a re-appearing first screen would be
         // deduped instead of emitting a fresh navigation.
         //
-        // Only reset on an actual session *change*. The initial session start carries the "none"
-        // session (empty id) as the previous session; resetting on it would clobber a first
+        // Only reset on an actual session *change*. The initial session start carries
+        // Session.NONE (empty id) as the previous session; resetting on it would clobber a first
         // screen that may already have been recorded by the time this notification fires.
-        ldSessionManager.addObserver(object : SessionObserver {
+        sessionManager?.addObserver(object : SessionObserver {
             override fun onSessionStarted(newSession: Session, previousSession: Session) {
-                if (previousSession.id.isNotEmpty()) {
+                if (previousSession.getId().isNotEmpty()) {
                     screenStack.reset()
                     // Re-seed the new session with the screen the user is still viewing. No
                     // onActivityResumed fires for an already-resumed activity, so without this the
@@ -458,7 +458,7 @@ class ObservabilityService(
 
     private fun createOtelRumConfig(): OtelRumConfig {
         // Session lifetime/rotation is owned by [ldSessionManager] (injected via
-        // `OpenTelemetryRumBuilder.setSessionProvider`), so no SessionConfig is applied here.
+        // [LDRumSessionManagerAccessor]), so no SessionConfig is applied here.
         val config = OtelRumConfig()
 
         if (!observabilityOptions.enabled || !observabilityOptions.instrumentations.crashReporting) {

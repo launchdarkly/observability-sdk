@@ -1,29 +1,28 @@
 package com.launchdarkly.observability.client
 
 import io.opentelemetry.android.session.Session
+import io.opentelemetry.android.session.SessionIdGenerator
+import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.android.session.SessionObserver
-import io.opentelemetry.android.session.SessionProvider
-import io.opentelemetry.android.session.SessionPublisher
 import io.opentelemetry.sdk.common.Clock
-import java.security.SecureRandom
 import java.util.Collections.synchronizedList
 import kotlin.time.Duration
 
 /**
- * LaunchDarkly's own session source, used in place of OpenTelemetry Android's default so we can
+ * LaunchDarkly's own [SessionManager], used in place of OpenTelemetry Android's default so we can
  * **seed the initial session id** ([initialSessionId]). This lets the native observability instance
  * adopt a session id created elsewhere (e.g. by the JavaScript SDK on the same device), so that
  * spans, logs, metrics, and Session Replay all report the same `session.id`.
  *
- * Injected into [io.opentelemetry.android.OpenTelemetryRumBuilder] via `setSessionProvider` so it
- * backs OpenTelemetry Android's own `session.id` span/log appenders as well — making it the single
- * source of session identity.
+ * Injected into [io.opentelemetry.android.OpenTelemetryRumBuilder] via
+ * [io.opentelemetry.android.LDRumSessionManagerAccessor] so it backs OpenTelemetry Android's own
+ * `session.id` span/log appenders as well — making it the single source of session identity.
  *
  * When [initialSessionId] is supplied the session is treated as *custom*: the caller owns the
  * session lifecycle, so automatic rotation is disabled and the seeded id is used for the lifetime
  * of this manager (mirrors iOS's `isCustomSession`).
  *
- * Otherwise rotation mirrors OpenTelemetry Android's default session manager /
+ * Otherwise rotation mirrors OpenTelemetry Android's default `SessionManagerImpl` /
  * `SessionIdTimeoutHandler`:
  *  - a foreground session never times out;
  *  - a background gap of at least [backgroundInactivityTimeout] rotates the session on next use;
@@ -38,15 +37,15 @@ import kotlin.time.Duration
  * @param backgroundInactivityTimeout Background inactivity after which the session rotates.
  * @param maxLifetime Absolute maximum session lifetime before rotation.
  * @param clock Time source; defaults to the OpenTelemetry default clock.
- * @param idGenerator Generator for new session ids; defaults to a random 128-bit hex id.
+ * @param idGenerator Generator for new session ids; defaults to OpenTelemetry's.
  */
 internal class LDSessionManager(
     initialSessionId: String? = null,
     private val backgroundInactivityTimeout: Duration,
     private val maxLifetime: Duration,
     private val clock: Clock = Clock.getDefault(),
-    private val idGenerator: () -> String = ::randomSessionId,
-) : SessionProvider, SessionPublisher {
+    private val idGenerator: SessionIdGenerator = SessionIdGenerator.DEFAULT,
+) : SessionManager {
 
     private val lock = Any()
     private val observers = synchronizedList(ArrayList<SessionObserver>())
@@ -61,11 +60,11 @@ internal class LDSessionManager(
     // Guarded by [lock].
     private var session: Session =
         if (isCustomSession) {
-            LDSession(initialSessionId!!, clock.now())
+            Session.DefaultSession(initialSessionId!!, clock.now())
         } else {
-            // Empty id + zero timestamp forces generation on first read, exactly like the default
-            // manager's initial "none" session.
-            NONE_SESSION
+            // Empty id + (-1) timestamp forces generation on first getSessionId(), exactly like
+            // the default manager's initial Session.NONE.
+            Session.NONE
         }
 
     // Timeout bookkeeping, mirroring SessionIdTimeoutHandler.
@@ -88,7 +87,7 @@ internal class LDSessionManager(
             var candidate = session
             // An externally supplied session id is never rotated; the caller owns its lifecycle.
             if (!isCustomSession && (sessionHasExpired() || hasTimedOut())) {
-                candidate = LDSession(idGenerator(), clock.now())
+                candidate = Session.DefaultSession(idGenerator.generateSessionId(), clock.now())
             }
             // Bump the inactivity timer after deciding, before notifying (a new span may be created).
             bump()
@@ -107,7 +106,7 @@ internal class LDSessionManager(
                 observer.onSessionStarted(newSession, previousSession)
             }
         }
-        return newSession.id
+        return newSession.getId()
     }
 
     /** Marks the app as transitioning to the foreground; the next event settles it to foreground. */
@@ -121,7 +120,7 @@ internal class LDSessionManager(
     }
 
     private fun sessionHasExpired(): Boolean {
-        val elapsed = clock.now() - session.startTimestamp
+        val elapsed = clock.now() - session.getStartTimestamp()
         return elapsed >= maxLifetime.inWholeNanoseconds
     }
 
@@ -147,26 +146,4 @@ internal class LDSessionManager(
         /** Temporary state for the first event after the app is brought back to the foreground. */
         TRANSITIONING_TO_FOREGROUND,
     }
-
-    private class LDSession(
-        override val id: String,
-        override val startTimestamp: Long,
-    ) : Session
-
-    private companion object {
-        /**
-         * Stands in for the default manager's "no session yet" value. The zero start timestamp
-         * makes the first expiry check rotate immediately, generating the real id lazily.
-         */
-        private val NONE_SESSION: Session = LDSession("", 0L)
-    }
-}
-
-private val sessionIdRandom = SecureRandom()
-
-/** Generates a random 128-bit session id, rendered as 32 lowercase hex characters. */
-private fun randomSessionId(): String {
-    val bytes = ByteArray(16)
-    sessionIdRandom.nextBytes(bytes)
-    return bytes.joinToString("") { "%02x".format(it) }
 }
