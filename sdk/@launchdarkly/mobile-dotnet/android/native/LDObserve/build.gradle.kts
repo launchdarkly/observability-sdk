@@ -55,6 +55,20 @@ configurations {
     create("copyDependencies")
 }
 
+// The io.opentelemetry.android:*:0.13.0-alpha modules pull kotlin-stdlib 2.2, whose metadata the
+// 2.0.21 compiler cannot read. Hold the Kotlin runtime artifacts at the compiler version, as
+// observability-android's lib build does.
+configurations.all {
+    resolutionStrategy.eachDependency {
+        val name = requested.name
+        val isRuntimeArtifact = name.startsWith("kotlin-stdlib") || name == "kotlin-reflect"
+        if (requested.group == "org.jetbrains.kotlin" && isRuntimeArtifact) {
+            useVersion("2.0.21")
+            because("Align Kotlin runtime artifacts with the project's Kotlin compiler version (2.0.21).")
+        }
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     "copyDependencies"("androidx.core:core-ktx:1.15.0")
@@ -67,45 +81,45 @@ dependencies {
 
     // TODO: revise these versions to be as old as usable for compatibility
     // OpenTelemetry JARs copied here are filtered for NuGet in observability/LDObservability.Fat.csproj (autoconfigure vs autoconfigure-spi).
-    implementation("io.opentelemetry:opentelemetry-api:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-api:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-api:1.52.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-api:1.52.0")
 
-    implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-sdk:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-sdk:1.52.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-sdk:1.52.0")
 
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.52.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-otlp:1.52.0")
 
-    implementation("io.opentelemetry:opentelemetry-exporter-sender-okhttp:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-sender-okhttp:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-sender-okhttp:1.52.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-sender-okhttp:1.52.0")
 
-    implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.52.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.52.0")
 
-    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.52.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-sdk-metrics:1.52.0")
 
-    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.52.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-sdk-logs:1.52.0")
 
     // TODO: Evaluate risks associated with incubator APIs
-    implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
-    "copyDependencies"("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
+    implementation("io.opentelemetry:opentelemetry-api-incubator:1.52.0-alpha")
+    "copyDependencies"("io.opentelemetry:opentelemetry-api-incubator:1.52.0-alpha")
 
     // OTEL Android
-    implementation("io.opentelemetry.android:core:0.11.0-alpha")
-    "copyDependencies"("io.opentelemetry.android:core:0.11.0-alpha")
+    implementation("io.opentelemetry.android:core:0.13.0-alpha")
+    "copyDependencies"("io.opentelemetry.android:core:0.13.0-alpha")
 
-    implementation("io.opentelemetry.android:session:0.11.0-alpha")
-    "copyDependencies"("io.opentelemetry.android:session:0.11.0-alpha")
+    implementation("io.opentelemetry.android:session:0.13.0-alpha")
+    "copyDependencies"("io.opentelemetry.android:session:0.13.0-alpha")
 
 
     // OTEL Android Instrumentations
-    implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
-    "copyDependencies"("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:crash:0.13.0-alpha")
+    "copyDependencies"("io.opentelemetry.android.instrumentation:crash:0.13.0-alpha")
 
-    implementation("io.opentelemetry.android:android-agent:0.11.0-alpha")
-    "copyDependencies"("io.opentelemetry.android:android-agent:0.11.0-alpha")
+    implementation("io.opentelemetry.android:android-agent:0.13.0-alpha")
+    "copyDependencies"("io.opentelemetry.android:android-agent:0.13.0-alpha")
 }
 
 // Custom task: merges all transitive JARs (OTel + okhttp + okio + ...) into a

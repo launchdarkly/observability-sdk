@@ -31,7 +31,7 @@ val isClientSdkProvidedByHost =
 
 // Pin Kotlin runtime artifacts on this build's classpath to match the configured Kotlin
 // compiler version (2.0.21). Without this, transitive deps such as the
-// io.opentelemetry.android:*:0.11.0-alpha modules drag in newer kotlin-stdlib / kotlin-reflect
+// io.opentelemetry.android:*:0.13.0-alpha modules drag in newer kotlin-stdlib / kotlin-reflect
 // whose metadata version the 2.0.21 compiler cannot read, producing
 // "Module was compiled with an incompatible version of Kotlin" errors at compileDebugKotlin.
 //
@@ -73,28 +73,28 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // TODO: revise these versions to be as old as usable for compatibility
-    implementation("io.opentelemetry:opentelemetry-api:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-api:1.52.0")
+    implementation("io.opentelemetry:opentelemetry-sdk:1.52.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.52.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.52.0")
 
     // Required at runtime by io.opentelemetry.android:core, which uses incubator APIs
     // internally for the logs bridge. Can be removed once the OTel Android SDK drops this dependency.
-    implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
+    implementation("io.opentelemetry:opentelemetry-api-incubator:1.52.0-alpha")
 
     // OTEL Android
-    implementation("io.opentelemetry.android:core:0.11.0-alpha")
-    implementation("io.opentelemetry.android:session:0.11.0-alpha")
+    implementation("io.opentelemetry.android:core:0.13.0-alpha")
+    implementation("io.opentelemetry.android:session:0.13.0-alpha")
 
     // OTEL Android Instrumentations
-    implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:crash:0.13.0-alpha")
     // NOTE: the `activity` instrumentation is intentionally NOT depended on. It is superseded by
     // LaunchDarkly's own app/screen lifecycle spans and would otherwise double-report; we also
     // defensively suppress it by name (see ObservabilityService.createOtelRumConfig).
 
     // Use JUnit Jupiter for testing.
     // Testing exporters for telemetry inspection
-    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.52.0")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -104,7 +104,7 @@ dependencies {
     testImplementation("io.mockk:mockk:1.14.5")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 
-    testFixturesApi("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+    testFixturesApi("io.opentelemetry:opentelemetry-sdk-testing:1.52.0")
     testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
 

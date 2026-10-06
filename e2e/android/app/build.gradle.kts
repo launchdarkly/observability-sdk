@@ -104,22 +104,22 @@ dependencies {
 
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
 
-    implementation("io.opentelemetry:opentelemetry-api:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-api:1.52.0")
+    implementation("io.opentelemetry:opentelemetry-sdk:1.52.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.52.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.52.0")
 
     // Android HTTP Url instrumentation
-    implementation("io.opentelemetry.android.instrumentation:httpurlconnection-library:0.11.0-alpha")
-    byteBuddy("io.opentelemetry.android.instrumentation:httpurlconnection-agent:0.11.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:httpurlconnection-library:0.13.0-alpha")
+    byteBuddy("io.opentelemetry.android.instrumentation:httpurlconnection-agent:0.13.0-alpha")
 
     // Used for accessing the SignalFromDiskExporter class in TestApplication
-    implementation("io.opentelemetry.android:core:0.11.0-alpha")
+    implementation("io.opentelemetry.android:core:0.13.0-alpha")
 
     // OkHTTP instrumentation
-    implementation("io.opentelemetry.android.instrumentation:okhttp3-library:0.11.0-alpha")
-    byteBuddy("io.opentelemetry.android.instrumentation:okhttp3-agent:0.11.0-alpha")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("io.opentelemetry.android.instrumentation:okhttp3-library:0.13.0-alpha")
+    byteBuddy("io.opentelemetry.android.instrumentation:okhttp3-agent:0.13.0-alpha")
+    implementation("com.squareup.okhttp3:okhttp:5.1.0")
 
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
@@ -147,8 +147,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.core.ktx)
     testImplementation(libs.robolectric)
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
-    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.1.0")
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.52.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation(testFixtures(project(":observability-android")))
 
