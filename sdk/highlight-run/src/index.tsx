@@ -148,19 +148,19 @@ const H: HighlightPublicInterface = {
 				sessionSecureID,
 			}
 
+			first_load_listeners = new FirstLoadListeners(client_options)
+			if (!options?.manualStart) {
+				// Start some of the listeners before client is loaded, then hand the
+				// listeners over for client to manage
+				first_load_listeners.startListening()
+			}
+
 			highlight_obj =
 				highlight_obj ??
 				new Highlight(client_options, first_load_listeners)
 
 			if (!options?.manualStart) {
 				highlight_obj.initialize()
-			}
-
-			first_load_listeners = new FirstLoadListeners(client_options)
-			if (!options?.manualStart) {
-				// Start some of the listeners before client is loaded, then hand the
-				// listeners over for client to manage
-				first_load_listeners.startListening()
 			}
 
 			if (
