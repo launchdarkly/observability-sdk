@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.7.6](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.5...highlight.run-10.7.6) (2026-10-06)
+
+
+### Bug Fixes
+
+* **highlight.run:** create FirstLoadListeners before constructing the Highlight client ([#792](https://github.com/launchdarkly/observability-sdk/issues/792)) ([babb68b](https://github.com/launchdarkly/observability-sdk/commit/babb68b96e304e1ae7b1943cc127a0d82b6889f2))
+
 ## [10.7.5](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.4...highlight.run-10.7.5) (2026-09-15)
 
 
