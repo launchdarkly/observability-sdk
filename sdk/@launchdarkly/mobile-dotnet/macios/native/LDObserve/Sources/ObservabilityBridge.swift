@@ -47,6 +47,8 @@ public final class ObservabilityBridge: NSObject {
                 otlpEndpoint: observability.otlpEndpoint,
                 backendUrl: observability.backendUrl,
                 resourceAttributes: buildResourceAttributes(observability.attributes),
+                customHeaders: (observability.customHeaders as? [String: String]) ?? [:],
+                logsApiLevel: .init(rawValue: observability.logsApiLevel) ?? .none,
                 crashReporting: .init(source: .none),
                 instrumentation: .init(
                     urlSession: .disabled, // Network tracing happens on the .NET side via System.Net.Http activities.
@@ -66,12 +68,17 @@ public final class ObservabilityBridge: NSObject {
                 observabilityPlugin,
                 SessionReplay(options: .init(
                     isEnabled: replay.isEnabled,
+                    sampleRate: replay.sampleRate,
                     privacy: .init(
                         maskTextInputs: replay.maskTextInputs,
                         maskWebViews: replay.maskWebViews,
                         maskLabels: replay.maskLabels,
-                        maskImages: replay.maskImages
-                    )
+                        maskImages: replay.maskImages,
+                        minimumAlpha: CGFloat(replay.minimumAlpha)
+                    ),
+                    frameRate: replay.frameRate,
+                    scale: CGFloat(replay.scale),
+                    imageQuality: CGFloat(replay.imageQuality)
                 ))
             ]
             
