@@ -1,5 +1,20 @@
 # highlight.run
 
+## [10.7.7](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.6...highlight.run-10.7.7) (2026-10-07)
+
+
+### Bug Fixes
+
+* **highlight.run:** decode streamed fetch bodies as a continuous UTF-8 stream ([#809](https://github.com/launchdarkly/observability-sdk/issues/809)) ([262df1c](https://github.com/launchdarkly/observability-sdk/commit/262df1c648668a25607ef3eb0f1640c287202855))
+* **highlight.run:** fix the rrweb warn logger binding ([#813](https://github.com/launchdarkly/observability-sdk/issues/813)) ([9ab884f](https://github.com/launchdarkly/observability-sdk/commit/9ab884fa09e52816d9694cd07fcac65c84c9a9db))
+* **highlight.run:** keep falsy feature flag evaluation attributes ([#810](https://github.com/launchdarkly/observability-sdk/issues/810)) ([8396b9a](https://github.com/launchdarkly/observability-sdk/commit/8396b9a2caf7606a226e5385168539877dadff0e))
+* **highlight.run:** mark first-load listeners as network-recording after setup ([#812](https://github.com/launchdarkly/observability-sdk/issues/812)) ([7d3056b](https://github.com/launchdarkly/observability-sdk/commit/7d3056b2337a64d03245de50803b4eea26a1b241))
+* **highlight.run:** read legacy semconv keys when rebuilding request/response pairs ([#814](https://github.com/launchdarkly/observability-sdk/issues/814)) ([853ffec](https://github.com/launchdarkly/observability-sdk/commit/853ffec21207c452e000860c1485ddd847dabe90))
+* **highlight.run:** record exception.cause on window errors ([#802](https://github.com/launchdarkly/observability-sdk/issues/802)) ([f36f794](https://github.com/launchdarkly/observability-sdk/commit/f36f794270f5036557ed1ffe7c32c1c8f1fb2ccb))
+* **highlight.run:** record resource fetch timings in nanoseconds ([#811](https://github.com/launchdarkly/observability-sdk/issues/811)) ([6f1b190](https://github.com/launchdarkly/observability-sdk/commit/6f1b190a2aa5b7a6fd609c5fcbfb9641cf70fcc4))
+* **highlight.run:** remove the iOS pagehide listener with the correct event name ([#805](https://github.com/launchdarkly/observability-sdk/issues/805)) ([ff00604](https://github.com/launchdarkly/observability-sdk/commit/ff00604a9fa5a9b703ae58b037863cf85481da60))
+* **highlight.run:** resolve span export when sampling drops the whole batch ([#804](https://github.com/launchdarkly/observability-sdk/issues/804)) ([d07c94d](https://github.com/launchdarkly/observability-sdk/commit/d07c94d263e9903b5bfa99d22feea536063c6984))
+
 ## [10.7.6](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.5...highlight.run-10.7.6) (2026-10-06)
 
 
