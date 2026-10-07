@@ -385,15 +385,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@angular/common@npm:^20.3.28":
-  version: 20.3.28
-  resolution: "@angular/common@npm:20.3.28"
+"@angular/common@npm:^19.2.23":
+  version: 19.2.25
+  resolution: "@angular/common@npm:19.2.25"
   dependencies:
     tslib: "npm:^2.3.0"
   peerDependencies:
-    "@angular/core": 20.3.28
+    "@angular/core": 19.2.25
     rxjs: ^6.5.3 || ^7.4.0
-  checksum: 10/1b9cc8739f846f7268988c1f37cb00450ceec818cc789ee859769d3505735124570c273b08fc38bd2fd893baec9cd7db8df65e8bad9648e616aaff0afe142214
+  checksum: 10/703275eed4e4f305c79abf1fbf1700ebc4ad20de1228051574aeb41ece14d031dbceeb17a95edbf086f7fe2589a358856ec9ef0daa0ee6f816b35179723d105d
   languageName: node
   linkType: hard
 
@@ -429,21 +429,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@angular/core@npm:^20.3.28":
-  version: 20.3.28
-  resolution: "@angular/core@npm:20.3.28"
+"@angular/core@npm:^19.2.23":
+  version: 19.2.25
+  resolution: "@angular/core@npm:19.2.25"
   dependencies:
     tslib: "npm:^2.3.0"
   peerDependencies:
-    "@angular/compiler": 20.3.28
     rxjs: ^6.5.3 || ^7.4.0
     zone.js: ~0.15.0
-  peerDependenciesMeta:
-    "@angular/compiler":
-      optional: true
-    zone.js:
-      optional: true
-  checksum: 10/0ca7e669ca6b897e3f0dcac0057cd6aefeb21127561f4e44ff13f5327819aa88ed6478d39e5b50c89ba86e0dbb4790ef5a3908f7bc73701b19d515bffb5813f0
+  checksum: 10/0c20bc5dfa83bb2dc01e734a9087ece7c89f62d73799e75d51dfce4be68f0e5f9d266e41b0735fdc485b96c0a7d857556f438f6943277adc9905f18383bf2bb8
   languageName: node
   linkType: hard
 
@@ -491,17 +485,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@angular/router@npm:^20.3.32":
-  version: 20.3.32
-  resolution: "@angular/router@npm:20.3.32"
+"@angular/router@npm:^19.2.25":
+  version: 19.2.25
+  resolution: "@angular/router@npm:19.2.25"
   dependencies:
     tslib: "npm:^2.3.0"
   peerDependencies:
-    "@angular/common": 20.3.32
-    "@angular/core": 20.3.32
-    "@angular/platform-browser": 20.3.32
+    "@angular/common": 19.2.25
+    "@angular/core": 19.2.25
+    "@angular/platform-browser": 19.2.25
     rxjs: ^6.5.3 || ^7.4.0
-  checksum: 10/4531312a2202547f4803ab2d34a5b40430c3303d7a704d655d43b35263878f4dbfb1891e5463e66df5f228d94d6c150ee242860b1eca39f081f202446e64ce8a
+  checksum: 10/32b999d7fc328754d493771a2e1b79d95ff805ad7d6c1f45d657a4d2ee28c530d7ac04f87f12e9ce61e4edbf541d95e496c980ec8d0220887ad3eefeac4300dd
   languageName: node
   linkType: hard
 
@@ -7394,7 +7388,7 @@ __metadata:
     eslint: "npm:^9.26.0"
     highlight.run: "workspace:*"
     js-cookie: "npm:^3.0.5"
-    next: "npm:^16.3.6"
+    next: "npm:^15.5.15"
     rollup: "npm:^4.4.1"
     semver: "npm:^7.6.3"
     tree-kill: "npm:^1.2.2"
@@ -7402,7 +7396,7 @@ __metadata:
     vite: "npm:^6.4.3"
     vitest: "npm:^4.1.0"
   peerDependencies:
-    next: ^16.3.6
+    next: ^15.5.15
     react: ">=17"
   languageName: unknown
   linkType: soft
@@ -10292,17 +10286,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/env@npm:15.5.27, @next/env@npm:^15.5.10":
+  version: 15.5.27
+  resolution: "@next/env@npm:15.5.27"
+  checksum: 10/12820bfe3950eaf0ef5d5b884876df9ccfcbe221f0bd5490ad146ab14cbb3b3010283a407b198e4b6c57a9e2f82da1fdc24edeeda05085858651514504018e3b
+  languageName: node
+  linkType: hard
+
 "@next/env@npm:16.3.6":
   version: 16.3.6
   resolution: "@next/env@npm:16.3.6"
   checksum: 10/f68185f0627b4499e75ece1136761c69109fab461c35172f776dd8f8da3f9923bdaaad20d56cd9ee28a47662c17ed208c8f706987cc9a58a87fcb5d02f3d50eb
-  languageName: node
-  linkType: hard
-
-"@next/env@npm:^15.5.10":
-  version: 15.5.24
-  resolution: "@next/env@npm:15.5.24"
-  checksum: 10/76da9f6dd5c890b9a7e584c9379a639e13a7ead41410c0743e23790990ef95bc1f797443b246322582535c2e9b3aa8dc88d175bf5e39e55e5ac2b9d83c497918
   languageName: node
   linkType: hard
 
@@ -10315,10 +10309,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/swc-darwin-arm64@npm:15.5.27":
+  version: 15.5.27
+  resolution: "@next/swc-darwin-arm64@npm:15.5.27"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@next/swc-darwin-arm64@npm:16.3.6":
   version: 16.3.6
   resolution: "@next/swc-darwin-arm64@npm:16.3.6"
   conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@next/swc-darwin-x64@npm:15.5.27":
+  version: 15.5.27
+  resolution: "@next/swc-darwin-x64@npm:15.5.27"
+  conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
@@ -10329,10 +10337,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/swc-linux-arm64-gnu@npm:15.5.27":
+  version: 15.5.27
+  resolution: "@next/swc-linux-arm64-gnu@npm:15.5.27"
+  conditions: os=linux & cpu=arm64 & libc=glibc
+  languageName: node
+  linkType: hard
+
 "@next/swc-linux-arm64-gnu@npm:16.3.6":
   version: 16.3.6
   resolution: "@next/swc-linux-arm64-gnu@npm:16.3.6"
   conditions: os=linux & cpu=arm64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@next/swc-linux-arm64-musl@npm:15.5.27":
+  version: 15.5.27
+  resolution: "@next/swc-linux-arm64-musl@npm:15.5.27"
+  conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
@@ -10343,10 +10365,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/swc-linux-x64-gnu@npm:15.5.27":
+  version: 15.5.27
+  resolution: "@next/swc-linux-x64-gnu@npm:15.5.27"
+  conditions: os=linux & cpu=x64 & libc=glibc
+  languageName: node
+  linkType: hard
+
 "@next/swc-linux-x64-gnu@npm:16.3.6":
   version: 16.3.6
   resolution: "@next/swc-linux-x64-gnu@npm:16.3.6"
   conditions: os=linux & cpu=x64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@next/swc-linux-x64-musl@npm:15.5.27":
+  version: 15.5.27
+  resolution: "@next/swc-linux-x64-musl@npm:15.5.27"
+  conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
@@ -10357,10 +10393,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/swc-win32-arm64-msvc@npm:15.5.27":
+  version: 15.5.27
+  resolution: "@next/swc-win32-arm64-msvc@npm:15.5.27"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@next/swc-win32-arm64-msvc@npm:16.3.6":
   version: 16.3.6
   resolution: "@next/swc-win32-arm64-msvc@npm:16.3.6"
   conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@next/swc-win32-x64-msvc@npm:15.5.27":
+  version: 15.5.27
+  resolution: "@next/swc-win32-x64-msvc@npm:15.5.27"
+  conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
@@ -16255,6 +16305,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@swc/helpers@npm:0.5.15":
+  version: 0.5.15
+  resolution: "@swc/helpers@npm:0.5.15"
+  dependencies:
+    tslib: "npm:^2.8.0"
+  checksum: 10/e3f32c6deeecfb0fa3f22edff03a7b358e7ce16d27b0f1c8b5cdc3042c5c4ce4da6eac0b781ab7cc4f54696ece657467d56734fb26883439fb00017385364c4c
+  languageName: node
+  linkType: hard
+
 "@swc/helpers@npm:0.5.23":
   version: 0.5.23
   resolution: "@swc/helpers@npm:0.5.23"
@@ -19814,14 +19873,14 @@ __metadata:
     "@angular-devkit/build-angular": "npm:^19.2.18"
     "@angular/animations": "npm:^19.2.18"
     "@angular/cli": "npm:^19.2.18"
-    "@angular/common": "npm:^20.3.28"
+    "@angular/common": "npm:^19.2.18"
     "@angular/compiler": "npm:^19.2.18"
     "@angular/compiler-cli": "npm:^19.2.18"
-    "@angular/core": "npm:^20.3.28"
+    "@angular/core": "npm:^19.2.18"
     "@angular/forms": "npm:^19.2.18"
     "@angular/platform-browser": "npm:^19.2.18"
     "@angular/platform-browser-dynamic": "npm:^19.2.18"
-    "@angular/router": "npm:^20.3.32"
+    "@angular/router": "npm:^19.2.25"
     "@types/jasmine": "npm:~5.1.0"
     "@types/node": "npm:^20.11.1"
     angular-in-memory-web-api: "npm:^0.19.0"
@@ -36884,16 +36943,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"morgan@npm:^1.11.0":
-  version: 1.11.0
-  resolution: "morgan@npm:1.11.0"
+"morgan@npm:^1.12.1":
+  version: 1.12.1
+  resolution: "morgan@npm:1.12.1"
   dependencies:
     basic-auth: "npm:~2.0.1"
     debug: "npm:2.6.9"
     depd: "npm:~2.0.0"
     on-finished: "npm:~2.4.1"
     on-headers: "npm:~1.1.0"
-  checksum: 10/d6e72d98ccaab1eb191f9455b224711b626e235e7ace217060b3d44e23a3cdc4ba6d9097b30e9195728ef86ecd53589685f211b8acb4c16dbf958fa787bc5ec0
+  checksum: 10/b907f5265409fffd6d8b56575d47d8d13e479313dc1dd59c0c8228e9c68b3418c131daddc3011329d0e8071d6e7fc23dd23ea1ec6f4474a1556f7a37777d4a59
   languageName: node
   linkType: hard
 
@@ -37269,6 +37328,65 @@ __metadata:
   languageName: node
   linkType: hard
 
+"next@npm:^15.5.27":
+  version: 15.5.27
+  resolution: "next@npm:15.5.27"
+  dependencies:
+    "@next/env": "npm:15.5.27"
+    "@next/swc-darwin-arm64": "npm:15.5.27"
+    "@next/swc-darwin-x64": "npm:15.5.27"
+    "@next/swc-linux-arm64-gnu": "npm:15.5.27"
+    "@next/swc-linux-arm64-musl": "npm:15.5.27"
+    "@next/swc-linux-x64-gnu": "npm:15.5.27"
+    "@next/swc-linux-x64-musl": "npm:15.5.27"
+    "@next/swc-win32-arm64-msvc": "npm:15.5.27"
+    "@next/swc-win32-x64-msvc": "npm:15.5.27"
+    "@swc/helpers": "npm:0.5.15"
+    caniuse-lite: "npm:^1.0.30001579"
+    postcss: "npm:8.4.31"
+    sharp: "npm:^0.34.3 || ^0.35.4"
+    styled-jsx: "npm:5.1.6"
+  peerDependencies:
+    "@opentelemetry/api": ^1.1.0
+    "@playwright/test": ^1.51.1
+    babel-plugin-react-compiler: "*"
+    react: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
+    react-dom: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
+    sass: ^1.3.0
+  dependenciesMeta:
+    "@next/swc-darwin-arm64":
+      optional: true
+    "@next/swc-darwin-x64":
+      optional: true
+    "@next/swc-linux-arm64-gnu":
+      optional: true
+    "@next/swc-linux-arm64-musl":
+      optional: true
+    "@next/swc-linux-x64-gnu":
+      optional: true
+    "@next/swc-linux-x64-musl":
+      optional: true
+    "@next/swc-win32-arm64-msvc":
+      optional: true
+    "@next/swc-win32-x64-msvc":
+      optional: true
+    sharp:
+      optional: true
+  peerDependenciesMeta:
+    "@opentelemetry/api":
+      optional: true
+    "@playwright/test":
+      optional: true
+    babel-plugin-react-compiler:
+      optional: true
+    sass:
+      optional: true
+  bin:
+    next: dist/bin/next
+  checksum: 10/07d158da0a6475356d91842dbe22e97eac8f5c76169e3fd7e2754359a15b1fa814455de70f2db80f219873a76b5e2a4ba26ae3a7b6d54a60008ede14671547a9
+  languageName: node
+  linkType: hard
+
 "next@npm:^16.3.6":
   version: 16.3.6
   resolution: "next@npm:16.3.6"
@@ -37368,7 +37486,7 @@ __metadata:
     eslint: "npm:^9.17.0"
     eslint-config-next: "npm:^15.5.10"
     ky: "npm:^1.7.4"
-    next: "npm:^16.3.6"
+    next: "npm:^15.5.10"
     next-build-id: "npm:^3.0.0"
     pg: "npm:^8.13.3"
     pino: "npm:^9.6.0"
