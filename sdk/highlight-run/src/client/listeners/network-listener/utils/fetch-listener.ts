@@ -233,7 +233,7 @@ export const getResponseBody = async (
 
 			while (!(nextChunk = await reader.read()).done) {
 				let partialData = nextChunk.value
-				result += utf8Decoder.decode(partialData)
+				result += utf8Decoder.decode(partialData, { stream: true })
 				if (result.length > bodyLimit) {
 					// Stop pulling the clone: the rest would be dropped anyway,
 					// and on a streaming or multi-megabyte response this is
@@ -242,6 +242,11 @@ export const getResponseBody = async (
 					reader.cancel().catch(() => {})
 					break
 				}
+			}
+			if (!overLimit) {
+				// Flush any bytes held back for a multi-byte character
+				// that spanned the final chunk boundary.
+				result += utf8Decoder.decode()
 			}
 			text = overLimit
 				? bodyOmittedPlaceholder(
