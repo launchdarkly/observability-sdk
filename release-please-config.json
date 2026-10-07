@@ -22,7 +22,7 @@
 			"include-component-in-tag": true,
 			"extra-files": ["gradle.properties"]
 		},
-		"sdk/@launchdarkly/flutter/packages/observability": {
+		"sdk/flutter/packages/observability": {
 			"package-name": "launchdarkly_flutter_observability",
 			"release-type": "dart",
 			"versioning": "default",

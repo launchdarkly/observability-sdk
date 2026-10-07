@@ -41,7 +41,7 @@ val useLocalNativeSdk = providers.gradleProperty("ldUseLocalNative")
 if (useLocalNativeSdk) {
     val observabilityAndroidPath = providers.gradleProperty("ldObservabilityAndroidPath")
         .orElse(providers.environmentVariable("LD_OBSERVABILITY_ANDROID_PATH"))
-        .orElse("../../../observability-android")
+        .orElse("../../../@launchdarkly/observability-android")
         .get()
 
     // Build the local `observability-android` library and substitute it for

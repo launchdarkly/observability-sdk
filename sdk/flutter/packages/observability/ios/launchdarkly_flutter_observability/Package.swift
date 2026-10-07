@@ -22,7 +22,7 @@ let localSwiftObservabilityPath = ProcessInfo.processInfo.environment["LD_SWIFT_
     ?? URL(fileURLWithPath: #filePath)
         .resolvingSymlinksInPath()
         .deletingLastPathComponent()
-        .appendingPathComponent("../../../../../../../../swift-launchdarkly-observability")
+        .appendingPathComponent("../../../../../../../swift-launchdarkly-observability")
         .standardizedFileURL
         .path
 
