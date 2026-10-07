@@ -657,7 +657,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						this.options.debug.domRecording)
 						? {
 								debug: this.logger.log,
-								warn: internalLog.bind('RecordSDK', 'warn'),
+								warn: internalLog.bind(
+									null,
+									'RecordSDK',
+									'warn',
+								),
 							}
 						: undefined,
 			})
