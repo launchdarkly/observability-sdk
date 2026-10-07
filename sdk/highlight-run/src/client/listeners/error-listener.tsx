@@ -19,9 +19,10 @@ function handleError(
 	let res = parseError(e)
 	let payload: Object = {}
 	if (event instanceof Error) {
+		const cause = event.cause
 		event = event.message
-		if (event.cause) {
-			payload = { 'exception.cause': event.cause }
+		if (cause) {
+			payload = { 'exception.cause': cause }
 		}
 	}
 	const framesToUse = removeHighlightFrameIfExists(res)
