@@ -245,6 +245,7 @@ export class FirstLoadListeners {
 			!sThis.disableNetworkRecording &&
 			sThis.enableRecordingNetworkContents
 		) {
+			sThis.hasNetworkRecording = true
 			sThis.listeners.push(
 				NetworkListener({
 					xhrCallback: (requestResponsePair) => {
