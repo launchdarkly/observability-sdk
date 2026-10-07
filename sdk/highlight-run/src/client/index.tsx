@@ -1221,12 +1221,14 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			)
 
 			if (this.sessionShortcut) {
-				SessionShortcutListener(this.sessionShortcut, () => {
-					window.open(
-						this.getCurrentSessionURLWithTimestamp(),
-						'_blank',
-					)
-				})
+				this.listeners.push(
+					SessionShortcutListener(this.sessionShortcut, () => {
+						window.open(
+							this.getCurrentSessionURLWithTimestamp(),
+							'_blank',
+						)
+					}),
+				)
 			}
 
 			if (this.enablePerformanceRecording) {

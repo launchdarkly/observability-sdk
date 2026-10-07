@@ -6,6 +6,7 @@ const SessionShortcutListener = (
 	let mods = []
 	const keyup = false
 	const keydown = true
+	const added: { key: any; handler: any }[] = []
 
 	for (let i = 0; i < keys.length; i++) {
 		let key: any = keys[i].split('+')
@@ -18,8 +19,7 @@ const SessionShortcutListener = (
 
 		// @ts-expect-error
 		if (!(key in handlers)) handlers[key] = []
-		// @ts-expect-error
-		handlers[key].push({
+		const handler = {
 			mods,
 			shortcut: keys[i],
 			key: keys[i],
@@ -28,11 +28,23 @@ const SessionShortcutListener = (
 			keydown,
 			scope: 'all',
 			splitKey: '+',
-		})
+		}
+		// @ts-expect-error
+		handlers[key].push(handler)
+		added.push({ key, handler })
 	}
-	addEvent(document, 'keydown', (e: any) => {
-		dispatch(e)
-	})
+	const keydownListener = (e: any) => dispatch(e)
+	addEvent(document, 'keydown', keydownListener)
+
+	return () => {
+		document.removeEventListener('keydown', keydownListener)
+		for (const { key, handler } of added) {
+			// @ts-expect-error
+			const keyHandlers = handlers[key]
+			const index = keyHandlers ? keyHandlers.indexOf(handler) : -1
+			if (index > -1) keyHandlers.splice(index, 1)
+		}
+	}
 }
 
 export default SessionShortcutListener
