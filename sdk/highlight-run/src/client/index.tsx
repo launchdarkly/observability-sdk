@@ -1323,7 +1323,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			}
 			window.addEventListener('pagehide', unloadListener)
 			this.listeners.push(() =>
-				window.removeEventListener('beforeunload', unloadListener),
+				window.removeEventListener('pagehide', unloadListener),
 			)
 		}
 	}
