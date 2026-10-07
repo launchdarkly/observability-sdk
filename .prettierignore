@@ -24,6 +24,6 @@ highlight.io/out
 sdk/highlightinc-highlight-datasource/grafana/data
 sdk/highlight-php
 sdk/@launchdarkly/observability-dotnet
-sdk/@launchdarkly/flutter
+sdk/flutter
 sdk/@launchdarkly/mobile-dotnet
 e2e/skipapp-howdy

@@ -1,3 +1,10 @@
+/// LaunchDarkly Observability and Session Replay for Flutter.
+///
+/// Initialize with [LDObserve.init] (alongside a LaunchDarkly client) or
+/// [LDObserve.initStandalone], then use [LDObserve] to record spans, logs and
+/// errors. Wrap your app in [SessionReplayCapture] to enable session replay.
+library;
+
 export 'src/ld_observe.dart' show LDObserve;
 export 'src/instrumentation/navigation/ld_navigator_observer.dart'
     show LDNavigatorObserver, LDScreenNameExtractor;

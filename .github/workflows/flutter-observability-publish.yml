@@ -23,7 +23,7 @@ jobs:
             id-token: write # Required for authentication using OIDC.
         defaults:
             run:
-                working-directory: ./sdk/@launchdarkly/flutter/packages/observability
+                working-directory: ./sdk/flutter/packages/observability
         steps:
             - uses: actions/checkout@v4
 

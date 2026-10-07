@@ -583,7 +583,7 @@ You do not need to call anything on `LDObserve`: the observability plugin hooks 
 
 ## Example
 
-A complete, runnable sample app lives in [`example/`](../../example). See its [README](../../example/README.md) for how to configure credentials and launch it on each platform.
+A minimal example is in [`example/main.dart`](example/main.dart). A complete, runnable sample app lives in [`example/`](../../example). See its [README](../../example/README.md) for how to configure credentials and launch it on each platform.
 
 LaunchDarkly overview
 -------------------------

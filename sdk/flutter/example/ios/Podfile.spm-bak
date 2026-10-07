@@ -33,7 +33,7 @@ end
 def local_swift_observability_path
   ENV.fetch(
     'LD_SWIFT_OBSERVABILITY_PATH',
-    File.expand_path('../../../../../../swift-launchdarkly-observability', __dir__)
+    File.expand_path('../../../../../swift-launchdarkly-observability', __dir__)
   )
 end
 

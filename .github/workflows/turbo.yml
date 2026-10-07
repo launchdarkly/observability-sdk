@@ -60,7 +60,7 @@ jobs:
                         - '**'
                         - '!sdk/@launchdarkly/observability-android/**'
                         - '!sdk/@launchdarkly/mobile-dotnet/**'
-                        - '!sdk/@launchdarkly/flutter/**'
+                        - '!sdk/flutter/**'
                         - '!sdk/@launchdarkly/launchdarkly_flutter_observability/**'
                         - '!sdk/@launchdarkly/observability-dotnet/**'
                         - '!sdk/@launchdarkly/observability-python/**'
