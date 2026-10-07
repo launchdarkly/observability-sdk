@@ -1120,13 +1120,19 @@ const applyRequestResponseSanitizer = (
 			sessionSecureID: '',
 			id: '',
 			url,
-			verb: (attrs['http.request.method'] as string) ?? 'GET',
+			verb:
+				((attrs['http.request.method'] ??
+					attrs[
+						SemanticAttributes.SEMATTRS_HTTP_METHOD
+					]) as string) ?? 'GET',
 			headers: requestHeaders,
 			body: (attrs['http.request.body'] as string) ?? '',
 		},
 		response: {
 			status: Number(
-				attrs[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE] ?? 0,
+				attrs[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE] ??
+					attrs[SemanticAttributes.SEMATTRS_HTTP_STATUS_CODE] ??
+					0,
 			),
 			headers: responseHeaders,
 			body: (attrs['http.response.body'] as string) ?? '',
