@@ -22,10 +22,7 @@ void main() {
       };
 
       final client = LDClient(
-        LDConfig(
-          CredentialSource.fromEnvironment(),
-          AutoEnvAttributes.enabled,
-        ),
+        LDConfig(CredentialSource.fromEnvironment(), AutoEnvAttributes.enabled),
         LDContextBuilder().kind('user', 'example-user').build(),
       );
       client.start();
