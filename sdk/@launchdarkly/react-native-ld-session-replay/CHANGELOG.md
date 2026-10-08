@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.24.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.24.0...session-replay-react-native-0.24.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* bump AGP buildscript Netty off CVE-2023-44487 ([#788](https://github.com/launchdarkly/observability-sdk/issues/788)) ([982ba5a](https://github.com/launchdarkly/observability-sdk/commit/982ba5ad062c50c520d2d2e67335f9b11f7f9f69))
+
+## [0.24.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.23.0...session-replay-react-native-0.24.0) (2026-09-30)
+
+
+### Features
+
+* **session-replay-react-native:** honor isEnabled: false and add initializeSessionReplay ([#785](https://github.com/launchdarkly/observability-sdk/issues/785)) ([9f9ca81](https://github.com/launchdarkly/observability-sdk/commit/9f9ca812ebaa2bed4159632398f01f9ee96fbd75))
+
 ## [0.23.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.22.2...session-replay-react-native-0.23.0) (2026-08-20)
 
 

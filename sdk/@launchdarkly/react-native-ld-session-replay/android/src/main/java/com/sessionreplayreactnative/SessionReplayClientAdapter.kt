@@ -11,6 +11,7 @@ import com.launchdarkly.observability.context.LDObserveLogging
 import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.SessionReplayStartResult
 import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.sdk.ContextKind
@@ -77,7 +78,20 @@ internal class SessionReplayClientAdapter private constructor() {
         }
     }
 
-    fun start(application: Application, activity: Activity?, completion: (Boolean, String?) -> Unit) {
+    /**
+     * Initializes session replay if needed and enables recording.
+     *
+     * @param forceEnable `true` for an explicit `startSessionReplay()`, which records regardless
+     *   of the configured `enabled`. `false` for the plugin's auto-start, which honors it. Either
+     *   way this never *disables* recording — that is [stop]'s job — so a deferred start is not
+     *   undone by a later re-init.
+     */
+    fun start(
+        application: Application,
+        activity: Activity?,
+        forceEnable: Boolean,
+        completion: (Boolean, String?) -> Unit
+    ) {
         val localMobileKey: String?
         val localServiceName: String
         val localServiceVersion: String?
@@ -129,16 +143,48 @@ internal class SessionReplayClientAdapter private constructor() {
                     )
                 }
             } else {
-                logger.info("$LOG_PREFIX start: already initialized, re-applying enabled=${localReplayOptions.enabled}")
+                logger.info("$LOG_PREFIX start: already initialized, forceEnable=$forceEnable")
             }
-            try {
-                applyEnabled(localReplayOptions.enabled)
+            // Only ever enables. On the first start the SessionReplay plugin has already applied
+            // the configured `enabled`, so this covers an explicit start and a start after stop().
+            // Calling LDReplay.stop() here instead would make startSessionReplay() a no-op for a
+            // deferred start, and would silently stop a recording an earlier start had begun.
+            if (!forceEnable && !localReplayOptions.enabled) {
+                logger.info("$LOG_PREFIX start: leaving recording off (enabled=false)")
+                completion(true, null)
+                return@post
+            }
+            // `start` over `isEnabled = true` so the outcome is reported: the setter's no-change
+            // guard would also swallow a start on a session that is already enabled but not
+            // recording. Runs inline here rather than hopping threads, since we are on the main
+            // thread already.
+            val result = try {
+                LDReplay.start(ignoreSampling = false)
             } catch (e: Exception) {
-                logger.error("$LOG_PREFIX start: applyEnabled threw {0}: {1}", e::class.simpleName, e.message)
+                logger.error("$LOG_PREFIX start: LDReplay.start threw {0}: {1}", e::class.simpleName, e.message)
                 completion(false, "Session replay failed to start.")
                 return@post
             }
-            completion(true, null)
+            when (result) {
+                SessionReplayStartResult.STARTED,
+                SessionReplayStartResult.ALREADY_STARTED -> completion(true, null)
+                SessionReplayStartResult.SAMPLED_OUT -> {
+                    // A legitimate outcome of honoring sampleRate, not a failure.
+                    logger.info("$LOG_PREFIX start: not recording, the session was sampled out")
+                    completion(true, null)
+                }
+                SessionReplayStartResult.UNAVAILABLE -> {
+                    logger.error("$LOG_PREFIX start: session replay is unavailable — the plugin did not register")
+                    completion(false, "Session replay is unavailable; the native plugin did not register.")
+                }
+                SessionReplayStartResult.UNRECOVERABLE_ERROR -> {
+                    logger.error("$LOG_PREFIX start: LaunchDarkly refused session replay for this launch")
+                    completion(
+                        false,
+                        "LaunchDarkly refused session replay for this launch; it is retried on the next launch."
+                    )
+                }
+            }
         }
     }
 
@@ -235,14 +281,6 @@ internal class SessionReplayClientAdapter private constructor() {
         // timeout=0: return immediately without blocking the main thread waiting for flags.
         // onPluginsReady() fires synchronously during init() before it returns.
         LDClient.init(application, config, cachedContext, 0)
-    }
-
-    private fun applyEnabled(enabled: Boolean) {
-        if (enabled) {
-            LDReplay.start()
-        } else {
-            LDReplay.stop()
-        }
     }
 
     // Analogous to buildObserveContext() in SessionReplayService.kt (observability-android),

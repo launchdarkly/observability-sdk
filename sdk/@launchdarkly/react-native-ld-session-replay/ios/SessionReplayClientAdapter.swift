@@ -176,7 +176,13 @@ public class SessionReplayClientAdapter: NSObject {
     return context
   }
 
-  @objc public func start(completion: @escaping (Bool, String?) -> Void) {
+  /// Initializes session replay if needed and enables recording.
+  ///
+  /// - Parameter forceEnable: `true` for an explicit `startSessionReplay()`, which records
+  ///   regardless of the configured `isEnabled`. `false` for the plugin's auto-start, which
+  ///   honors it. Either way this never *disables* recording — that is `stop()`'s job — so a
+  ///   deferred start is not undone by a later re-init.
+  @objc public func start(forceEnable: Bool, completion: @escaping (Bool, String?) -> Void) {
     lock.lock()
     defer { lock.unlock() }
     guard let mobileKey = mobileKey, let sessionReplayOptions = sessionReplayOptions else {
@@ -212,10 +218,33 @@ public class SessionReplayClientAdapter: NSObject {
         }
         self.initialized = true
       } else {
-        NSLog("%@ start: already initialized, re-applying isEnabled=%@", Self.logPrefix, sessionReplayOptions.isEnabled ? "true" : "false")
+        NSLog("%@ start: already initialized, forceEnable=%@", Self.logPrefix, forceEnable ? "true" : "false")
       }
-      LDReplay.shared.isEnabled = sessionReplayOptions.isEnabled
-      completion(true, nil)
+      // Only ever enables. On the first start the SessionReplay plugin has already applied the
+      // configured `isEnabled`, so this covers an explicit start and a start after stop(). Writing
+      // `false` here instead would make `startSessionReplay()` a no-op for a deferred start, and
+      // would silently stop a recording that an earlier explicit start had begun.
+      guard forceEnable || sessionReplayOptions.isEnabled else {
+        NSLog("%@ start: leaving recording off (isEnabled=false)", Self.logPrefix)
+        completion(true, nil)
+        return
+      }
+      // `start` over `isEnabled = true` so the outcome is reported: the setter's no-change guard
+      // would also swallow a start on a session that is already enabled but not recording.
+      switch LDReplay.shared.start(ignoreSampling: false) {
+      case .started, .alreadyStarted:
+        completion(true, nil)
+      case .sampledOut:
+        // A legitimate outcome of honoring sampleRate, not a failure.
+        NSLog("%@ start: not recording, the session was sampled out", Self.logPrefix)
+        completion(true, nil)
+      case .unavailable:
+        NSLog("%@ start: session replay is unavailable — the plugin did not register", Self.logPrefix)
+        completion(false, "Session replay is unavailable; the native plugin did not register.")
+      case .unrecoverableError:
+        NSLog("%@ start: LaunchDarkly refused session replay for this launch", Self.logPrefix)
+        completion(false, "LaunchDarkly refused session replay for this launch; it is retried on the next launch.")
+      }
     }
   }
 

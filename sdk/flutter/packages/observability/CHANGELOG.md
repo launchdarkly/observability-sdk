@@ -1,0 +1,210 @@
+# Change log
+
+All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
+
+## [1.0.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-1.0.1...launchdarkly_flutter_observability-1.0.2) (2026-10-07)
+
+
+### Bug Fixes
+
+* **flutter:** fix pub.dev repository verification and add package example ([#816](https://github.com/launchdarkly/observability-sdk/issues/816)) ([c95857d](https://github.com/launchdarkly/observability-sdk/commit/c95857d110e4d41e9670ac16ad04794de3fea854))
+
+## [1.0.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-1.0.0...launchdarkly_flutter_observability-1.0.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* bump AGP buildscript Netty off CVE-2023-44487 ([#788](https://github.com/launchdarkly/observability-sdk/issues/788)) ([982ba5a](https://github.com/launchdarkly/observability-sdk/commit/982ba5ad062c50c520d2d2e67335f9b11f7f9f69))
+
+## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.19.1...launchdarkly_flutter_observability-1.0.0) (2026-09-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* Flutter SR Release 1.0.0 ([#781](https://github.com/launchdarkly/observability-sdk/issues/781))
+
+### Features
+
+* Flutter SR Release 1.0.0 ([#781](https://github.com/launchdarkly/observability-sdk/issues/781)) ([4f004d5](https://github.com/launchdarkly/observability-sdk/commit/4f004d50662b67a9bdf40489385a3e45abfb8dde))
+
+## [0.19.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.19.0...launchdarkly_flutter_observability-0.19.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **flutter:** Brings the plugin's public contract 1.0.  ([#777](https://github.com/launchdarkly/observability-sdk/issues/777)) ([a65ca7d](https://github.com/launchdarkly/observability-sdk/commit/a65ca7de5a4948160c6bf6a8b47de4a76ba874ec))
+
+## [0.19.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.18.0...launchdarkly_flutter_observability-0.19.0) (2026-09-16)
+
+
+### Features
+
+* **flutter:** report route patterns and drop query strings from scre… ([#773](https://github.com/launchdarkly/observability-sdk/issues/773)) ([7e99338](https://github.com/launchdarkly/observability-sdk/commit/7e9933817b4894c6917bf9743ad030a216611183))
+
+## [0.18.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.17.0...launchdarkly_flutter_observability-0.18.0) (2026-09-15)
+
+
+### Features
+
+* **flutter:** bump launchdarkly-observability-android to 0.68.0 ([#769](https://github.com/launchdarkly/observability-sdk/issues/769)) ([f0bc390](https://github.com/launchdarkly/observability-sdk/commit/f0bc390d76e391aea8c9e736ae85c07ee9f8842a))
+
+## [0.17.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.16.0...launchdarkly_flutter_observability-0.17.0) (2026-09-15)
+
+
+### Features
+
+* **flutter:** record screen views (Navigate) from Dart ([#627](https://github.com/launchdarkly/observability-sdk/issues/627)) ([cdd2190](https://github.com/launchdarkly/observability-sdk/commit/cdd219004a83ff59ff9e827e4e99da567ea4adbb))
+
+## [0.16.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.15.1...launchdarkly_flutter_observability-0.16.0) (2026-08-14)
+
+
+### Features
+
+* **flutter:** expose session replay imageQuality and bump native SDKs ([#730](https://github.com/launchdarkly/observability-sdk/issues/730)) ([f46fc13](https://github.com/launchdarkly/observability-sdk/commit/f46fc13c21efd9c4e796a4b22ed86299134a3219))
+
+## [0.15.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.15.1...launchdarkly_flutter_observability-0.15.2) (2026-08-13)
+
+
+### Features
+
+* expose Session Replay `imageQuality` and bump native SDKs to observability-android 0.66.0 and swift-launchdarkly-observability 0.52.0 ([#730](https://github.com/launchdarkly/observability-sdk/pull/730))
+
+## [0.15.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.15.0...launchdarkly_flutter_observability-0.15.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* **deps:** bump mobile bridges to observability-android 0.65.0 and client SDK 5.13.3 ([#720](https://github.com/launchdarkly/observability-sdk/issues/720)) ([b951c0c](https://github.com/launchdarkly/observability-sdk/commit/b951c0c038f99cb5025abf104b08865f1e24fe7a))
+
+## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.14.1...launchdarkly_flutter_observability-0.15.0) (2026-08-12)
+
+
+### Features
+
+* Android scale issues and imageQuality option ([#716](https://github.com/launchdarkly/observability-sdk/issues/716)) ([acacd0e](https://github.com/launchdarkly/observability-sdk/commit/acacd0e5cc637cf879572431b266c342eff2d2fb))
+
+## [0.14.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.14.0...launchdarkly_flutter_observability-0.14.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* carry render scale into Flutter iOS replay frames ([#717](https://github.com/launchdarkly/observability-sdk/issues/717)) ([046f389](https://github.com/launchdarkly/observability-sdk/commit/046f3893783b41a2050d43339c6488fa1f682c10))
+
+## [0.14.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.13.0...launchdarkly_flutter_observability-0.14.0) (2026-08-10)
+
+
+### Features
+
+* expose native Flutter observability options ([#713](https://github.com/launchdarkly/observability-sdk/issues/713)) ([ab29eea](https://github.com/launchdarkly/observability-sdk/commit/ab29eea4b85652ceeed025cab2c53f558e3e7a7e))
+
+## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.12.2...launchdarkly_flutter_observability-0.13.0) (2026-07-24)
+
+
+### Features
+
+* **flutter:** Dart AOT symbolication + uniform SYMBOLICATION.md docs ([#691](https://github.com/launchdarkly/observability-sdk/issues/691)) ([7432a78](https://github.com/launchdarkly/observability-sdk/commit/7432a787a477608dbab7dd1ec1e85c4072239cb8))
+
+## [0.12.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.12.1...launchdarkly_flutter_observability-0.12.2) (2026-07-14)
+
+
+### Bug Fixes
+
+* **flutter:** remove conflicting ios-client-sdk pin in SPM manifest ([#674](https://github.com/launchdarkly/observability-sdk/issues/674)) ([a8da119](https://github.com/launchdarkly/observability-sdk/commit/a8da11901a2304213526dd183f610059ea43ce01))
+
+## [0.12.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.12.0...launchdarkly_flutter_observability-0.12.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* **flutter:** gate Android touch capture on analytics.taps ([#635](https://github.com/launchdarkly/observability-sdk/issues/635)) ([394d8a7](https://github.com/launchdarkly/observability-sdk/commit/394d8a7e15b62dd937ae5f3cdbfb63ed81672d2b))
+
+## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.11.0...launchdarkly_flutter_observability-0.12.0) (2026-06-18)
+
+
+### Features
+
+* richer click analytics (ldId, screen_id/screen_name) + touch-capture gating + lifecycle span cleanup ([#634](https://github.com/launchdarkly/observability-sdk/issues/634)) ([91f5816](https://github.com/launchdarkly/observability-sdk/commit/91f5816d0db59cc55f33c651a3c7eab806208c73))
+
+## [0.11.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.10.0...launchdarkly_flutter_observability-0.11.0) (2026-06-17)
+
+
+### Features
+
+* **flutter:** configurable Session Replay capture scale ([#626](https://github.com/launchdarkly/observability-sdk/issues/626)) ([e3d8383](https://github.com/launchdarkly/observability-sdk/commit/e3d83830edcefb8b82019099d0d0bd924f5e5b6f))
+
+## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.9.0...launchdarkly_flutter_observability-0.10.0) (2026-06-15)
+
+
+### Features
+
+* **flutter:** allow overriding OTLP endpoint and backend URL in example ([#624](https://github.com/launchdarkly/observability-sdk/issues/624)) ([7eff0cd](https://github.com/launchdarkly/observability-sdk/commit/7eff0cdacd029995fda822c6c95e4d3645fed01c))
+
+## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.8.0...launchdarkly_flutter_observability-0.9.0) (2026-06-12)
+
+
+### Features
+
+* **android:** app_launch span + Session Replay Launch breadcrumb ([#620](https://github.com/launchdarkly/observability-sdk/issues/620)) ([1822333](https://github.com/launchdarkly/observability-sdk/commit/18223336dcf2ec19cb38658e5c299c0c043c5c72))
+* **flutter:** propagate appLifecycle + appLaunch analytics options ([#621](https://github.com/launchdarkly/observability-sdk/issues/621)) ([3cb99be](https://github.com/launchdarkly/observability-sdk/commit/3cb99be9ef92af0d1ded32aab00f7d042986c7c7))
+
+## [0.8.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.7.0...launchdarkly_flutter_observability-0.8.0) (2026-06-12)
+
+
+### Features
+
+* **flutter:** forward identify to native observability + Session Replay ([#617](https://github.com/launchdarkly/observability-sdk/issues/617)) ([8384b4e](https://github.com/launchdarkly/observability-sdk/commit/8384b4e63d366b0a78b2134f98ea47a8e0040f36))
+
+## [0.7.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.6.0...launchdarkly_flutter_observability-0.7.0) (2026-06-11)
+
+
+### Features
+
+* Flutter track API (LDObserve.track + afterTrack hook) ([#612](https://github.com/launchdarkly/observability-sdk/issues/612)) ([4d58af4](https://github.com/launchdarkly/observability-sdk/commit/4d58af408f3dcfc181b23c67350aa761a59db2b8))
+
+## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.5.0...launchdarkly_flutter_observability-0.6.0) (2026-06-09)
+
+
+### Features
+
+* Flutter mask stabilization + Native Logs/Spans ([#597](https://github.com/launchdarkly/observability-sdk/issues/597)) ([7e5cfd2](https://github.com/launchdarkly/observability-sdk/commit/7e5cfd29831faea3f04ab083338b15ec05a07489))
+
+## [0.5.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.4.0...launchdarkly_flutter_observability-0.5.0) (2026-06-04)
+
+
+### Features
+
+* MAUI  API revamp ([#573](https://github.com/launchdarkly/observability-sdk/issues/573)) ([c2dfa64](https://github.com/launchdarkly/observability-sdk/commit/c2dfa64a55aad59af02002401a3b004852e15b20))
+
+## [0.4.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.3.0...launchdarkly_flutter_observability-0.4.0) (2026-06-03)
+
+
+### Features
+
+* Android - Rename track span event  ([#586](https://github.com/launchdarkly/observability-sdk/issues/586)) ([2f5b066](https://github.com/launchdarkly/observability-sdk/commit/2f5b0667385b59181d3e1970234fc7bcae08aa19))
+
+## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.2.0...launchdarkly_flutter_observability-0.3.0) (2026-06-03)
+
+
+### Features
+
+* **flutter:** propagate native-only observability options ([#584](https://github.com/launchdarkly/observability-sdk/issues/584)) ([51a0658](https://github.com/launchdarkly/observability-sdk/commit/51a065874986b7574ddcb4410d3fd0b8e006f8dd))
+
+## [0.2.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.1.0...launchdarkly_flutter_observability-0.2.0) (2026-06-02)
+
+
+### Features
+
+* **@launchdarkly/session-replay-react-native:** use cocoapods for native session replay ([#434](https://github.com/launchdarkly/observability-sdk/issues/434)) ([41988e1](https://github.com/launchdarkly/observability-sdk/commit/41988e196b02901964efdad0e25f892d5ba55fc4))
+* Android - support SurfaceView ([#563](https://github.com/launchdarkly/observability-sdk/issues/563)) ([f142c1e](https://github.com/launchdarkly/observability-sdk/commit/f142c1e857880713aa6312e23ee7e4aea545700a))
+* Flutter API and package publish ([#578](https://github.com/launchdarkly/observability-sdk/issues/578)) ([7f82771](https://github.com/launchdarkly/observability-sdk/commit/7f827717e833dc108fc0f77d19b82a8291f5909a))
+
+## 0.1.0
+
+Initial early-access release of `launchdarkly_flutter_observability`.
+
+### Features
+
+* Unified `LDObserve` facade for observability (spans, logs, errors) and session replay.
+* Cross-platform Dart OpenTelemetry pipeline (mobile and web).
+* Native session replay capture on iOS and Android via `SessionReplayCapture`.
+* Automatic instrumentation: HTTP requests, crash/error reporting, feature flag evaluation correlation, app lifecycle/launch times, and `print`/`debugPrint` capture.

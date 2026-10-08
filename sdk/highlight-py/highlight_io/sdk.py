@@ -236,7 +236,8 @@ class H(object):
                 OTLPSpanExporter(
                     f"{self._otlp_endpoint}/v1/traces",
                     compression=Compression.Gzip,
-                    timeout=kwargs["schedule_delay_millis"],
+                    # exporter timeout is in seconds, not milliseconds
+                    timeout=kwargs["schedule_delay_millis"] / 1000,
                 ),
                 **kwargs,
             )
@@ -252,7 +253,8 @@ class H(object):
                 OTLPLogExporter(
                     f"{self._otlp_endpoint}/v1/logs",
                     compression=Compression.Gzip,
-                    timeout=kwargs["schedule_delay_millis"],
+                    # exporter timeout is in seconds, not milliseconds
+                    timeout=kwargs["schedule_delay_millis"] / 1000,
                 ),
                 **kwargs,
             )
@@ -264,7 +266,8 @@ class H(object):
             exporter=OTLPMetricExporter(
                 f"{self._otlp_endpoint}/v1/metrics",
                 compression=Compression.Gzip,
-                timeout=kwargs["schedule_delay_millis"],
+                # exporter timeout is in seconds, not milliseconds
+                timeout=kwargs["schedule_delay_millis"] / 1000,
                 max_export_batch_size=kwargs["max_export_batch_size"],
                 preferred_temporality={
                     Counter: AggregationTemporality.DELTA,

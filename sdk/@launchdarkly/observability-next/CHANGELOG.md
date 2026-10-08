@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.2.11](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.10...observability-next-0.2.11) (2026-10-07)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.25
+    * @launchdarkly/session-replay bumped to 1.1.25
+
+## [0.2.10](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.9...observability-next-0.2.10) (2026-10-06)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.24
+    * @launchdarkly/session-replay bumped to 1.1.24
+
+## [0.2.9](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.8...observability-next-0.2.9) (2026-09-24)
+
+
+### Bug Fixes
+
+* **observability-next:** require next &gt;=16.3.3 to resolve GHSA-p293-qw3h-jr36 ([#762](https://github.com/launchdarkly/observability-sdk/issues/762)) ([42dc7ed](https://github.com/launchdarkly/observability-sdk/commit/42dc7ed12783a0a7618185f6538a0f61ec4066ee))
+
+## [0.2.8](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.7...observability-next-0.2.8) (2026-09-15)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.23
+    * @launchdarkly/session-replay bumped to 1.1.23
+
+## [0.2.7](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.6...observability-next-0.2.7) (2026-09-09)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.22
+    * @launchdarkly/session-replay bumped to 1.1.22
+
 ## [0.2.6](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.5...observability-next-0.2.6) (2026-09-09)
 
 

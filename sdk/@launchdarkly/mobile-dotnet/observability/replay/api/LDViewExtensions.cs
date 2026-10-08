@@ -32,4 +32,19 @@ public static class LDViewExtensions
             LDMasking.Unmask(nativeView);
         #endif
     }
+
+    /// <summary>
+    /// Leaves the view out of recordings. On Android, where the native SDK has no per-view
+    /// ignore, the view is masked instead.
+    /// </summary>
+    public static void LDIgnore(this View view)
+    {
+        #if IOS
+        if (view?.Handler?.PlatformView is UIView uiView)
+            LDMasking.Ignore(uiView);
+        #elif ANDROID
+        if (view?.Handler?.PlatformView is Android.Views.View nativeView)
+            LDMasking.Mask(nativeView);
+        #endif
+    }
 }

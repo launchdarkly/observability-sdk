@@ -4,6 +4,8 @@ import com.launchdarkly.observability.otlp.json.JsonTestHelpers.array
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.boolean
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.double
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.encodeToTree
+import com.launchdarkly.observability.otlp.json.JsonTree
+import com.launchdarkly.observability.otlp.json.toJsonBytes
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.obj
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.string
 import io.opentelemetry.api.common.AttributeKey
@@ -23,7 +25,6 @@ import io.opentelemetry.sdk.metrics.internal.data.ImmutableLongPointData
 import io.opentelemetry.sdk.metrics.internal.data.ImmutableSumData
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.testing.metrics.TestMetricData
-import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -227,9 +228,9 @@ class JsonMetricsAdapterTest {
         )
     }
 
-    private fun drillToMetric(metric: io.opentelemetry.sdk.metrics.data.MetricData): JsonObject {
+    private fun drillToMetric(metric: io.opentelemetry.sdk.metrics.data.MetricData): JsonTree {
         val request = JsonMetricsAdapter.toJsonRequest(listOf(metric))
-        val tree = encodeToTree(request, OtlpJsonExportMetricsServiceRequest.serializer())
+        val tree = encodeToTree(request.toJsonBytes())
 
         val resourceMetric = obj(array(tree["resourceMetrics"])[0])
         val scopeMetric = obj(array(resourceMetric["scopeMetrics"])[0])

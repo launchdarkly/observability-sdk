@@ -17,12 +17,7 @@ import com.launchdarkly.observability.replay.RRWebIncrementalSource
 import com.launchdarkly.observability.replay.RRWebMouseInteraction
 import com.launchdarkly.observability.replay.capture.ExportFrame
 import com.launchdarkly.observability.replay.capture.ImageSignature
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.putJsonObject
+import com.launchdarkly.observability.json.JsonByteWriter
 
 /**
  * Generates RRWeb-compatible events for session replay.
@@ -266,18 +261,18 @@ class RRWebEventGenerator(
             timestamp = exportFrame.timestamp,
             sid = nextSid(),
             data = EventDataUnion.CustomEventDataWrapper(
-                buildJsonObject {
-                    put("tag", RRWebCustomDataTag.VIEWPORT.wireValue)
-                    putJsonObject("payload") {
-                        put("width", exportFrame.originalSize.width)
-                        put("height", exportFrame.originalSize.height)
-                        put("availWidth", exportFrame.originalSize.width)
-                        put("availHeight", exportFrame.originalSize.height)
-                        put("colorDepth", 30)
-                        put("pixelDepth", 30)
-                        put("orientation", exportFrame.orientation)
-                    }
-                }
+                mapOf(
+                    "tag" to RRWebCustomDataTag.VIEWPORT.wireValue,
+                    "payload" to mapOf(
+                        "width" to exportFrame.originalSize.width,
+                        "height" to exportFrame.originalSize.height,
+                        "availWidth" to exportFrame.originalSize.width,
+                        "availHeight" to exportFrame.originalSize.height,
+                        "colorDepth" to 30,
+                        "pixelDepth" to 30,
+                        "orientation" to exportFrame.orientation,
+                    ),
+                )
             )
         )
         eventBatch.add(viewportEvent)
@@ -301,42 +296,13 @@ class RRWebEventGenerator(
                         timestamp = firstPosition.timestamp,
                         sid = nextSid(),
                         data = EventDataUnion.CustomEventDataWrapper(
-                            buildJsonObject {
-                                put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
-                                putJsonArray("texts") {}
-                                put("type", RRWebMouseInteraction.TOUCH_START.code)
-                                imageNodeId?.let { put("id", it) }
-                                put("x", firstPosition.x + RRWEB_DOCUMENT_PADDING)
-                                put("y", firstPosition.y + RRWEB_DOCUMENT_PADDING)
-                            }
+                            touchData(RRWebMouseInteraction.TOUCH_START, firstPosition.x, firstPosition.y)
                         )
                     )
                 )
-                // Mirror the web `Click` payload (`highlight-run` ClickListener):
-                // - clickTarget: target view class name (web: full CSS selector path)
-                // - clickTextContent: the target's visible text (web: `target.textContent`)
-                // - clickSelector: resource-id else class name (web: `#id` else tag)
-                val clickCustomData = buildJsonObject {
-                    put("tag", RRWebCustomDataTag.CLICK.wireValue)
-                    putJsonObject("payload") {
-                        put("clickTarget", interactionEvent.targetClassName ?: "")
-                        put("clickTextContent", interactionEvent.targetText ?: "")
-                        put(
-                            "clickSelector",
-                            interactionEvent.targetResourceId
-                                ?: interactionEvent.targetClassName
-                                ?: CLICK_SELECTOR_FALLBACK
-                        )
-                    }
-                }
-                events.add(
-                    Event(
-                        type = EventType.CUSTOM,
-                        timestamp = firstPosition.timestamp,
-                        sid = nextSid(),
-                        data = EventDataUnion.CustomEventDataWrapper(clickCustomData)
-                    )
-                )
+                // No `Click` event here: a touch-down is not yet a click (it may become a drag or a
+                // long press), and this stream cannot see clicks an embedder resolves itself. Clicks
+                // arrive from Observability's click funnel instead - see [generateClickEvent].
             }
 
             MotionEvent.ACTION_UP -> { // CANCEL is not here because UP and CANCEL are merged to UP in interaction source.
@@ -347,14 +313,7 @@ class RRWebEventGenerator(
                         timestamp = lastPosition.timestamp,
                         sid = nextSid(),
                         data = EventDataUnion.CustomEventDataWrapper(
-                            buildJsonObject {
-                                put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
-                                putJsonArray("texts") {}
-                                put("type", RRWebMouseInteraction.TOUCH_END.code)
-                                imageNodeId?.let { put("id", it) }
-                                put("x", lastPosition.x + RRWEB_DOCUMENT_PADDING)
-                                put("y", lastPosition.y + RRWEB_DOCUMENT_PADDING)
-                            }
+                            touchData(RRWebMouseInteraction.TOUCH_END, lastPosition.x, lastPosition.y)
                         )
                     )
                 )
@@ -369,19 +328,17 @@ class RRWebEventGenerator(
                             timestamp = position.timestamp,
                             sid = nextSid(),
                             data = EventDataUnion.CustomEventDataWrapper(
-                                buildJsonObject {
-                                    put("source", RRWebIncrementalSource.TOUCH_MOVE.code)
-                                    put("positions", buildJsonArray {
-                                        add(
-                                            buildJsonObject {
-                                                imageNodeId?.let { put("id", it) }
-                                                put("timeOffset", 0)
-                                                put("x", position.x + RRWEB_DOCUMENT_PADDING)
-                                                put("y", position.y + RRWEB_DOCUMENT_PADDING)
-                                            }
-                                        )
-                                    })
-                                }
+                                mapOf(
+                                    "source" to RRWebIncrementalSource.TOUCH_MOVE.code,
+                                    "positions" to listOf(
+                                        buildMap {
+                                            imageNodeId?.let { put("id", it) }
+                                            put("timeOffset", 0)
+                                            put("x", position.x + RRWEB_DOCUMENT_PADDING)
+                                            put("y", position.y + RRWEB_DOCUMENT_PADDING)
+                                        }
+                                    ),
+                                )
                             )
                         )
                     )
@@ -392,24 +349,33 @@ class RRWebEventGenerator(
         return events
     }
 
+    private fun touchData(interaction: RRWebMouseInteraction, x: Int, y: Int): Map<String, Any?> = buildMap {
+        put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
+        put("texts", emptyList<String>())
+        put("type", interaction.code)
+        imageNodeId?.let { put("id", it) }
+        put("x", x + RRWEB_DOCUMENT_PADDING)
+        put("y", y + RRWEB_DOCUMENT_PADDING)
+    }
+
+    /** A compact JSON string, for the custom events whose payload is stringified JSON. */
+    private fun jsonString(value: Map<String, Any?>): String = JsonByteWriter.encodeToString { anyValue(value) }
+
     /**
      * Payload is a JSON string representing the user attributes map.
      */
     fun generateIdentifyEvent(identify: IdentifyItemPayload): Event? {
         val userJSONString = try {
-            // Encode attributes map into a compact JSON string without requiring serializers
-            buildJsonObject {
-                identify.attributes.forEach { (k, v) -> put(k, v) }
-            }.toString()
+            jsonString(identify.attributes)
         } catch (_: Exception) {
             return null
         }
 
-        val customData = buildJsonObject {
-            put("tag", JsonPrimitive(RRWebCustomDataTag.IDENTIFY.wireValue))
+        val customData = mapOf(
+            "tag" to RRWebCustomDataTag.IDENTIFY.wireValue,
             // Payload must be a JSON string per rrweb Custom event contract used by Swift
-            put("payload", JsonPrimitive(userJSONString))
-        }
+            "payload" to userJSONString,
+        )
 
         return Event(
             type = EventType.CUSTOM,
@@ -425,22 +391,22 @@ class RRWebEventGenerator(
      */
     fun generateTrackEvent(track: TrackItemPayload): Event? {
         val payloadJSONString = try {
-            buildJsonObject {
-                put("event", track.name)
-                track.metricValue?.let { put("value", it) }
-                putJsonObject("data") {
-                    track.attributes.forEach { (k, v) -> put(k, v) }
+            jsonString(
+                buildMap {
+                    put("event", track.name)
+                    track.metricValue?.let { put("value", it) }
+                    put("data", track.attributes)
                 }
-            }.toString()
+            )
         } catch (_: Exception) {
             return null
         }
 
-        val customData = buildJsonObject {
-            put("tag", JsonPrimitive(RRWebCustomDataTag.TRACK.wireValue))
+        val customData = mapOf(
+            "tag" to RRWebCustomDataTag.TRACK.wireValue,
             // Payload must be a JSON string per rrweb Custom event contract used by web / Swift.
-            put("payload", JsonPrimitive(payloadJSONString))
-        }
+            "payload" to payloadJSONString,
+        )
 
         return Event(
             type = EventType.CUSTOM,
@@ -455,14 +421,44 @@ class RRWebEventGenerator(
      * (here the screen name) as a plain string.
      */
     fun generateNavigateEvent(navigate: NavigateItemPayload): Event {
-        val customData = buildJsonObject {
-            put("tag", JsonPrimitive(RRWebCustomDataTag.NAVIGATE.wireValue))
-            put("payload", JsonPrimitive(navigate.name))
-        }
+        val customData = mapOf(
+            "tag" to RRWebCustomDataTag.NAVIGATE.wireValue,
+            "payload" to navigate.name,
+        )
 
         return Event(
             type = EventType.CUSTOM,
             timestamp = navigate.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
+     * Generates a "Click" custom event from Observability's click funnel, which covers both
+     * automatically detected taps and clicks reported through `LDObserve.trackClick` (the path
+     * embedders such as Flutter use, since a native hit-test only ever finds their render surface).
+     *
+     * Mirrors the web `Click` payload (`highlight-run` ClickListener):
+     * - `clickTarget`: element class name (web: full CSS selector path)
+     * - `clickTextContent`: the element's visible text (web: `target.textContent`)
+     * - `clickSelector`: stable id else class name (web: `#id` else tag)
+     */
+    fun generateClickEvent(click: ClickItemPayload): Event {
+        val customData = mapOf(
+            "tag" to RRWebCustomDataTag.CLICK.wireValue,
+            "payload" to buildMap {
+                put("clickTarget", click.target ?: "")
+                put("clickTextContent", click.text ?: "")
+                put("clickSelector", click.id ?: click.target ?: CLICK_SELECTOR_FALLBACK)
+                click.screenId?.let { put("screenId", it) }
+                click.screenName?.let { put("screenName", it) }
+            },
+        )
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = click.timestamp,
             sid = nextSid(),
             data = EventDataUnion.CustomEventDataWrapper(customData)
         )
@@ -475,17 +471,19 @@ class RRWebEventGenerator(
      */
     fun generateAppLifecycleEvent(payload: AppLifecycleItemPayload): Event? {
         val payloadJSONString = try {
-            buildJsonObject {
-                payload.lifecycleState?.let { put("lifecycle_state", it) }
-            }.toString()
+            jsonString(
+                buildMap {
+                    payload.lifecycleState?.let { put("lifecycle_state", it) }
+                }
+            )
         } catch (_: Exception) {
             return null
         }
 
-        val customData = buildJsonObject {
-            put("tag", JsonPrimitive(payload.tag.wireValue))
-            put("payload", JsonPrimitive(payloadJSONString))
-        }
+        val customData = mapOf(
+            "tag" to payload.tag.wireValue,
+            "payload" to payloadJSONString,
+        )
 
         return Event(
             type = EventType.CUSTOM,
@@ -501,20 +499,22 @@ class RRWebEventGenerator(
      */
     fun generateAppLaunchEvent(payload: AppLaunchItemPayload): Event? {
         val payloadJSONString = try {
-            buildJsonObject {
-                payload.launchType?.let { put("launch_type", it) }
-                payload.version?.let { put("version", it) }
-                payload.build?.let { put("build", it) }
-                payload.previousVersion?.let { put("previous_version", it) }
-            }.toString()
+            jsonString(
+                buildMap {
+                    payload.launchType?.let { put("launch_type", it) }
+                    payload.version?.let { put("version", it) }
+                    payload.build?.let { put("build", it) }
+                    payload.previousVersion?.let { put("previous_version", it) }
+                }
+            )
         } catch (_: Exception) {
             return null
         }
 
-        val customData = buildJsonObject {
-            put("tag", JsonPrimitive(payload.tag.wireValue))
-            put("payload", JsonPrimitive(payloadJSONString))
-        }
+        val customData = mapOf(
+            "tag" to payload.tag.wireValue,
+            "payload" to payloadJSONString,
+        )
 
         return Event(
             type = EventType.CUSTOM,
@@ -545,10 +545,10 @@ class RRWebEventGenerator(
     }
 
     private fun generateReloadEvent(timestamp: Long): Event {
-        val customData = buildJsonObject {
-            put("tag", JsonPrimitive(RRWebCustomDataTag.RELOAD.wireValue))
-            put("payload", JsonPrimitive(title))
-        }
+        val customData = mapOf(
+            "tag" to RRWebCustomDataTag.RELOAD.wireValue,
+            "payload" to title,
+        )
         return Event(
             type = EventType.CUSTOM,
             timestamp = timestamp,
@@ -563,14 +563,14 @@ class RRWebEventGenerator(
         id: Int,
         timestamp: Long
     ): Event {
-        val customData = buildJsonObject {
-            put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
-            putJsonArray("texts") {}
-            put("type", interactionType.code)
-            put("id", id)
-            put("x", RRWEB_DOCUMENT_PADDING)
-            put("y", RRWEB_DOCUMENT_PADDING)
-        }
+        val customData = mapOf(
+            "source" to RRWebIncrementalSource.MOUSE_INTERACTION.code,
+            "texts" to emptyList<String>(),
+            "type" to interactionType.code,
+            "id" to id,
+            "x" to RRWEB_DOCUMENT_PADDING,
+            "y" to RRWEB_DOCUMENT_PADDING,
+        )
         return Event(
             type = eventType,
             timestamp = timestamp,

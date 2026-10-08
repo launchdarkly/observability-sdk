@@ -18,6 +18,7 @@ internal object ClickAttributes {
     val EVENT_CLASSNAME = AttributeKey.stringKey("event.classname")
     val EVENT_ID = AttributeKey.stringKey("event.id")
     val EVENT_TEXT = AttributeKey.stringKey("event.text")
+    val EVENT_XPATH = AttributeKey.stringKey("event.xpath")
     val EVENT_SCREEN_ID = AttributeKey.stringKey("event.screen_id")
     val EVENT_SCREEN_NAME = AttributeKey.stringKey("event.screen_name")
     val EVENT_X = AttributeKey.longKey("event.x")
@@ -37,6 +38,7 @@ internal object ClickAttributes {
         screenName: String?,
         x: Long?,
         y: Long?,
+        xpath: String? = null,
         contextKeyAttributes: Attributes = Attributes.empty(),
         properties: Attributes = Attributes.empty(),
     ): Attributes {
@@ -48,10 +50,30 @@ internal object ClickAttributes {
         classname?.let { builder.put(EVENT_CLASSNAME, it) }
         id?.let { builder.put(EVENT_ID, it) }
         text?.let { builder.put(EVENT_TEXT, it) }
+        xpath?.let { builder.put(EVENT_XPATH, it) }
         screenId?.let { builder.put(EVENT_SCREEN_ID, it) }
         screenName?.let { builder.put(EVENT_SCREEN_NAME, it) }
         x?.let { builder.put(EVENT_X, it) }
         y?.let { builder.put(EVENT_Y, it) }
         return builder.build()
     }
+
+    /** Builds the span attributes for [click], the shape carried by the click funnel. */
+    fun build(
+        click: ClickEvent,
+        contextKeyAttributes: Attributes = Attributes.empty(),
+        properties: Attributes = Attributes.empty(),
+    ): Attributes = build(
+        tag = click.tag,
+        classname = click.classname,
+        id = click.id,
+        text = click.text,
+        screenId = click.screenId,
+        screenName = click.screenName,
+        x = click.x,
+        y = click.y,
+        xpath = click.xpath,
+        contextKeyAttributes = contextKeyAttributes,
+        properties = properties,
+    )
 }

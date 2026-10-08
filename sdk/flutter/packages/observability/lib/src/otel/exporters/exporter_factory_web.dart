@@ -1,0 +1,215 @@
+// Web (and any non-io target) exporter construction. Uses the Dart
+// OpenTelemetry pipeline directly: spans are exported over OTLP/HTTP via
+// [CollectorExporter], and logs are emitted as span events (the Dart pipeline
+// has no standalone logs exporter). This preserves the pre-existing behaviour.
+
+import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
+import 'package:opentelemetry/api.dart' as otel;
+import 'package:opentelemetry/sdk.dart'
+    show BatchSpanProcessor, CollectorExporter, SpanProcessor;
+
+import '../../api/attribute.dart';
+import '../../api/log_severity.dart';
+import '../../plugin/observability_config.dart';
+import '../click_convention.dart';
+import '../conversions.dart';
+import '../log_convention.dart';
+import '../screen_view_convention.dart';
+import '../track_convention.dart';
+import 'exporter_factory.dart';
+
+const _tracesSuffix = '/v1/traces';
+const _tracerName = 'launchdarkly-observability';
+
+/// Creates the web implementation of [ObservabilityExporters].
+ObservabilityExporters createObservabilityExporters() => _WebExporters();
+
+class _WebExporters implements ObservabilityExporters {
+  @override
+  List<SpanProcessor> createSpanProcessors(ObservabilityConfig config) => [
+    BatchSpanProcessor(
+      CollectorExporter(Uri.parse('${config.otlpEndpoint}$_tracesSuffix')),
+    ),
+  ];
+
+  @override
+  LogRecorder createLogRecorder(ObservabilityConfig config) =>
+      _SpanEventLogRecorder();
+
+  // Without session replay on web these recorders only emit spans, so they
+  // follow `isEnabled` as well as their own analytics flag.
+  @override
+  TrackRecorder createTrackRecorder(ObservabilityConfig config) =>
+      _SpanTrackRecorder(config.enabled && config.trackEventsEnabled);
+
+  @override
+  IdentifyRecorder createIdentifyRecorder(ObservabilityConfig config) =>
+      _NoopIdentifyRecorder();
+
+  @override
+  ScreenViewRecorder createScreenViewRecorder(ObservabilityConfig config) =>
+      _SpanScreenViewRecorder(config.enabled && config.screenViewsEnabled);
+
+  @override
+  ClickRecorder createClickRecorder(ObservabilityConfig config) =>
+      _SpanClickRecorder(config.enabled && config.tapsEnabled);
+}
+
+/// Emits each click as a Dart `click` span via the OpenTelemetry pipeline. Gated
+/// by `analytics.taps`.
+class _SpanClickRecorder implements ClickRecorder {
+  _SpanClickRecorder(this._tapsEnabled);
+
+  final bool _tapsEnabled;
+
+  @override
+  void trackClick({
+    String? id,
+    String? tag,
+    String? classname,
+    String? text,
+    String? xpath,
+    int? x,
+    int? y,
+    int? timestampMillis,
+    Map<String, Object?>? properties,
+  }) {
+    if (!_tapsEnabled) {
+      return;
+    }
+    final tracer = otel.globalTracerProvider.getTracer(_tracerName);
+    final span = tracer.startSpan(
+      ClickConvention.spanName,
+      kind: otel.SpanKind.client,
+      attributes: convertAttributes(
+        ClickConvention.getSpanAttributes(
+          id: id,
+          tag: tag,
+          classname: classname,
+          text: text,
+          xpath: xpath,
+          x: x,
+          y: y,
+          properties: properties,
+        ),
+      ),
+    );
+    span.setStatus(otel.StatusCode.ok);
+    span.end();
+  }
+
+  @override
+  void setEmbedderClickHandling(bool enabled) {
+    // Nothing to suppress: web has no native tap detection that could describe
+    // — or double-report — a click.
+  }
+}
+
+/// Emits each screen view as a Dart `screen_view` span via the OpenTelemetry
+/// pipeline. Gated by `analytics.views`.
+class _SpanScreenViewRecorder implements ScreenViewRecorder {
+  _SpanScreenViewRecorder(this._screenViewsEnabled);
+
+  final bool _screenViewsEnabled;
+
+  @override
+  void trackScreenView(
+    String name, {
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  }) {
+    if (!_screenViewsEnabled) {
+      return;
+    }
+    final tracer = otel.globalTracerProvider.getTracer(_tracerName);
+    final span = tracer.startSpan(
+      ScreenViewConvention.spanName,
+      attributes: convertAttributes(
+        ScreenViewConvention.getSpanAttributes(
+          name: name,
+          screenClass: screenClass,
+          screenId: screenId,
+          category: category,
+          properties: properties,
+        ),
+      ),
+    );
+    span.setStatus(otel.StatusCode.ok);
+    span.end();
+  }
+}
+
+/// No Session Replay or context-key caching exists on the Dart web pipeline, so
+/// `identify` has nothing to forward.
+class _NoopIdentifyRecorder implements IdentifyRecorder {
+  @override
+  void identify({
+    required Map<String, String> contextKeys,
+    required String canonicalKey,
+    required bool completed,
+  }) {}
+}
+
+/// Emits each `track` event as a Dart `track` span via the OpenTelemetry
+/// pipeline. Gated by `analytics.trackEvents`.
+class _SpanTrackRecorder implements TrackRecorder {
+  _SpanTrackRecorder(this._trackEventsEnabled);
+
+  final bool _trackEventsEnabled;
+
+  @override
+  void track(
+    String eventName, {
+    LDValue? data,
+    num? metricValue,
+    LDContext? context,
+  }) {
+    if (!_trackEventsEnabled) {
+      return;
+    }
+    final tracer = otel.globalTracerProvider.getTracer(_tracerName);
+    final span = tracer.startSpan(
+      TrackConvention.spanName,
+      attributes: convertAttributes(
+        TrackConvention.getSpanAttributes(
+          eventName: eventName,
+          data: data,
+          metricValue: metricValue,
+          context: context,
+        ),
+      ),
+    );
+    span.setStatus(otel.StatusCode.ok);
+    span.end();
+  }
+}
+
+/// Emits each log as an event on a short-lived span, parented to the active
+/// span so it is correlated with the surrounding trace.
+class _SpanEventLogRecorder implements LogRecorder {
+  @override
+  void recordLog(
+    String message, {
+    required LogSeverity severity,
+    StackTrace? stackTrace,
+    Map<String, Attribute>? attributes,
+  }) {
+    final combinedAttributes = LogConvention.getEventAttributes(
+      message,
+      severity.name,
+      stackTrace,
+    );
+    if (attributes != null) {
+      combinedAttributes.addAll(attributes);
+    }
+    final tracer = otel.globalTracerProvider.getTracer(_tracerName);
+    final span = tracer.startSpan(LogConvention.spanName);
+    span.addEvent(
+      LogConvention.eventName,
+      attributes: convertAttributes(combinedAttributes),
+    );
+    span.end();
+  }
+}

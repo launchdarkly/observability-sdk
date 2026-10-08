@@ -1,0 +1,155 @@
+<Project>
+
+	<!--
+		.NET 10 variant of MauiSample9.csproj. It deliberately lives in the same folder and
+		compiles the same sources (the namespace stays MauiSample9, matching the XAML x:Class
+		values), so the two projects differ only by target framework and package versions.
+
+		Because both projects share this directory, the SDK is imported explicitly rather than
+		via the Sdk attribute: BaseIntermediateOutputPath / BaseOutputPath have to be set before
+		Microsoft.Common.props reads them, otherwise the two projects would fight over the same
+		obj/project.assets.json.
+
+		Requires the .NET 10 SDK.
+	-->
+	<PropertyGroup>
+		<BaseIntermediateOutputPath>obj\MauiSample10\</BaseIntermediateOutputPath>
+		<BaseOutputPath>bin\MauiSample10\</BaseOutputPath>
+	</PropertyGroup>
+
+	<Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+	<PropertyGroup>
+		<TargetFrameworks>net10.0-android;net10.0-ios</TargetFrameworks>
+
+		<OutputType>Exe</OutputType>
+		<RootNamespace>MauiSample9</RootNamespace>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<!-- We rely on the installed MAUI workload packs (no Microsoft.Maui.* PackageReferences here). -->
+		<SkipValidateMauiImplicitPackageReferences>true</SkipValidateMauiImplicitPackageReferences>
+
+		<!--
+			The sibling MauiSample9 project keeps its own bin/ and obj/ in this same folder.
+			The default excludes only cover this project's output paths, so exclude both trees
+			explicitly to keep their .cs/.xaml out of this project's globs.
+		-->
+		<DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**</DefaultItemExcludes>
+
+		<!-- Display name -->
+		<ApplicationTitle>MauiSample10</ApplicationTitle>
+
+		<!-- App Identifier. Distinct from the .NET 9 sample so both can be installed side by side. -->
+		<ApplicationId>com.companyname.mauisample10</ApplicationId>
+
+		<!-- Versions -->
+		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- App Icon -->
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+
+		<!-- Splash Screen -->
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+
+		<!-- Images -->
+		<MauiImage Include="Resources\Images\*" />
+		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
+
+		<!-- Custom Fonts -->
+		<MauiFont Include="Resources\Fonts\*" />
+
+		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.90" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+		<!--
+			v11 (used by the .NET 9 sample) caps Microsoft.Maui.Essentials at < 10.0.0, so MAUI 10
+			requires v15. The toolkit reworked the Popup API in between (Close -> CloseAsync), which
+			DialogsPage.xaml.cs handles with a NET10_0_OR_GREATER guard.
+		-->
+		<PackageReference Include="CommunityToolkit.Maui" Version="15.0.1" />
+		<!--
+			Held at 10.0.6 (same as the .NET 9 sample): it already ships a net10.0 group, whereas
+			11.0.0 declares a dependency on the unrelated legacy Plugin.BottomSheet 1.0.0, which
+			drags in Xamarin.Forms and fails the MAUI build with error MA001.
+		-->
+		<PackageReference Include="Plugin.Maui.BottomSheet" Version="10.0.6" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="appsettings.json" />
+		<EmbeddedResource Include="appsettings.Local.json" Condition="Exists('appsettings.Local.json')" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
+		<!-- (No AndroidX pins here; LDObservability carries required minimums) -->
+	</ItemGroup>
+
+	<!--
+		Firebase is here as a standing compatibility check, not because the sample uses it.
+
+		It is common enough in customer apps that we need to keep building against it, and its
+		dependency graph is what surfaced the R8 duplicate-class failure in the Delta Faucet
+		report: Firebase.Common -> AndroidX.DataStore.Preferences -> Square.OkIO.JVM and
+		Xamarin.KotlinX.Serialization.Json.Jvm. Square.OkIO.JVM embeds its own copy of okio,
+		which used to collide with the okio inside ldobserve-otel-bundle.jar (now relocated
+		under com.launchdarkly.sessionreplay.shaded), and the KotlinX package is the second
+		copy that made our old Org.Jetbrains.Kotlinx.KotlinxSerializationJson dependency fatal.
+
+		Both collisions only appear in Release, where R8 runs, so Release builds of this project
+		are the ones that actually exercise the check.
+	-->
+	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
+		<PackageReference Include="Xamarin.Firebase.Messaging" Version="125.0.1.2" />
+		<PackageReference Include="Xamarin.Firebase.Analytics" Version="123.0.0.3" />
+	</ItemGroup>
+
+	<!-- Observability library aggregates platform bindings and Android dependencies -->
+	<ItemGroup>
+		<ProjectReference Include="..\observability\LDObservability.csproj" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(UseLocalClientSdk)' == 'true'">
+		<ProjectReference Include="..\..\..\..\..\dotnet-core\pkgs\sdk\client\src\LaunchDarkly.ClientSdk.csproj"
+						SetTargetFramework="TargetFramework=netstandard2.0;BUILDFRAMEWORKS=netstandard2.0"
+						SkipGetTargetFrameworkProperties="true"
+						GlobalPropertiesToRemove="RuntimeIdentifier;TargetPlatformIdentifier;SupportedOSPlatformVersion;UseMaui;SkipValidateMauiImplicitPackageReferences" />
+	</ItemGroup>
+
+	<!-- Ensure native Android deps are included when building the app -->
+	<PropertyGroup Condition="$(TargetFramework.Contains('android'))">
+		<LD_INCLUDE_NATIVE_DEPS>true</LD_INCLUDE_NATIVE_DEPS>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!-- The Android SDK defaults this to false in every configuration and the iOS SDK in Release.
+		     When false, the trimmer hard-wires System.Net.Http diagnostics off and LDObserve records
+		     no HTTP spans, whatever networkRequests is set to. -->
+		<HttpActivityPropagationSupport>true</HttpActivityPropagationSupport>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$(TargetFramework.Contains('android'))">
+		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+		<!-- Use SocketsHttpHandler so System.Net.Http emits Activity diagnostics
+		     for automatic HTTP tracing via LDObserve. -->
+		<UseNativeHttpHandler>false</UseNativeHttpHandler>
+	</PropertyGroup>
+
+	<Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+</Project>

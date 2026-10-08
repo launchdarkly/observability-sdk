@@ -168,6 +168,19 @@ class ObservabilityService(
     val screenViewFlow: SharedFlow<ScreenViewEvent> = _screenViewFlow.asSharedFlow()
 
     /**
+     * Broadcasts each recorded click so Session Replay can emit a `Click` event regardless of the
+     * entry path (automatic tap detection or the manual
+     * [com.launchdarkly.observability.sdk.LDObserve.trackClick] API, which embedders such as Flutter
+     * use to report taps they resolved in their own widget tree). Shared with Session Replay via
+     * [ObservabilityContext.clickFlow].
+     */
+    private val _clickFlow = MutableSharedFlow<ClickEvent>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val clickFlow: SharedFlow<ClickEvent> = _clickFlow.asSharedFlow()
+
+    /**
      * Broadcasts each `track` event so Session Replay can emit a `Track` timeline event regardless
      * of the entry path (`LDClient.track` or [com.launchdarkly.observability.sdk.LDObserve.track],
      * including standalone init without `LDClient`). Shared via [ObservabilityContext.trackFlow].
@@ -220,7 +233,14 @@ class ObservabilityService(
     init {
         requireMainThread { "ObservabilityService must be initialized on the main thread" }
 
-        registerOtlpExporters()
+        // With `enabled = false` the service is still built, so Session Replay keeps its session,
+        // screen, click and lifecycle signals, but nothing is exported: no exporters, span/log
+        // processors or metric reader are registered, the batch worker never starts, and the crash,
+        // launch-time and sampling-config network work is skipped. Mirrors iOS, which leaves the
+        // service unstarted when `isEnabled` is false.
+        if (observabilityOptions.enabled) {
+            registerOtlpExporters()
+        }
         val otelRumConfig = createOtelRumConfig()
 
         val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
@@ -238,7 +258,7 @@ class ObservabilityService(
         // id and keep a single source of session identity across spans, logs, metrics, and replay.
         LDRumSessionManagerAccessor.setSessionManager(rumBuilder, ldSessionManager)
 
-        if (observabilityOptions.instrumentations.launchTime) {
+        if (observabilityOptions.enabled && observabilityOptions.instrumentations.launchTime) {
             addLaunchTimeInstrumentation(rumBuilder)
         }
 
@@ -265,7 +285,9 @@ class ObservabilityService(
 
             override fun onSessionEnded(session: Session) {}
         })
-        loadSamplingConfigAsync()
+        if (observabilityOptions.enabled) {
+            loadSamplingConfigAsync()
+        }
 
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
@@ -301,6 +323,9 @@ class ObservabilityService(
         // published as a `click` span is governed separately by `analytics.taps`.
         if (observabilityOptions.instrumentations.userTaps) {
             userInteractionManager.enableTouchCapture()
+            // Tap detection is the only consumer of the resolved target, so hit-testing each
+            // ACTION_DOWN is enabled here rather than for every recording session.
+            userInteractionManager.targetResolutionEnabled = true
             startTapInstrumentation()
         }
 
@@ -330,13 +355,15 @@ class ObservabilityService(
         // always available; the `app_launch` span is gated by analytics.appLaunch inside the handler.
         appLaunchTracker.start()
 
-        batchWorker.start()
+        if (observabilityOptions.enabled) {
+            batchWorker.start()
+        }
     }
 
     /**
-     * Detects taps from the shared [UserInteractionManager.touchFlow] and publishes a `click` span
-     * for each when [ObservabilityOptions.Analytics.taps] is enabled. A tap is an ACTION_DOWN
-     * followed by an ACTION_UP on the watched pointer within the long-press timeout and touch slop.
+     * Detects taps from the shared [UserInteractionManager.touchFlow] and routes each through
+     * [emitClick]. A tap is an ACTION_DOWN followed by an ACTION_UP on the watched pointer within
+     * the long-press timeout and touch slop.
      */
     private fun startTapInstrumentation() {
         scope.launch {
@@ -350,6 +377,7 @@ class ObservabilityService(
             var downTargetClassName: String? = null
             var downTargetText: String? = null
             var downTargetResourceId: String? = null
+            var downTargetEmbedderOwned = false
             var downScreenId: String? = null
             var downScreenName: String? = null
             userInteractionManager.touchFlow.collect { sample ->
@@ -361,39 +389,43 @@ class ObservabilityService(
                         downTargetClassName = sample.targetClassName
                         downTargetText = sample.targetText
                         downTargetResourceId = sample.targetResourceId
+                        downTargetEmbedderOwned = sample.targetEmbedderOwned
                         downScreenId = sample.screenId
                         downScreenName = sample.screenName
                     }
                     MotionEvent.ACTION_UP -> {
-                        if (!observabilityOptions.analytics.taps) return@collect
-                        if (!observabilityOptions.tracesApi.includeSpans) return@collect
                         val dx = sample.x - downX
                         val dy = sample.y - downY
                         val movedTooFar = dx * dx + dy * dy > TAP_SLOP_SQUARED_PX
                         val duration = sample.timestamp - downTimeMs
                         if (movedTooFar || duration > TAP_TIMEOUT_MS) return@collect
 
+                        // A tap the embedder already owns (Flutter resolves it in its own widget
+                        // tree and reports it via `trackClick`) carries no target, so reporting it
+                        // here would duplicate that click as an unhelpful `FlutterSurfaceView`.
+                        if (downTargetEmbedderOwned) return@collect
+
                         // Per analytics-taxonomy §4.1 `click`: one event for all element types,
                         // described through the `event.*` namespace. `event.tag` is the short
                         // element tag (e.g. `Button`); the fully-qualified class name is kept in
                         // `event.classname`. `event.screen_id`/`event.screen_name` correlate the tap
                         // with the screen it landed on, captured at ACTION_DOWN.
-                        val attrs = ClickAttributes.build(
-                            tag = downTargetClassName?.let { shortElementTag(it) },
-                            classname = downTargetClassName,
-                            id = downTargetResourceId,
-                            text = downTargetText,
-                            screenId = downScreenId,
-                            screenName = downScreenName,
-                            x = sample.x.toLong(),
-                            y = sample.y.toLong(),
+                        emitClick(
+                            ClickEvent(
+                                tag = downTargetClassName?.let { shortElementTag(it) },
+                                classname = downTargetClassName,
+                                id = downTargetResourceId,
+                                text = downTargetText,
+                                screenId = downScreenId,
+                                screenName = downScreenName,
+                                x = sample.x.toLong(),
+                                y = sample.y.toLong(),
+                                timestamp = sample.timestamp,
+                            ),
+                            // Span timing spans the whole gesture, DOWN through UP.
+                            spanStartTimeMs = downTimeMs,
+                            spanEndTimeMs = sample.timestamp,
                         )
-                        otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
-                            .setSpanKind(SpanKind.CLIENT)
-                            .setAllAttributes(attrs)
-                            .setStartTimestamp(downTimeMs, TimeUnit.MILLISECONDS)
-                            .startSpan()
-                            .end(sample.timestamp, TimeUnit.MILLISECONDS)
                     }
                 }
             }
@@ -429,7 +461,7 @@ class ObservabilityService(
         // [LDRumSessionManagerAccessor]), so no SessionConfig is applied here.
         val config = OtelRumConfig()
 
-        if (!observabilityOptions.instrumentations.crashReporting) {
+        if (!observabilityOptions.enabled || !observabilityOptions.instrumentations.crashReporting) {
             // Disables [io.opentelemetry.android.instrumentation.crash.CrashReporterInstrumentation.java]
             config.suppressInstrumentation("crash")
         }
@@ -461,6 +493,7 @@ class ObservabilityService(
 
     private fun configureLoggerProvider(sdkLoggerProviderBuilder: SdkLoggerProviderBuilder): SdkLoggerProviderBuilder {
         sdkLoggerProviderBuilder.setResource(resources)
+        if (!observabilityOptions.enabled) return sdkLoggerProviderBuilder
 
         val delegates = buildList<LogRecordProcessor> {
             add(EventLogRecordProcessor(eventQueue = eventQueue, batchWorker = batchWorker))
@@ -483,6 +516,7 @@ class ObservabilityService(
 
     private fun configureTracerProvider(sdkTracerProviderBuilder: SdkTracerProviderBuilder): SdkTracerProviderBuilder {
         sdkTracerProviderBuilder.setResource(resources)
+        if (!observabilityOptions.enabled) return sdkTracerProviderBuilder
 
         val debugExporters = buildList<io.opentelemetry.sdk.trace.export.SpanExporter> {
             if (observabilityOptions.debug) {
@@ -510,6 +544,7 @@ class ObservabilityService(
     }
 
     private fun configureMeterProvider(sdkMeterProviderBuilder: SdkMeterProviderBuilder): SdkMeterProviderBuilder {
+        if (!observabilityOptions.enabled) return sdkMeterProviderBuilder.setResource(resources)
         val eventExporter = EventMetricExporter(
             eventQueue = eventQueue,
             temporalitySelector = AggregationTemporalitySelector.deltaPreferred(),
@@ -687,8 +722,9 @@ class ObservabilityService(
      * Manually emit a `click` span, mirroring the automatic tap instrumentation. Use this to
      * reproduce the taxonomy `click` event for interactions automatic capture can't observe.
      *
-     * Gated by [ObservabilityOptions.Analytics.taps] (the same flag as automatic click spans) and
-     * the global span flag. When [screenId] is `null`, the current tracked screen's id and name are
+     * Routes through [emitClick], so the click also reaches Session Replay. The span is gated by
+     * [ObservabilityOptions.Analytics.taps] (the same flag as automatic click spans) and the global
+     * span flag; the replay event is not. When [screenId] is `null`, the current tracked screen's id and name are
      * used so the click correlates with the active `screen_view`; when an explicit [screenId] is
      * supplied, `event.screen_name` is omitted (its name is unknown here) to avoid pairing one
      * screen's id with another's name. Reserved `event.*` fields take precedence over caller
@@ -697,15 +733,15 @@ class ObservabilityService(
     override fun trackClick(
         id: String?,
         tag: String?,
+        classname: String?,
         text: String?,
+        xpath: String?,
         screenId: String?,
         x: Int?,
         y: Int?,
+        timestampMillis: Long?,
         properties: Map<String, Any?>?
     ) {
-        if (!observabilityOptions.analytics.taps) return
-        if (!observabilityOptions.tracesApi.includeSpans) return
-
         // Default to the current screen so the click correlates with the active `screen_view`. Only
         // pair the current screen's name when we actually defaulted to it; for a caller-supplied
         // `screenId` the matching name is unknown here, so omit `screen_name` rather than mismatch a
@@ -713,24 +749,69 @@ class ObservabilityService(
         val resolvedScreenId = screenId ?: screenStack.currentScreenId
         val resolvedScreenName = if (screenId == null) screenStack.currentScreenName else null
 
-        val attrs = ClickAttributes.build(
-            tag = tag,
-            classname = null,
-            id = id,
-            text = text,
-            screenId = resolvedScreenId,
-            screenName = resolvedScreenName,
-            x = x?.toLong(),
-            y = y?.toLong(),
-            contextKeyAttributes = cachedContextKeyAttributes,
+        emitClick(
+            ClickEvent(
+                tag = tag,
+                classname = classname,
+                id = id,
+                text = text,
+                xpath = xpath,
+                screenId = resolvedScreenId,
+                screenName = resolvedScreenName,
+                x = x?.toLong(),
+                y = y?.toLong(),
+                // An embedder captures the timestamp when the pointer actually went up; without it
+                // the replay marker and the `click` span would land wherever the (asynchronous)
+                // bridge call arrives, after the pointer trail they belong to.
+                timestamp = timestampMillis ?: System.currentTimeMillis(),
+            ),
             properties = properties?.toOtelAttributes() ?: Attributes.empty(),
         )
+    }
 
-        otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
+    /**
+     * Single funnel for clicks. Both the automatic tap detection in [startTapInstrumentation] and
+     * the manual [trackClick] API - the path embedders such as Flutter use to report taps they
+     * resolved in their own widget tree - route through here.
+     *
+     * The click broadcast (Session Replay `Click`) always fires; the `click` span is gated by
+     * [ObservabilityOptions.Analytics.taps], mirroring the navigation/track/lifecycle emitters.
+     *
+     * @param spanStartTimeMs Span start, when the caller knows the gesture began earlier than
+     *   [ClickEvent.timestamp] (automatic detection times the span from ACTION_DOWN to ACTION_UP).
+     *   Defaults to [ClickEvent.timestamp] so `trackClick(timestampMillis=...)` backdates the
+     *   span, not only the Session Replay marker.
+     * @param spanEndTimeMs Span end, paired with [spanStartTimeMs]. Defaults to
+     *   [ClickEvent.timestamp].
+     */
+    fun emitClick(
+        click: ClickEvent,
+        properties: Attributes = Attributes.empty(),
+        spanStartTimeMs: Long? = null,
+        spanEndTimeMs: Long? = null,
+    ) {
+        // Broadcast so Session Replay can record a `Click` event for every click path, independent
+        // of the span flags below (mirrors the `Navigate` broadcast in emitScreenView).
+        _clickFlow.tryEmit(click)
+
+        if (!observabilityOptions.analytics.taps) return
+        if (!observabilityOptions.tracesApi.includeSpans) return
+
+        // Reserved `event.*` fields take precedence over caller properties, matching the
+        // `screen_view`/`track` precedence model.
+        val attrs = ClickAttributes.build(
+            click = click,
+            contextKeyAttributes = cachedContextKeyAttributes,
+            properties = properties,
+        )
+
+        val (startMs, endMs) = click.spanWindow(spanStartTimeMs, spanEndTimeMs)
+        val span = otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
             .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrs)
+            .setStartTimestamp(startMs, TimeUnit.MILLISECONDS)
             .startSpan()
-            .end()
+        span.end(endMs, TimeUnit.MILLISECONDS)
     }
 
     /**

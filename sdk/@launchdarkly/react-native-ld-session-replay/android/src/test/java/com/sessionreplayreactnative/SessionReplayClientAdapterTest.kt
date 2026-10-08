@@ -155,7 +155,24 @@ class SessionReplayClientAdapterTest {
         var success: Boolean? = null
         var errorMessage: String? = null
 
-        adapter.start(mockk<Application>(relaxed = true), null) { s, e ->
+        adapter.start(mockk<Application>(relaxed = true), null, forceEnable = true) { s, e ->
+            success = s
+            errorMessage = e
+        }
+
+        assertEquals(false, success)
+        assertTrue(errorMessage!!.contains("mobile key"))
+    }
+
+    @Test
+    fun `initialize before setMobileKey calls completion with failure`() {
+        // Both entry points must reject a start that configure() never set up, not just the
+        // explicit one.
+        val adapter = newAdapter()
+        var success: Boolean? = null
+        var errorMessage: String? = null
+
+        adapter.start(mockk<Application>(relaxed = true), null, forceEnable = false) { s, e ->
             success = s
             errorMessage = e
         }

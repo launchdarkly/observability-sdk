@@ -657,7 +657,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						this.options.debug.domRecording)
 						? {
 								debug: this.logger.log,
-								warn: internalLog.bind('RecordSDK', 'warn'),
+								warn: internalLog.bind(
+									null,
+									'RecordSDK',
+									'warn',
+								),
 							}
 						: undefined,
 			})
@@ -867,12 +871,14 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			)
 
 			if (this.sessionShortcut) {
-				SessionShortcutListener(this.sessionShortcut, () => {
-					window.open(
-						this.getCurrentSessionURLWithTimestamp(),
-						'_blank',
-					)
-				})
+				this.listeners.push(
+					SessionShortcutListener(this.sessionShortcut, () => {
+						window.open(
+							this.getCurrentSessionURLWithTimestamp(),
+							'_blank',
+						)
+					}),
+				)
 			}
 
 			// only do this once, since we want to keep the visibility listener attached even when recoding is stopped
@@ -1242,6 +1248,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			const domain = (regexMatch.groups.domain ??
 				'') as keyof typeof LAUNCHDARKLY_ENV_APPS
 			const appUrl = LAUNCHDARKLY_ENV_APPS[domain]
+			if (!appUrl) {
+				return LAUNCHDARKLY_URL
+			}
 			return `https://${appUrl}${LAUNCHDARKLY_PATH_PREFIX}`
 		}
 		return LAUNCHDARKLY_URL

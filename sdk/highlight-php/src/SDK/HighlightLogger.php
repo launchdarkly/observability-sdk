@@ -21,7 +21,9 @@ class HighlightLogger {
         $severity = $record->getSeverity();
         $logRecord = new LogRecord($record->getMessage());
 
-        $logRecord->setTimestamp($record->getTimeOccurred()->getTimestamp())
+        // OpenTelemetry expects nanoseconds since the unix epoch; format('Uu')
+        // yields seconds+microseconds, so multiplying by 1000 gives nanos.
+        $logRecord->setTimestamp((int) $record->getTimeOccurred()->format('Uu') * 1000)
         ->setSeverityNumber($severity->id())
         ->setSeverityText($severity->text())
         ->setAttributes($record->getAttributes()->toArray());

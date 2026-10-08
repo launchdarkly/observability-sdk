@@ -26,14 +26,28 @@ class SessionReplayReactNativeModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  /** Initializes and honors the configured `isEnabled` (the plugin's auto-start). */
+  override fun initializeSessionReplay(promise: Promise) {
+    start(forceEnable = false, promise = promise)
+  }
+
+  /** Starts recording regardless of the configured `isEnabled`. */
   override fun startSessionReplay(promise: Promise) {
+    start(forceEnable = true, promise = promise)
+  }
+
+  private fun start(forceEnable: Boolean, promise: Promise) {
     val application = reactApplicationContext.applicationContext as? Application
     if (application == null) {
       promise.reject("start_failed", "Could not obtain application context.", null)
       return
     }
     try {
-      SessionReplayClientAdapter.shared.start(application, reactApplicationContext.getCurrentActivity()) { success, errorMessage ->
+      SessionReplayClientAdapter.shared.start(
+        application,
+        reactApplicationContext.getCurrentActivity(),
+        forceEnable
+      ) { success, errorMessage ->
         if (success) {
           promise.resolve(null)
         } else {

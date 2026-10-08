@@ -138,6 +138,12 @@ export const setupBrowserTracing = (
 		...(config.networkRecordingOptions?.urlBlocklist ?? []),
 		...DEFAULT_URL_BLOCKLIST,
 	]
+	// The SDK's own OTLP exports and replay uploads: their bodies must never be
+	// stashed or recorded. Compared case-insensitively as substrings, like the
+	// rest of the blocklist.
+	const ownEndpoints = [backendUrl, config.otlpEndpoint]
+		.filter((u): u is string => !!u)
+		.map((u) => u.toLowerCase())
 	const isDebug = import.meta.env.DEBUG === 'true'
 	const environment = config.environment ?? 'production'
 
@@ -493,7 +499,10 @@ export const setupBrowserTracing = (
 		// later re-init still finds the OTel wrapper (which enable() knows
 		// how to unwrap) rather than ours.
 		xhrRequestCaptureCleanup?.()
-		xhrRequestCaptureCleanup = installXhrRequestCapture(urlBlocklist)
+		xhrRequestCaptureCleanup = installXhrRequestCapture([
+			...urlBlocklist,
+			...ownEndpoints,
+		])
 	}
 
 	if (
@@ -504,8 +513,10 @@ export const setupBrowserTracing = (
 	) {
 		// Same placement rationale as the XHR capture above.
 		fetchRequestBodyCaptureCleanup?.()
-		fetchRequestBodyCaptureCleanup =
-			installFetchRequestBodyCapture(urlBlocklist)
+		fetchRequestBodyCaptureCleanup = installFetchRequestBodyCapture([
+			...urlBlocklist,
+			...ownEndpoints,
+		])
 	}
 
 	const contextManager = new StackContextManager()
@@ -1109,13 +1120,19 @@ const applyRequestResponseSanitizer = (
 			sessionSecureID: '',
 			id: '',
 			url,
-			verb: (attrs['http.request.method'] as string) ?? 'GET',
+			verb:
+				((attrs['http.request.method'] ??
+					attrs[
+						SemanticAttributes.SEMATTRS_HTTP_METHOD
+					]) as string) ?? 'GET',
 			headers: requestHeaders,
 			body: (attrs['http.request.body'] as string) ?? '',
 		},
 		response: {
 			status: Number(
-				attrs[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE] ?? 0,
+				attrs[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE] ??
+					attrs[SemanticAttributes.SEMATTRS_HTTP_STATUS_CODE] ??
+					0,
 			),
 			headers: responseHeaders,
 			body: (attrs['http.response.body'] as string) ?? '',
@@ -1275,10 +1292,10 @@ const assignResourceFetchDurations = (
 ) => {
 	const durations = {
 		domain_lookup:
-			(resource.domainLookupEnd - resource.domainLookupStart) * 1e9,
-		connect: (resource.connectEnd - resource.connectStart) * 1e9,
-		request: (resource.responseEnd - resource.requestStart) * 1e9,
-		response: (resource.responseEnd - resource.responseStart) * 1e9,
+			(resource.domainLookupEnd - resource.domainLookupStart) * 1e6,
+		connect: (resource.connectEnd - resource.connectStart) * 1e6,
+		request: (resource.responseEnd - resource.requestStart) * 1e6,
+		response: (resource.responseEnd - resource.responseStart) * 1e6,
 	}
 
 	Object.entries(durations).forEach(([key, value]) => {

@@ -130,7 +130,7 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 		const sampledItems = sampleSpans(items, this.sampler)
 		// Sampling removed all items and there is nothing to export.
 		if (sampledItems.length === 0) {
-			return
+			return resultCallback({ code: ExportResultCode.SUCCESS })
 		}
 
 		if (this.unloading) {

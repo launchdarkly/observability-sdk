@@ -16,6 +16,10 @@ import android.view.MotionEvent
  * @property targetText visible text / content description of the target view (truncated), if any.
  * @property targetResourceId the target view's resource entry name (the `accessibilityIdentifier`
  *   analog), if any.
+ * @property targetEmbedderOwned true when the touch landed on an embedder surface (a Flutter view)
+ *   whose contents this SDK cannot describe and whose embedder reports clicks itself, so tap
+ *   detection must skip this touch rather than report the surface view as the target. Distinct from a
+ *   null [targetClassName], which only means resolution failed.
  * @property screenId stable id (`event.screen_id`) of the active screen, read on the main thread at
  *   capture time (ACTION_DOWN) - before the touch is dispatched to app handlers that may navigate -
  *   so the click correlates with the screen the user actually tapped, not a destination screen.
@@ -29,6 +33,7 @@ data class TouchSample(
     val targetClassName: String? = null,
     val targetText: String? = null,
     val targetResourceId: String? = null,
+    val targetEmbedderOwned: Boolean = false,
     val screenId: String? = null,
     val screenName: String? = null,
 )

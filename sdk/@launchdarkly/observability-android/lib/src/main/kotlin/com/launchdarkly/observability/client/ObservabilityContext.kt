@@ -30,6 +30,13 @@ data class ObservabilityContext(
      */
     var screenViewFlow: SharedFlow<ScreenViewEvent>? = null,
     /**
+     * Ordered stream of recorded clicks from the single emitter, owned by Observability. Session
+     * Replay consumes it to emit `Click` events for every click path (automatic tap detection and
+     * the manual `LDObserve.trackClick` API, which embedders such as Flutter use to report taps
+     * resolved in their own widget tree).
+     */
+    var clickFlow: SharedFlow<ClickEvent>? = null,
+    /**
      * The automatic screen-view capture manager owned by Observability. Session Replay uses it to
      * register an already-resumed activity on late init (e.g. React Native) so the first screen
      * isn't missed.

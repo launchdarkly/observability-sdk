@@ -16,6 +16,7 @@ class ClickAttributesTest {
     private val eventClassname = AttributeKey.stringKey("event.classname")
     private val eventId = AttributeKey.stringKey("event.id")
     private val eventText = AttributeKey.stringKey("event.text")
+    private val eventXpath = AttributeKey.stringKey("event.xpath")
     private val eventScreenId = AttributeKey.stringKey("event.screen_id")
     private val eventScreenName = AttributeKey.stringKey("event.screen_name")
     private val eventX = AttributeKey.longKey("event.x")
@@ -46,6 +47,31 @@ class ClickAttributesTest {
     }
 
     @Test
+    fun `an embedder-resolved click carries its element path`() {
+        // Flutter's shape: a widget type and the ancestry path that locates it, with the screen
+        // fields left for the funnel to fill from the screen stack.
+        val attrs = ClickAttributes.build(
+            ClickEvent(
+                tag = "ElevatedButton",
+                id = "checkout.pay",
+                text = "Pay",
+                xpath = "Scaffold/Column/ElevatedButton#checkout.pay",
+                x = 120L,
+                y = 480L,
+            )
+        )
+
+        assertEquals("click", attrs.get(eventType))
+        assertEquals("ElevatedButton", attrs.get(eventTag))
+        assertEquals("checkout.pay", attrs.get(eventId))
+        assertEquals("Pay", attrs.get(eventText))
+        assertEquals("Scaffold/Column/ElevatedButton#checkout.pay", attrs.get(eventXpath))
+        assertEquals(120L, attrs.get(eventX))
+        assertEquals(480L, attrs.get(eventY))
+        assertNull(attrs.get(eventClassname))
+    }
+
+    @Test
     fun `optional fields are omitted when null`() {
         val attrs = ClickAttributes.build(
             tag = null,
@@ -64,6 +90,7 @@ class ClickAttributesTest {
         assertNull(attrs.get(eventClassname))
         assertNull(attrs.get(eventId))
         assertNull(attrs.get(eventText))
+        assertNull(attrs.get(eventXpath))
         assertNull(attrs.get(eventScreenId))
         assertNull(attrs.get(eventScreenName))
         assertNull(attrs.get(eventX))

@@ -3,8 +3,10 @@ import { getBodySizeLimit } from '../listeners/network-listener/utils/xhr-listen
 
 export type HeaderRecord = { [key: string]: string }
 
-// Bodies larger than this are described rather than decoded to text.
-const MAX_BINARY_DECODE_BYTES = 64 * 1024 * 1024
+// Bodies larger than this are described rather than decoded to text. Kept in
+// line with the largest recordable body (see getBodySizeLimit); decoding more
+// only to truncate it later is what made oversized bodies expensive.
+const MAX_BINARY_DECODE_BYTES = 256 * 1024
 
 const isMultipartFormData = (
 	contentType: string | null | undefined,

@@ -1,0 +1,111 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:launchdarkly_flutter_observability/src/options/observability_options.dart';
+import 'package:launchdarkly_flutter_observability/src/options/session_replay_options.dart';
+import 'package:launchdarkly_flutter_observability/src/platform/io/native_options_codec.dart';
+
+void main() {
+  group('ObservabilityOptions.toWire', () {
+    test('maps native-parity defaults', () {
+      final wire = const ObservabilityOptions().toWire();
+
+      expect(wire.customHeaders, isEmpty);
+      expect(wire.sessionBackgroundTimeoutMillis, 15 * 60 * 1000);
+      expect(wire.logsApiLevel, ObservabilityLogLevel.info.severity);
+      expect(wire.traces?.includeErrors, isTrue);
+      expect(wire.traces?.includeSpans, isTrue);
+      expect(wire.metricsEnabled, isTrue);
+      expect(wire.analytics?.taps, isTrue);
+      expect(wire.analytics?.views, isTrue);
+      expect(wire.analytics?.trackEvents, isTrue);
+      expect(wire.analytics?.appLifecycle, isTrue);
+      expect(wire.analytics?.appLaunch, isTrue);
+      expect(wire.instrumentation?.crashReporting, isTrue);
+      // Null lets native report the host app's own version.
+      expect(wire.serviceVersion, isNull);
+    });
+
+    test('propagates custom values', () {
+      final wire = const ObservabilityOptions(
+        isEnabled: false,
+        contextFriendlyName: 'checkout user',
+        customHeaders: {'x-proxy': 'value'},
+        sessionBackgroundTimeout: Duration(minutes: 5),
+        logsApiLevel: ObservabilityLogLevel.none,
+        traces: TracesOptions(includeErrors: false, includeSpans: false),
+        metricsEnabled: false,
+        analytics: AnalyticsOptions(
+          taps: true,
+          views: false,
+          trackEvents: false,
+          appLifecycle: false,
+          appLaunch: false,
+        ),
+        instrumentation: InstrumentationOptions(crashReporting: false),
+      ).toWire();
+
+      expect(wire.isEnabled, isFalse);
+      expect(wire.contextFriendlyName, 'checkout user');
+      expect(wire.customHeaders, {'x-proxy': 'value'});
+      expect(wire.sessionBackgroundTimeoutMillis, 5 * 60 * 1000);
+      expect(wire.logsApiLevel, 0x7fffffff);
+      expect(wire.traces?.includeErrors, isFalse);
+      expect(wire.traces?.includeSpans, isFalse);
+      expect(wire.metricsEnabled, isFalse);
+      expect(wire.analytics?.taps, isTrue);
+      expect(wire.analytics?.views, isFalse);
+      expect(wire.analytics?.trackEvents, isFalse);
+      expect(wire.analytics?.appLifecycle, isFalse);
+      expect(wire.analytics?.appLaunch, isFalse);
+      expect(wire.instrumentation?.crashReporting, isFalse);
+    });
+
+    test('maps a non-default log level to its OTel severity', () {
+      final wire = const ObservabilityOptions(
+        logsApiLevel: ObservabilityLogLevel.warn,
+      ).toWire();
+
+      expect(wire.logsApiLevel, 13);
+    });
+  });
+
+  group('SessionReplayOptions.toWire', () {
+    test('uses default sample rate, frame rate, scale, and image quality', () {
+      final wire = const SessionReplayOptions().toWire();
+
+      expect(wire.sampleRate, 1.0);
+      expect(wire.frameRate, 1.0);
+      expect(wire.scale, 1.0);
+      expect(wire.imageQuality, 0.3);
+    });
+
+    test('propagates a custom sample rate', () {
+      final wire = const SessionReplayOptions(sampleRate: 0.25).toWire();
+
+      expect(wire.sampleRate, 0.25);
+    });
+
+    test('propagates a custom frame rate', () {
+      final wire = const SessionReplayOptions(frameRate: 4.0).toWire();
+
+      expect(wire.frameRate, 4.0);
+    });
+
+    test('propagates a custom scale', () {
+      final wire = const SessionReplayOptions(scale: 2.0).toWire();
+
+      expect(wire.scale, 2.0);
+    });
+
+    test('propagates a custom image quality', () {
+      final wire = const SessionReplayOptions(imageQuality: 0.75).toWire();
+
+      expect(wire.imageQuality, 0.75);
+    });
+
+    test('propagates a null scale to disable the scaling override', () {
+      final wire = const SessionReplayOptions(scale: null).toWire();
+
+      expect(wire.scale, isNull);
+    });
+  });
+}
