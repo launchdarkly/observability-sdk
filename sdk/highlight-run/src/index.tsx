@@ -306,7 +306,11 @@ const H: HighlightPublicInterface = {
 				)
 			}
 		} else {
-			first_load_listeners.startListening()
+			// the client replaces its listeners on reset, so start the instance it
+			// currently owns rather than the one created at init
+			const listeners =
+				highlight_obj?._firstLoadListeners ?? first_load_listeners
+			listeners.startListening()
 			H.onHighlightReady(
 				async () => {
 					await highlight_obj.initialize(options)
