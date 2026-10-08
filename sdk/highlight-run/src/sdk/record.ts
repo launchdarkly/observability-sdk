@@ -871,12 +871,14 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			)
 
 			if (this.sessionShortcut) {
-				SessionShortcutListener(this.sessionShortcut, () => {
-					window.open(
-						this.getCurrentSessionURLWithTimestamp(),
-						'_blank',
-					)
-				})
+				this.listeners.push(
+					SessionShortcutListener(this.sessionShortcut, () => {
+						window.open(
+							this.getCurrentSessionURLWithTimestamp(),
+							'_blank',
+						)
+					}),
+				)
 			}
 
 			// only do this once, since we want to keep the visibility listener attached even when recoding is stopped
