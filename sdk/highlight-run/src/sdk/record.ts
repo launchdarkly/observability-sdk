@@ -1248,6 +1248,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			const domain = (regexMatch.groups.domain ??
 				'') as keyof typeof LAUNCHDARKLY_ENV_APPS
 			const appUrl = LAUNCHDARKLY_ENV_APPS[domain]
+			if (!appUrl) {
+				return LAUNCHDARKLY_URL
+			}
 			return `https://${appUrl}${LAUNCHDARKLY_PATH_PREFIX}`
 		}
 		return LAUNCHDARKLY_URL
