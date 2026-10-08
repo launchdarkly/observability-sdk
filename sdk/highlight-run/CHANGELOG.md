@@ -1,5 +1,16 @@
 # highlight.run
 
+## [10.7.8](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.7...highlight.run-10.7.8) (2026-10-08)
+
+
+### Bug Fixes
+
+* **highlight.run:** apply bodyKeysToRecord to elements of JSON array bodies ([#808](https://github.com/launchdarkly/observability-sdk/issues/808)) ([30d12a2](https://github.com/launchdarkly/observability-sdk/commit/30d12a2e42df2e38b9ad12124c0becc101b3186d))
+* **highlight.run:** clean up the session shortcut listener on stop ([#815](https://github.com/launchdarkly/observability-sdk/issues/815)) ([6efae67](https://github.com/launchdarkly/observability-sdk/commit/6efae6707335532350a2be185607564732ce4d85))
+* **highlight.run:** fall back to the default frontend URL for unknown backends ([#803](https://github.com/launchdarkly/observability-sdk/issues/803)) ([baafc3e](https://github.com/launchdarkly/observability-sdk/commit/baafc3ea8b47556cc9131e86c8ca6ee20de04cd0))
+* **highlight.run:** preserve and restore pre-existing window error handlers ([#807](https://github.com/launchdarkly/observability-sdk/issues/807)) ([f75de82](https://github.com/launchdarkly/observability-sdk/commit/f75de828453d5aa76a8be871a8c4ecaac4613f71))
+* **highlight.run:** stop first-load listeners before replacing them on reset ([#806](https://github.com/launchdarkly/observability-sdk/issues/806)) ([09f9763](https://github.com/launchdarkly/observability-sdk/commit/09f97635d4aaf41ce204e20b3238f58240c7b1ea))
+
 ## [10.7.7](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.6...highlight.run-10.7.7) (2026-10-07)
 
 
