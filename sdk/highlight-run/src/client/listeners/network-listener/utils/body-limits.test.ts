@@ -52,6 +52,44 @@ describe('body size limits', () => {
 		})
 	})
 
+	it('applies bodyKeysToRecord to every element of a JSON array body', () => {
+		const body = JSON.stringify([
+			{ id: 1, secret: 'a' },
+			null,
+			'leak',
+			42,
+			[{ secret: 'b' }],
+		])
+		const recorded = getBodyThatShouldBeRecorded(
+			body,
+			undefined,
+			['id'],
+			json,
+		)
+		expect(JSON.parse(recorded)).toEqual([
+			{ id: 1, secret: '[REDACTED]' },
+			'[REDACTED]',
+			'[REDACTED]',
+			'[REDACTED]',
+			'[REDACTED]',
+		])
+	})
+
+	it('redacts array elements even when the array contains non-objects', () => {
+		const body = JSON.stringify([null, { password: 'x', user: 'chad' }, 7])
+		const recorded = getBodyThatShouldBeRecorded(
+			body,
+			['password'],
+			undefined,
+			json,
+		)
+		expect(JSON.parse(recorded)).toEqual([
+			null,
+			{ password: '[REDACTED]', user: 'chad' },
+			7,
+		])
+	})
+
 	it('stops reading a cloned response stream once it is over the limit', async () => {
 		const chunk = new TextEncoder().encode('x'.repeat(64 * 1024))
 		let pulls = 0

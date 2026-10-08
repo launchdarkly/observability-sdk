@@ -333,6 +333,9 @@ export const getBodySizeLimit = (
 	)
 }
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+	typeof value === 'object' && value !== null && !Array.isArray(value)
+
 export const getBodyThatShouldBeRecorded = (
 	bodyData: any,
 	bodyKeysToRedact?: string[],
@@ -356,6 +359,9 @@ export const getBodyThatShouldBeRecorded = (
 
 				if (Array.isArray(json)) {
 					json.forEach((element) => {
+						if (!isPlainObject(element)) {
+							return
+						}
 						Object.keys(element).forEach((key) => {
 							if (
 								bodyKeysToRedact.includes(
@@ -384,11 +390,33 @@ export const getBodyThatShouldBeRecorded = (
 			try {
 				const json = JSON.parse(bodyData)
 
-				Object.keys(json).forEach((key) => {
-					if (!bodyKeysToRecord.includes(key.toLocaleLowerCase())) {
-						json[key] = '[REDACTED]'
-					}
-				})
+				if (Array.isArray(json)) {
+					json.forEach((element, index) => {
+						// An element without keys has nothing on the allowlist,
+						// so it is redacted whole rather than recorded as-is.
+						if (!isPlainObject(element)) {
+							json[index] = '[REDACTED]'
+							return
+						}
+						Object.keys(element).forEach((key) => {
+							if (
+								!bodyKeysToRecord.includes(
+									key.toLocaleLowerCase(),
+								)
+							) {
+								element[key] = '[REDACTED]'
+							}
+						})
+					})
+				} else {
+					Object.keys(json).forEach((key) => {
+						if (
+							!bodyKeysToRecord.includes(key.toLocaleLowerCase())
+						) {
+							json[key] = '[REDACTED]'
+						}
+					})
+				}
 
 				bodyData = JSON.stringify(json)
 			} catch {}
