@@ -333,6 +333,9 @@ export const getBodySizeLimit = (
 	)
 }
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+	typeof value === 'object' && value !== null && !Array.isArray(value)
+
 export const getBodyThatShouldBeRecorded = (
 	bodyData: any,
 	bodyKeysToRedact?: string[],
@@ -356,6 +359,9 @@ export const getBodyThatShouldBeRecorded = (
 
 				if (Array.isArray(json)) {
 					json.forEach((element) => {
+						if (!isPlainObject(element)) {
+							return
+						}
 						Object.keys(element).forEach((key) => {
 							if (
 								bodyKeysToRedact.includes(
@@ -385,7 +391,13 @@ export const getBodyThatShouldBeRecorded = (
 				const json = JSON.parse(bodyData)
 
 				if (Array.isArray(json)) {
-					json.forEach((element) => {
+					json.forEach((element, index) => {
+						// An element without keys has nothing on the allowlist,
+						// so it is redacted whole rather than recorded as-is.
+						if (!isPlainObject(element)) {
+							json[index] = '[REDACTED]'
+							return
+						}
 						Object.keys(element).forEach((key) => {
 							if (
 								!bodyKeysToRecord.includes(
