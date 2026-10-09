@@ -7,7 +7,7 @@ on:
                 required: true
                 type: choice
                 options:
-                    - sdk/highlight-run
+                    - 'sdk/@launchdarkly/o11y'
                     - 'sdk/@launchdarkly/observability-android'
                     - 'sdk/@launchdarkly/observability-dotnet'
                     - 'sdk/@launchdarkly/observability-node'
@@ -108,18 +108,18 @@ jobs:
                   cd "$WORKSPACE_PATH"
                   make docs
 
-            - name: Publish Highlight.run as Observability Plugin
-              if: inputs.workspace_path == 'sdk/highlight-run'
+            - name: Publish @launchdarkly/o11y docs as @launchdarkly/observability
+              if: inputs.workspace_path == 'sdk/@launchdarkly/o11y'
               uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
               with:
-                  docs_path: sdk/highlight-run/docs
+                  docs_path: sdk/@launchdarkly/o11y/docs
                   output_path: packages/@launchdarkly/observability
                   github_token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Publish Docs
-              # This is generalized to work with any package, but we don't use it for highlight-run,
+              # This is generalized to work with any package, but we don't use it for @launchdarkly/o11y,
               # because we publish its docs to a different path.
-              if: inputs.workspace_path != 'sdk/highlight-run'
+              if: inputs.workspace_path != 'sdk/@launchdarkly/o11y'
               uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
               with:
                   docs_path: ${{ inputs.workspace_path }}/docs

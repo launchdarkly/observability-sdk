@@ -69,7 +69,7 @@ sdk/highlight-wordpress/highlight-io.zip
 sdk/highlight-wordpress/highlight-io/highlight.js
 
 # Typedoc docs
-sdk/highlight-run/docs
+sdk/@launchdarkly/o11y/docs
 sdk/@launchdarkly/observability-react-native/docs
 
 # .NET mobile SDK build artifacts

@@ -1,2 +1,2 @@
-export { Record as default, LDRecord } from 'highlight.run'
-export type { RecordOptions } from 'highlight.run'
+export { Record as default, LDRecord } from '@launchdarkly/o11y'
+export type { RecordOptions } from '@launchdarkly/o11y'
