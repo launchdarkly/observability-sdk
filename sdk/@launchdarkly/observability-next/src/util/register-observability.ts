@@ -34,10 +34,15 @@ async function init(env: ObservabilityEnv) {
  * `env` — initialize once in `instrumentation.ts` for the canonical config.
  *
  * Bundling note: Turbopack may duplicate this module across server bundles
- * (each entry gets its own `initPromise`), so the in-flight/successful init is
+ * (each entry gets its own `initPromise`), so the in-flight init is
  * additionally cached on `globalThis` — only the first copy constructs the
  * `Observability` plugin (and with it the OTel NodeSDK and instrumentation
- * hooks). A failed init drops the cache so a later call can retry.
+ * hooks).
+ *
+ * Failure semantics: a failed init drops the cached promise so a later request
+ * can retry, and the rejection is re-thrown so that callers (e.g. route
+ * wrappers) surface the original error instead of a confusing downstream
+ * `LDObserve.*` failure on an uninitialized client.
  */
 export async function registerObservability(env: ObservabilityEnv) {
 	if (!isNodeJsRuntime()) {
@@ -47,23 +52,18 @@ export async function registerObservability(env: ObservabilityEnv) {
 		return
 	}
 
-	try {
-		// Cache the init process-wide so duplicated module copies converge on
-		// the first initialization instead of each constructing their own
-		// plugin (and therefore a second OTel NodeSDK).
-		globalThis.__ldObservabilityNextRegister ??= init(env)
-	} catch (e) {
-		// Synchronous failure scheduling init: drop the cache so a later call
-		// can retry, and warn.
-		globalThis.__ldObservabilityNextRegister = undefined
-		console.warn('LaunchDarkly observability registration failed: ', e)
-		return
-	}
+	// Cache the in-flight init process-wide so duplicated module copies converge
+	// on the first initialization instead of each constructing their own plugin
+	// (and therefore a second OTel NodeSDK). On failure the cache is dropped so
+	// a later call retries; the rejection still reaches each caller.
+	const inFlight = (globalThis.__ldObservabilityNextRegister ??= init(
+		env,
+	).catch((err) => {
+		if (globalThis.__ldObservabilityNextRegister === inFlight) {
+			globalThis.__ldObservabilityNextRegister = undefined
+		}
+		throw err
+	}))
 
-	try {
-		await globalThis.__ldObservabilityNextRegister
-	} catch (e) {
-		globalThis.__ldObservabilityNextRegister = undefined
-		console.warn('LaunchDarkly observability registration failed: ', e)
-	}
+	await inFlight
 }

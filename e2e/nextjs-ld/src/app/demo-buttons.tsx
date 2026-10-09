@@ -15,6 +15,9 @@ async function call(path: string, method = 'GET', body?: unknown) {
 	return { status: res.status, json: await res.json().catch(() => null) }
 }
 
+/** Fixed sample latency for the manual-span demo (constant, not user input). */
+const MANUAL_SPAN_SAMPLE_MS = 300
+
 function Button({
 	label,
 	onClick,
@@ -119,7 +122,12 @@ export function DemoButtons() {
 							'client.manual-span',
 							(span) => {
 								span.setAttribute('demo.kind', 'manual')
-								setTimeout(() => span.end(), 300)
+								// Short, constant sample delay (no user input).
+								const timer = setTimeout(
+									() => span.end(),
+									MANUAL_SPAN_SAMPLE_MS,
+								)
+								return timer
 							},
 						)
 					}}

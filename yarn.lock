@@ -10349,7 +10349,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/env@npm:15.5.27":
+"@next/env@npm:15.5.27, @next/env@npm:^15.5.10":
   version: 15.5.27
   resolution: "@next/env@npm:15.5.27"
   checksum: 10/12820bfe3950eaf0ef5d5b884876df9ccfcbe221f0bd5490ad146ab14cbb3b3010283a407b198e4b6c57a9e2f82da1fdc24edeeda05085858651514504018e3b
@@ -10360,13 +10360,6 @@ __metadata:
   version: 16.3.8
   resolution: "@next/env@npm:16.3.8"
   checksum: 10/986f34658f5f8f91c7e137e2d2e9f28eac17689a4f670208414ce2f2ae1a2243f35fe0228ff4eaf2cb9b9ea3c305917b69728a68e52bdfd643e74ad6002bc957
-  languageName: node
-  linkType: hard
-
-"@next/env@npm:^15.5.10":
-  version: 15.5.22
-  resolution: "@next/env@npm:15.5.22"
-  checksum: 10/0289b68fe3aeb5783d239637ff50dd483d1609e45b9e98b31ac0d5578fc3228f696fbda1a860b4b0a7ae414c30156ce1d3d889d3a173a5dbd96b362a1a1436f9
   languageName: node
   linkType: hard
 
@@ -17715,16 +17708,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:^19.0.2, @types/react-dom@npm:^19.0.4":
-  version: 19.0.4
-  resolution: "@types/react-dom@npm:19.0.4"
-  peerDependencies:
-    "@types/react": ^19.0.0
-  checksum: 10/f15d470242f0b7cca57dd7e991a2852525ac93b2cb92f7e6c104d7bd6a978c3b1d0ba9b8698f23bc19c16b5cd98a6d160007be52c61196952f57cf019f204254
-  languageName: node
-  linkType: hard
-
-"@types/react-dom@npm:^19.2.0":
+"@types/react-dom@npm:^19.0.2, @types/react-dom@npm:^19.0.4, @types/react-dom@npm:^19.2.0":
   version: 19.3.0
   resolution: "@types/react-dom@npm:19.3.0"
   peerDependencies:
