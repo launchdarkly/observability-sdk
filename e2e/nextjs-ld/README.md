@@ -116,6 +116,34 @@ yarn workspace nextjs-ld start
 #        --data-binary @/tmp/otlp-capture/<n>-_v1_traces.bin
 ```
 
+### Inspect ingested data in LaunchDarkly (MCP)
+
+Add the LaunchDarkly MCP server and sign in (browser OAuth):
+
+```bash
+pi mcp add launchdarkly-staging --url https://mcp.launchdarkly.com/mcp/staging
+pi mcp login launchdarkly-staging
+```
+
+Then query the ingested data from the shell via `scripts/ld-mcp.mjs` (a
+streamable-HTTP MCP client that reuses the token pi stored):
+
+```bash
+# sessions panel: find our e2e sessions (Headless Chrome from the browser-e2e run)
+node scripts/ld-mcp.mjs call query-sessions \
+	'{"projectKey":"default","startDate":"2026-10-09T18:00:00Z","count":10,"query":"secure_id=<SESSION_SECURE_ID>"}'
+# replay chunks (rrweb) for a session
+node scripts/ld-mcp.mjs call get-session-event-chunks \
+	'{"projectKey":"default","sessionSecureId":"<SESSION_SECURE_ID>"}'
+# errors / traces / logs (our env data lands under project `default`)
+node scripts/ld-mcp.mjs call query-error-groups \
+	'{"projectKey":"default","startDate":"...","query":"environment=vadim"}'
+node scripts/ld-mcp.mjs call query-traces \
+	'{"projectKey":"default","startDate":"...","query":"service_name=nextjs-ld-backend"}'
+node scripts/ld-mcp.mjs call query-logs \
+	'{"projectKey":"default","startDate":"...","query":"service_name=nextjs-ld-backend"}'
+```
+
 ### What the automation proved in this repo's last run
 
 - All route/telemetry CLI checks pass with the staging proxy enabled.
@@ -127,6 +155,29 @@ yarn workspace nextjs-ld start
   spans (`render route (app) /ssr`, `fetch GET ...`, `tcp.connect`, ...), and
   carry `highlight.session_id` equal to the browser's `sessionSecureID` — the
   frontend→backend session↔trace link end to end.
+
+### Verified in the LaunchDarkly staging UI data (via the MCP server)
+
+With project `default` / environment `vadim` (the environment owning the
+demo's SDK credentials):
+
+- **Sessions**: `query-sessions` returns the `browser-e2e.mjs` sessions
+  (`Headless Chrome` on Linux, `has_errors: true`, `processed: true`,
+  `chunked: true`); each has a `session_url` on ld-stg for playback, and
+  `get-session-event-chunks` + `get-session-event-chunk-url` return rrweb
+  chunks containing a full DOM snapshot (type 2) plus incremental
+  mutations.
+- **Errors**: 7 error groups for the demo scenarios — the 3 client errors
+  (uncaught handler throw, `<ErrorBoundary>` render crash,
+  `LDObserve.recordError`) and the 4 backend errors (`/api/test`,
+  `/api/legacy-error`, `/legacy/oops`, `/danger`).
+- **Traces**: `service_name=nextjs-ld-backend` spans visible, including the
+  wrapper span `POST - http://localhost:3006/api/echo` carrying
+  `secureSessionID` equal to the browser session that fetched it — the
+  same-origin-proxied session replay is linked to the backend trace.
+- **Logs**: server `console.*` records (`API /api/test called`,
+  `[pages] rendering /legacy via getServerSideProps`, `nested echo status`)
+  under `service_name=nextjs-ld-backend`.
 
 ### Manual UI verification (LaunchDarkly dashboard)
 

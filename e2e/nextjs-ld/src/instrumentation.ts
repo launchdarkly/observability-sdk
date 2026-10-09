@@ -8,20 +8,19 @@ export async function register() {
 
 	const { registerObservability } =
 		await import('@launchdarkly/observability-next/server')
+	// Servers must follow the same endpoint selection as the browser proxy:
+	// resolveLDEndpoints honors explicit options > LAUNCHDARKLY_OTEL_ENDPOINT /
+	// LAUNCHDARKLY_BACKEND_URL env vars > LAUNCHDARKLY_ENV=staging hosts > prod.
+	const { resolveLDEndpoints } =
+		await import('@launchdarkly/observability-next/config')
 	const { CONSTANTS } = await import('@/constants')
+	const endpoints = resolveLDEndpoints()
 
 	await registerObservability({
 		sdkKey: CONSTANTS.LAUNCHDARKLY_SDK_KEY,
 		serviceName: CONSTANTS.BACKEND_SERVICE_NAME,
 		environment: CONSTANTS.OBSERVE_ENVIRONMENT,
-		// Optional staging/local overrides. The LAUNCHDARKLY_* vars are read by
-		// the node SDK's defaults too, but be explicit here so whichever env file
-		// this app runs with is the single source of truth.
-		...(process.env.LAUNCHDARKLY_OTEL_ENDPOINT
-			? { otlpEndpoint: process.env.LAUNCHDARKLY_OTEL_ENDPOINT }
-			: {}),
-		...(process.env.LAUNCHDARKLY_BACKEND_URL
-			? { backendUrl: process.env.LAUNCHDARKLY_BACKEND_URL }
-			: {}),
+		otlpEndpoint: endpoints.otlpEndpoint,
+		backendUrl: endpoints.backendUrl,
 	})
 }
