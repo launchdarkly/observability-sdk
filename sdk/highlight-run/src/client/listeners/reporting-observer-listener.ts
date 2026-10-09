@@ -23,6 +23,19 @@ const isReportingObserverSupported = (): boolean =>
 	typeof (window as unknown as { ReportingObserver?: unknown })
 		.ReportingObserver !== 'undefined'
 
+// Report bodies expose their fields as prototype getters, which Object.entries skips; toJSON() returns them.
+const toPlainBody = (body: unknown): Record<string, unknown> => {
+	if (!body || typeof body !== 'object') return {}
+	const toJSON = (body as { toJSON?: () => unknown }).toJSON
+	if (typeof toJSON === 'function') {
+		const json = toJSON.call(body)
+		if (json && typeof json === 'object') {
+			return json as Record<string, unknown>
+		}
+	}
+	return body as Record<string, unknown>
+}
+
 const flattenBody = (
 	body: unknown,
 ): Record<string, string | number | boolean> => {
@@ -50,6 +63,9 @@ const messageFromReport = (report: {
 	body?: Record<string, unknown> | null
 }): string => {
 	const body = report.body ?? {}
+	if (report.type === 'csp-violation' && body['blockedURL']) {
+		return `CSP ${body['effectiveDirective'] ?? 'violation'} blocked ${body['blockedURL']}`
+	}
 	const message =
 		(body['message'] as string | undefined) ||
 		(body['reason'] as string | undefined) ||
@@ -101,7 +117,7 @@ export const ReportingObserverListener = (
 			(reports) => {
 				for (const report of reports) {
 					const type = report.type ?? 'unknown'
-					const body = (report.body ?? {}) as Record<string, unknown>
+					const body = toPlainBody(report.body)
 					const attributes = {
 						'report.type': type,
 						'report.url': report.url,
