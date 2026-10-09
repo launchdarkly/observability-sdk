@@ -22,7 +22,7 @@
 		"e2e:nestjs": "yarn turbo run dev --filter nestjs",
 		"e2e:nextjs": "yarn turbo run dev --filter nextjs...",
 		"e2e:remix": "yarn turbo run dev --filter remix...",
-		"enforce-size": "yarn turbo run enforce-size --filter highlight.run...",
+		"enforce-size": "yarn turbo run enforce-size --filter @launchdarkly/o11y...",
 		"format-check": "prettier --check --ignore-unknown .",
 		"format:all": "prettier --write --ignore-unknown .",
 		"lint": "yarn run turbo lint --filter=!@highlight-run/rrweb --filter=!@highlight-run/rrvideo --filter=!@highlight-run/rrweb-rrweb-plugin-console-record --filter=!@highlight-run/rrweb-_monorepo --filter=!@highlight-run/rrweb-all --filter=!@highlight-run/rrweb-record --filter=!@highlight-run/rrweb-replay --filter=!@highlight-run/rrweb-types --filter=!@highlight-run/rrweb-packer --filter=!@highlight-run/rrweb-utils --filter=!@highlight-run/rrweb-web-extension --filter=!@highlight-run/rrweb-snapshot --filter=!@highlight-run/rrweb-player --filter=!@highlight-run/rrdom --filter=!@highlight-run/rrdom-nodejs --filter=!e2e-react-native",
