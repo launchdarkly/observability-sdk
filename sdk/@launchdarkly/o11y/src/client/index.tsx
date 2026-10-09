@@ -390,6 +390,7 @@ export class Highlight {
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stopRecording()
+		this._firstLoadListeners.stopListening()
 		this._firstLoadListeners = new FirstLoadListeners(this.options)
 		await this.initialize()
 		if (user_identifier && user_object) {

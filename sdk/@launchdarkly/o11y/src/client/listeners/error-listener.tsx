@@ -49,7 +49,8 @@ export const ErrorListener = (
 ) => {
 	if (typeof window === 'undefined') return () => {}
 
-	const initialOnError = (window.onerror = (
+	const initialOnError = window.onerror
+	window.onerror = (
 		event: any,
 		source: string | undefined,
 		_lineno: number | undefined,
@@ -57,11 +58,10 @@ export const ErrorListener = (
 		error: Error | undefined,
 	): void => {
 		handleError(callback, event, source, error)
-	})
+	}
 
-	const initialOnUnhandledRejection = (window.onunhandledrejection = (
-		event: PromiseRejectionEvent,
-	) => {
+	const initialOnUnhandledRejection = window.onunhandledrejection
+	window.onunhandledrejection = (event: PromiseRejectionEvent) => {
 		if (event.reason) {
 			const hPromise = event.promise as HighlightPromise<any>
 			if (hPromise.getStack) {
@@ -75,7 +75,7 @@ export const ErrorListener = (
 				handleError(callback, event.reason, event.type)
 			}
 		}
-	})
+	}
 
 	const initialPromise = window.Promise
 	const highlightPromise = class Promise<T> extends initialPromise<T> {
