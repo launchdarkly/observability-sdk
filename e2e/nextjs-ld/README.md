@@ -73,6 +73,8 @@ LAUNCHDARKLY_OTEL_ENDPOINT=https://otel.observability.ld-stg.launchdarkly.com:43
 
 ## Validate
 
+### CLI checks
+
 ```bash
 yarn workspace nextjs-ld validate          # runs scripts/validate.mjs
 ```
@@ -81,6 +83,50 @@ The script checks route statuses (including the deliberate errors), that the
 same-origin proxy rewrites (`/v1/traces`, `/highlight-events`) forward to
 LaunchDarkly rather than 404, and that the configured LaunchDarkly targets are
 reachable.
+
+### Real browser checks
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH=~/.cache/ms-playwright \
+	yarn workspace nextjs-ld exec node scripts/browser-e2e.mjs
+```
+
+Drives real Chromium against the running app: waits for the SDK to initialize
+(the `sessionSecureID` cookie), clicks the client demo buttons (errors,
+manual spans, metrics, console), visits the SSR/ISR/streaming pages, and
+records every telemetry response (session/error/replay uploads to
+`/highlight-events`, browser OTLP spans to `/v1/traces`). Printing
+`SESSION_SECURE_ID=...` lets scripts cross-check that the `highlight.session_id`
+attribute on backend spans matches.
+
+### OTLP capture + ingest replay
+
+To inspect (or replay) every OTLP export the app makes, point the server at a
+local capture receiver:
+
+```bash
+node scripts/otlp-capture-server.mjs &      # listens on 127.0.0.1:4318
+echo "LAUNCHDARKLY_OTEL_ENDPOINT=http://127.0.0.1:4318" >> .env
+yarn workspace nextjs-ld start
+# exercise the app, then:
+#   payloads land in /tmp/otlp-capture/*.bin (gzip OTLP/JSON)
+#   replay them to the real ingest with:
+#   curl -X POST https://otel.observability.ld-stg.launchdarkly.com:4318/v1/traces \
+#        -H 'content-type: application/json' -H 'content-encoding: gzip' \
+#        --data-binary @/tmp/otlp-capture/<n>-_v1_traces.bin
+```
+
+### What the automation proved in this repo's last run
+
+- All route/telemetry CLI checks pass with the staging proxy enabled.
+- Browser telemetry uploads (33× `/highlight-events`, 3× `/v1/traces`) all
+  returned 200 through the same-origin proxy to LaunchDarkly staging.
+- The server's exported OTLP trace batches contain spans named
+  `GET - http://localhost:3006/api/test`, `POST .../api/echo`,
+  `GET - .../api/external` (the route wrappers) nested under Next.js internal
+  spans (`render route (app) /ssr`, `fetch GET ...`, `tcp.connect`, ...), and
+  carry `highlight.session_id` equal to the browser's `sessionSecureID` — the
+  frontend→backend session↔trace link end to end.
 
 ### Manual UI verification (LaunchDarkly dashboard)
 

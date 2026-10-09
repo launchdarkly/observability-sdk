@@ -16,6 +16,9 @@ export default function App({ Component, pageProps }: AppProps) {
 				environment={CONSTANTS.OBSERVE_ENVIRONMENT}
 				tracingOrigins
 				networkRecording={{ enabled: true, recordHeadersAndBody: true }}
+				// Server-side: next.config env values are readable in the pages
+				// router server runtime, so this prop is reliable.
+				useProxy={process.env.configureLaunchDarklyProxy === 'true'}
 			/>
 			<div style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
 				<nav style={{ marginBottom: 16 }}>

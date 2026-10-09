@@ -7,6 +7,10 @@ import Link from 'next/link'
 import { CONSTANTS } from '@/constants'
 import { RootErrorFallback } from './root-error-fallback'
 
+// NOTE: keep this file a Server Component — the proxy flag is read from the
+// server runtime (next.config env map) at render time and passed down as a
+// serializable prop; client bundles cannot read next.config env values.
+
 export const metadata = {
 	title: 'LaunchDarkly Observability Next Demo',
 	description:
@@ -58,6 +62,7 @@ export default function RootLayout({
 					id: 'nextjs-ld-example',
 					version: process.env.NEXT_PUBLIC_APP_VERSION ?? 'dev',
 				}}
+				useProxy={proxyEnabled}
 				{...directEndpoints}
 			/>
 			<html lang="en">
