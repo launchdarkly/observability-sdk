@@ -1,5 +1,19 @@
 # @launchdarkly/session-replay
 
+## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.26...session-replay-1.2.0) (2026-10-09)
+
+
+### Features
+
+* add @launchdarkly/o11y as the shared browser foundation, publish highlight.run as a thin alias ([#756](https://github.com/launchdarkly/observability-sdk/issues/756)) ([6d938c4](https://github.com/launchdarkly/observability-sdk/commit/6d938c48eab054b67a9c1cfc8120445b9d11cd4d))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/o11y bumped to 1.2.0
+
 ## [1.1.26](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.25...session-replay-1.1.26) (2026-10-08)
 
 
