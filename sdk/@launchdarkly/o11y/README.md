@@ -14,3 +14,7 @@ See the [SDK reference](https://docs.launchdarkly.com/sdk/observability).
 
 Session replay recording is powered by the
 [launchdarkly/rrweb](https://github.com/launchdarkly/rrweb) fork.
+
+When recording has to recover CSS-in-JS rules that another script kept from
+reaching it, it re-sends the affected stylesheets whole, so rules a library
+inserted mid-sheet (as styled-components does) still reach the replay.
