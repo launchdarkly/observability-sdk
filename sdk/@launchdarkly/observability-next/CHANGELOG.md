@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.13...observability-next-0.3.0) (2026-10-10)
+
+
+### Features
+
+* **next:** full-featured Next 16 e2e example + bundler-safe observability singleton + staging-configurable endpoints ([#822](https://github.com/launchdarkly/observability-sdk/issues/822)) ([51a1010](https://github.com/launchdarkly/observability-sdk/commit/51a1010cd1314b8a7c48238f788372df14199610))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-node bumped to 1.4.0
+
 ## [0.2.13](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.12...observability-next-0.2.13) (2026-10-09)
 
 
