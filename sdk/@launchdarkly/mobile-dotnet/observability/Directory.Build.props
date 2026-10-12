@@ -5,7 +5,7 @@
 	<Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 	<PropertyGroup>
 		<PackageId>LaunchDarkly.SessionReplay</PackageId>
-		<Version>0.11.0</Version>
+		<Version>0.14.1</Version>
 		<Authors>LaunchDarkly</Authors>
 		<Owners>LaunchDarkly</Owners>
 		<Company>LaunchDarkly</Company>

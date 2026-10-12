@@ -1,5 +1,12 @@
 # @launchdarkly/observability-node
 
+## [1.4.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.3.0...observability-node-1.4.0) (2026-10-10)
+
+
+### Features
+
+* **next:** full-featured Next 16 e2e example + bundler-safe observability singleton + staging-configurable endpoints ([#822](https://github.com/launchdarkly/observability-sdk/issues/822)) ([51a1010](https://github.com/launchdarkly/observability-sdk/commit/51a1010cd1314b8a7c48238f788372df14199610))
+
 ## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.2.0...observability-node-1.3.0) (2026-08-07)
 
 

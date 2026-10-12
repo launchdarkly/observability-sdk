@@ -6,21 +6,50 @@ import { Observe } from '../api/Observe'
 import { Metric } from '../api/Metric'
 import { Headers, IncomingHttpHeaders } from '../api/headers'
 
-let observabilityClient: ObservabilityClient
+/**
+ * Bundlers (e.g. Turbopack in Next.js) may include a separate copy of this
+ * module in each server bundle, which would otherwise split the `LDObserve`
+ * singleton across copies: `instrumentation.ts` would initialize one copy
+ * while pages/route handlers happen to hold an uninitialized one. Persisting
+ * the client on `globalThis` makes the singleton shared across every copy in
+ * the process (and HMR re-runs).
+ */
+const GLOBAL_CLIENT_KEY = '__launchdarklyObservabilityNodeClient'
+
+function readGlobalObservabilityClient(): ObservabilityClient | undefined {
+	return (globalThis as unknown as Record<string, unknown>)[
+		GLOBAL_CLIENT_KEY
+	] as ObservabilityClient | undefined
+}
+
+function getClient(): ObservabilityClient {
+	return readGlobalObservabilityClient() as ObservabilityClient
+}
 
 const _LDObserve = {
-	_init(client: ObservabilityClient) {
-		observabilityClient = client
+	/**
+	 * Install the singleton client. Idempotent: once a client is installed (by
+	 * any of the module's copies), later calls are no-ops — a second bundle
+	 * copy's `plugin.register` can never replace (or double-start) the live
+	 * OpenTelemetry configuration.
+	 */
+	_init(client: ObservabilityClient): ObservabilityClient {
+		if (!readGlobalObservabilityClient()) {
+			;(globalThis as unknown as Record<string, unknown>)[
+				GLOBAL_CLIENT_KEY
+			] = client
+		}
+		return getClient()
 	},
 	isInitialized: () => {
-		return !!observabilityClient
+		return !!readGlobalObservabilityClient()
 	},
 	stop: async () => {
-		if (!observabilityClient) {
+		if (!readGlobalObservabilityClient()) {
 			return
 		}
 		try {
-			await observabilityClient.stop()
+			await getClient().stop()
 		} catch (e) {
 			console.warn('highlight-node stop error: ', e)
 		}
@@ -33,7 +62,7 @@ const _LDObserve = {
 		options?: { span: OtelSpan },
 	) => {
 		try {
-			observabilityClient?.consumeCustomError(
+			getClient()?.consumeCustomError(
 				error,
 				secureSessionId,
 				requestId,
@@ -46,42 +75,42 @@ const _LDObserve = {
 	},
 	recordMetric: (metric: Metric) => {
 		try {
-			observabilityClient.recordMetric(metric)
+			getClient()?.recordMetric(metric)
 		} catch (e) {
 			console.warn('highlight-node recordMetric error: ', e)
 		}
 	},
 	recordCount: (metric: Metric) => {
 		try {
-			observabilityClient.recordCount(metric)
+			getClient()?.recordCount(metric)
 		} catch (e) {
 			console.warn('highlight-node recordCount error: ', e)
 		}
 	},
-	recordIncr: (metric: Metric) => {
+	recordIncr: (metric: Omit<Metric, 'value'>) => {
 		try {
-			observabilityClient.recordIncr(metric)
+			getClient()?.recordIncr(metric)
 		} catch (e) {
 			console.warn('highlight-node recordIncr error: ', e)
 		}
 	},
 	recordHistogram: (metric: Metric) => {
 		try {
-			observabilityClient.recordHistogram(metric)
+			getClient()?.recordHistogram(metric)
 		} catch (e) {
 			console.warn('highlight-node recordHistogram error: ', e)
 		}
 	},
 	recordUpDownCounter: (metric: Metric) => {
 		try {
-			observabilityClient.recordUpDownCounter(metric)
+			getClient()?.recordUpDownCounter(metric)
 		} catch (e) {
 			console.warn('highlight-node recordUpDownCounter error: ', e)
 		}
 	},
 	flush: async () => {
 		try {
-			await observabilityClient.flush()
+			await getClient()?.flush()
 		} catch (e) {
 			console.warn('highlight-node flush error: ', e)
 		}
@@ -96,7 +125,7 @@ const _LDObserve = {
 		const o: { stack: any } = { stack: {} }
 		Error.captureStackTrace(o)
 		try {
-			observabilityClient.log(
+			getClient()?.log(
 				new Date(),
 				message,
 				level,
@@ -110,35 +139,34 @@ const _LDObserve = {
 		}
 	},
 	parseHeaders: (headers: Headers | IncomingHttpHeaders): RequestContext => {
-		return observabilityClient.parseHeaders(headers)
+		return getClient().parseHeaders(headers)
 	},
-
 	runWithHeaders: (
 		name: string,
 		headers: Headers | IncomingHttpHeaders,
 		cb: (span: OtelSpan) => any,
 		options?: SpanOptions,
 	) => {
-		return observabilityClient.runWithHeaders(name, headers, cb, options)
+		return getClient().runWithHeaders(name, headers, cb, options)
 	},
 	startWithHeaders: (
 		spanName: string,
 		headers: Headers | IncomingHttpHeaders,
 		options?: SpanOptions,
 	) => {
-		return observabilityClient.startWithHeaders(spanName, headers, options)
+		return getClient().startWithHeaders(spanName, headers, options)
 	},
 	setAttributes: (attributes: Attributes) => {
-		return observabilityClient.setAttributes(attributes)
+		return getClient().setAttributes(attributes)
 	},
 	_debug: (...data: any[]) => {
-		observabilityClient._log(...data)
+		getClient()?._log(...data)
 	},
 }
 
 // The _LDObserve object is for internal use.
 // The LDObserve object is for external use and is exposed with an interface.
 
-const LDObserve: Observe = _LDObserve as Observe
+const LDObserve: Observe = _LDObserve as unknown as Observe
 
 export { LDObserve, _LDObserve }

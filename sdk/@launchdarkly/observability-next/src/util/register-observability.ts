@@ -2,7 +2,7 @@ import { isNodeJsRuntime } from './is-node-js-runtime'
 import { standaloneMetadata, type StandalonePlugin } from './standalone'
 import type { ObservabilityEnv } from './types'
 
-let initPromise: Promise<void> | undefined
+declare var globalThis: { __ldObservabilityNextRegister?: Promise<void> }
 
 async function init(env: ObservabilityEnv) {
 	// Import lazily so the OpenTelemetry/node dependencies are never pulled into
@@ -12,7 +12,10 @@ async function init(env: ObservabilityEnv) {
 	const { sdkKey, ...options } = env
 	const plugin = new Observability(options) as unknown as StandalonePlugin
 	// `register` ignores the client argument and initializes LDObserve from the
-	// SDK key in the metadata. See util/standalone.ts.
+	// SDK key in the metadata. See util/standalone.ts. Inside the node SDK,
+	// `Observability.register` is idempotent, so even if a bundler-duplicated
+	// copy of this module runs the same call, only the first OpenTelemetry
+	// configuration is created.
 	plugin.register?.({}, standaloneMetadata(sdkKey))
 }
 
@@ -29,6 +32,17 @@ async function init(env: ObservabilityEnv) {
  * so the first successful call wins and later calls reuse it. All callers
  * (`instrumentation.ts` and any route wrappers) should therefore pass the same
  * `env` — initialize once in `instrumentation.ts` for the canonical config.
+ *
+ * Bundling note: Turbopack may duplicate this module across server bundles
+ * (each entry gets its own `initPromise`), so the in-flight init is
+ * additionally cached on `globalThis` — only the first copy constructs the
+ * `Observability` plugin (and with it the OTel NodeSDK and instrumentation
+ * hooks).
+ *
+ * Failure semantics: a failed init drops the cached promise so a later request
+ * can retry, and the rejection is re-thrown so that callers (e.g. route
+ * wrappers) surface the original error instead of a confusing downstream
+ * `LDObserve.*` failure on an uninitialized client.
  */
 export async function registerObservability(env: ObservabilityEnv) {
 	if (!isNodeJsRuntime()) {
@@ -38,12 +52,18 @@ export async function registerObservability(env: ObservabilityEnv) {
 		return
 	}
 
-	// Cache the in-flight/successful init, but drop the cached promise if it
-	// rejects so a failed import or registration can be retried on a later
-	// call rather than poisoning every subsequent request.
-	initPromise ??= init(env).catch((err) => {
-		initPromise = undefined
+	// Cache the in-flight init process-wide so duplicated module copies converge
+	// on the first initialization instead of each constructing their own plugin
+	// (and therefore a second OTel NodeSDK). On failure the cache is dropped so
+	// a later call retries; the rejection still reaches each caller.
+	const inFlight = (globalThis.__ldObservabilityNextRegister ??= init(
+		env,
+	).catch((err) => {
+		if (globalThis.__ldObservabilityNextRegister === inFlight) {
+			globalThis.__ldObservabilityNextRegister = undefined
+		}
 		throw err
-	})
-	return initPromise
+	}))
+
+	await inFlight
 }

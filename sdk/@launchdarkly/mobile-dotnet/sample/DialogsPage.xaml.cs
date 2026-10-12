@@ -1,4 +1,8 @@
 using CommunityToolkit.Maui.Views;
+#if NET10_0_OR_GREATER
+// Toolkit v12 moved ShowPopupAsync out of CommunityToolkit.Maui.Views.
+using CommunityToolkit.Maui.Extensions;
+#endif
 using System.Linq;
 using System.Threading;
 #if IOS
@@ -236,7 +240,13 @@ public partial class DialogsPage : ContentPage
 			BackgroundColor = Color.FromArgb("#F2B8B5"),
 			TextColor = Colors.White
 		};
+		// CommunityToolkit.Maui replaced Popup.Close() with CloseAsync() in v12. The .NET 9 build
+		// stays on toolkit v11, which caps Microsoft.Maui.Essentials below 10.0.0.
+#if NET10_0_OR_GREATER
+		closeBtn.Clicked += async (s, args) => await popup.CloseAsync();
+#else
 		closeBtn.Clicked += (s, _) => popup.Close();
+#endif
 
 		popup.Content = new VerticalStackLayout
 		{
@@ -268,8 +278,12 @@ public partial class DialogsPage : ContentPage
 		_ = this.ShowPopupAsync(popup);
 
 		await AutoClose(async () => {
+#if NET10_0_OR_GREATER
+			await popup.CloseAsync();
+#else
 			popup.Close();
 			await Task.CompletedTask;
+#endif
 		});
 	}
 

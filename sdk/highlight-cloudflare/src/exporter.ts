@@ -3,11 +3,10 @@ import type { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-ht
 import type { ExportResult, ExportResultCode } from '@opentelemetry/core'
 import type { SpanExporter } from '@opentelemetry/sdk-trace-web'
 import type {
-	Aggregation,
-	AggregationTemporality,
 	InstrumentType,
 	PushMetricExporter,
 } from '@opentelemetry/sdk-metrics'
+import { Aggregation, AggregationTemporality } from '@opentelemetry/sdk-metrics'
 
 import {
 	JsonMetricsSerializer,
@@ -65,8 +64,9 @@ export class OTLPMetricExporterFetch implements PushMetricExporter {
 	private readonly fetchConfig: RequestInit
 
 	constructor(config?: MetricExporterConfig) {
-		this.url = config?.url ?? '/v1/traces'
+		this.url = config?.url ?? '/v1/metrics'
 		this.fetchConfig = {
+			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 			},
@@ -79,10 +79,10 @@ export class OTLPMetricExporterFetch implements PushMetricExporter {
 	selectAggregationTemporality?(
 		instrumentType: InstrumentType,
 	): AggregationTemporality {
-		throw new Error('Method not implemented.')
+		return AggregationTemporality.CUMULATIVE
 	}
 	selectAggregation?(instrumentType: InstrumentType): Aggregation {
-		throw new Error('Method not implemented.')
+		return Aggregation.Default()
 	}
 	async shutdown(): Promise<void> {
 		// noop

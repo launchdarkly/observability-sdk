@@ -9,6 +9,9 @@ public class LDObservabilityOptions {
     @JvmField var contextFriendlyName: String? = null
     @JvmField var attributes: HashMap<String, Any?>? = null
     @JvmField var launchTime: Boolean = true
+    @JvmField var customHeaders: HashMap<String, String>? = null
+    // OpenTelemetry severity number; Int.MAX_VALUE disables log export.
+    @JvmField var logsApiLevel: Int = 9
 
     constructor()
 
@@ -19,8 +22,10 @@ public class LDObservabilityOptions {
         otlpEndpoint: String,
         backendUrl: String,
         contextFriendlyName: String?,
-        attributes: HashMap<String, Any?>? = null,
-        launchTime: Boolean = true
+        attributes: HashMap<String, Any?>?,
+        launchTime: Boolean,
+        customHeaders: HashMap<String, String>?,
+        logsApiLevel: Int
     ) {
         this.isEnabled = isEnabled
         this.serviceName = serviceName
@@ -30,6 +35,8 @@ public class LDObservabilityOptions {
         this.contextFriendlyName = contextFriendlyName
         this.attributes = attributes
         this.launchTime = launchTime
+        this.customHeaders = customHeaders
+        this.logsApiLevel = logsApiLevel
     }
 }
 
@@ -61,16 +68,28 @@ public class LDSessionReplayOptions {
     @JvmField var isEnabled: Boolean = true
     @JvmField var serviceName: String = ""
     @JvmField var privacy: LDPrivacyOptions = LDPrivacyOptions()
+    @JvmField var sampleRate: Double = 1.0
+    @JvmField var frameRate: Double = 1.0
+    @JvmField var scale: Double = 1.0
+    @JvmField var imageQuality: Double = 0.3
 
     constructor()
 
     constructor(
         isEnabled: Boolean,
         serviceName: String,
-        privacy: LDPrivacyOptions
+        privacy: LDPrivacyOptions,
+        sampleRate: Double,
+        frameRate: Double,
+        scale: Double,
+        imageQuality: Double
     ) {
         this.isEnabled = isEnabled
         this.serviceName = serviceName
         this.privacy = privacy
+        this.sampleRate = sampleRate
+        this.frameRate = frameRate
+        this.scale = scale
+        this.imageQuality = imageQuality
     }
 }

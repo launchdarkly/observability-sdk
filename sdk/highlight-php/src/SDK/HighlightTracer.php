@@ -25,7 +25,9 @@ class HighlightTracer
         $spanBuilder = $this->tracer->spanBuilder('highlight-ctx');
 
         $spanBuilder->setAttributes($record->getAttributes()->toArray())
-            ->setStartTimestamp($record->getTimeOccurred()->getTimestamp())
+            // OpenTelemetry expects nanoseconds since the unix epoch; format('Uu')
+            // yields seconds+microseconds, so multiplying by 1000 gives nanos.
+            ->setStartTimestamp((int) $record->getTimeOccurred()->format('Uu') * 1000)
             ->setParent(null);
 
         $span = $spanBuilder->startSpan();

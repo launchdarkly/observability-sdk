@@ -1,3 +1,10 @@
+> **Note:** `highlight.run` is now published as a compatibility alias of
+> [`@launchdarkly/o11y`](https://www.npmjs.com/package/@launchdarkly/o11y).
+> The implementation lives in `sdk/@launchdarkly/o11y` in this repository;
+> this package re-exports it unchanged. New projects should use
+> [`@launchdarkly/observability`](https://www.npmjs.com/package/@launchdarkly/observability)
+> and [`@launchdarkly/session-replay`](https://www.npmjs.com/package/@launchdarkly/session-replay).
+
 # Highlight
 
 The official Javascript SDK for [Highlight](https://highlight.run).

@@ -10,6 +10,9 @@ public final class ObjcObservabilityOptions: NSObject {
     // Not consumed yet — network tracing is handled on the .NET side. Kept for future iOS-native URL session instrumentation.
     @objc public var networkRequests: Bool = true
     @objc public var launchTimes: Bool = true
+    @objc public var customHeaders: NSDictionary?
+    /// OpenTelemetry severity number; values above `fatal4` (24) disable log export.
+    @objc public var logsApiLevel: Int = 9
 
     @objc public override init() {
         super.init()
@@ -23,6 +26,11 @@ public final class ObjcSessionReplayOptions: NSObject {
     @objc public var maskWebViews: Bool = false
     @objc public var maskLabels: Bool = false
     @objc public var maskImages: Bool = false
+    @objc public var minimumAlpha: Double = 0.02
+    @objc public var sampleRate: Double = 1.0
+    @objc public var frameRate: Double = 1.0
+    @objc public var scale: Double = 1.0
+    @objc public var imageQuality: Double = 0.3
 
     @objc public override init() {
         super.init()

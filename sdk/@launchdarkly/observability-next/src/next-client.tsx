@@ -39,6 +39,19 @@ export type LDObservabilityInitProps = ObserveOptions &
 		 * substrings the SDK is skipped.
 		 */
 		excludedHostnames?: string[]
+		/**
+		 * Whether the same-origin telemetry proxy rewrites (from
+		 * `withLaunchDarklyConfig`) are configured. When true, telemetry is
+		 * uploaded to `/highlight-events` plus same-origin OTLP paths, which the
+		 * Next server rewrites forward to LaunchDarkly.
+		 *
+		 * Compute it server-side with `process.env[PROXY_ENV_FLAG] === 'true'` —
+		 * the server runtime has the `env` map from `next.config`, while client
+		 * bundles cannot (Turbopack does not inline `next.config.js` `env` map
+		 * values into the client bundle). If omitted, the SDK falls back to the
+		 * (less reliable) client-side env probe.
+		 */
+		useProxy?: boolean
 	}
 
 /**
@@ -54,6 +67,7 @@ export function LDObservabilityInit({
 	sdkKey,
 	application,
 	excludedHostnames = [],
+	useProxy,
 	...options
 }: LDObservabilityInitProps) {
 	useEffect(() => {
@@ -69,7 +83,13 @@ export function LDObservabilityInit({
 
 		let initOptions: LDObservabilityInitProps = { ...options }
 
-		const configureProxy = process.env[PROXY_ENV_FLAG] === 'true'
+		// `useProxy` is normally passed as a prop by a server layout (computed
+		// from the withLaunchDarklyConfig env flag). Fall back to a client-side
+		// probe of the same flag for callers that don't pass it — note this probe
+		// only sees a value when the bundler inlined next.config's env map (e.g.
+		// webpack builds).
+		const configureProxy =
+			useProxy ?? process.env[PROXY_ENV_FLAG] === 'true'
 		if (configureProxy) {
 			initOptions = {
 				...initOptions,

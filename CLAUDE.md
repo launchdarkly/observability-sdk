@@ -26,7 +26,7 @@ yarn docs                 # Generate TypeDoc documentation
 
 ```bash
 yarn turbo run build --filter @launchdarkly/observability
-yarn turbo run test --filter highlight.run
+yarn turbo run test --filter @launchdarkly/o11y
 yarn turbo run build --filter '@launchdarkly/*'
 ```
 
@@ -43,8 +43,9 @@ yarn publish:highlight    # highlight.run + @highlight-run/* packages
 
 | Package | Description |
 |---------|-------------|
-| `observability` | Browser SDK - errors, logs, traces |
-| `session-replay` | Browser SDK - session replay (thin wrapper over highlight.run) |
+| `o11y` | Shared browser foundation - session replay + observability. Most browser logic lives here. Published as `@launchdarkly/o11y` and (via a thin wrapper) as `highlight.run`. |
+| `observability` | Browser SDK - errors, logs, traces (thin wrapper over `@launchdarkly/o11y`) |
+| `session-replay` | Browser SDK - session replay (thin wrapper over `@launchdarkly/o11y`) |
 | `observability-shared` | Internal shared types and GraphQL codegen (private) |
 | `observability-node` | Node.js SDK |
 | `observability-react-native` | React Native SDK |
@@ -58,11 +59,12 @@ yarn publish:highlight    # highlight.run + @highlight-run/* packages
 
 | Package | Description |
 |---------|-------------|
-| `sdk/highlight-run` | Core browser library - session replay + observability. Most logic lives here. |
+| `sdk/@launchdarkly/o11y` | Core browser library - session replay + observability. Most logic lives here. |
+| `sdk/highlight-run` | `highlight.run` compatibility alias - thin re-export wrapper over `@launchdarkly/o11y`, still published for existing highlight.io users |
 | `rrweb/` | Forked session replay recording library (git submodule, ~15 sub-packages) |
 | `go/` | Go observability SDK |
 
-### Key source files in highlight.run
+### Key source files in @launchdarkly/o11y (`sdk/@launchdarkly/o11y`)
 
 - `src/index.tsx` - Public API, `H` global singleton
 - `src/sdk/record.ts` - `RecordSDK` class (session replay recording logic)

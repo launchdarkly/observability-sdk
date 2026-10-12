@@ -79,10 +79,14 @@ public class ObservabilityBridge(
                 debug = false,
                 otlpEndpoint = observability.otlpEndpoint,
                 backendUrl = observability.backendUrl,
+                contextFriendlyName = observability.contextFriendlyName,
+                customHeaders = observability.customHeaders ?: emptyMap(),
+                logsApiLevel = toLogLevel(observability.logsApiLevel),
                 tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = true),
                 metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.enabled(),
-                // Page views rely on the OTel `activity` instrumentation AAR, which MAUI no longer ships.
-                analytics = com.launchdarkly.observability.api.ObservabilityOptions.Analytics(pageViews = false),
+                // Screen views are reported from the MAUI layer, so the Android-side span is left off
+                // to avoid double-reporting navigation.
+                analytics = com.launchdarkly.observability.api.ObservabilityOptions.Analytics(screenViews = false),
                 instrumentations = com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations(
                     crashReporting = false, launchTime = observability.launchTime
                 ),
@@ -100,8 +104,13 @@ public class ObservabilityBridge(
                     maskTextInputs = privacy.maskTextInputs,
                     maskText = privacy.maskLabels,
                     maskImageViews = privacy.maskImages,
-                    maskWebViews = privacy.maskWebViews
-                )
+                    maskWebViews = privacy.maskWebViews,
+                    minimumAlpha = privacy.minimumAlpha.toFloat()
+                ),
+                sampleRate = replay.sampleRate,
+                frameRate = replay.frameRate,
+                scale = replay.scale,
+                imageQuality = replay.imageQuality
             )
         } catch (t: Throwable) {
             printException("LD:ObservabilityBridge failed to build ReplayOptions", t)
@@ -139,6 +148,11 @@ public class ObservabilityBridge(
     companion object {
         private const val MAUI_DISTRO_NAME = "observability-maui-android"
     }
+
+    private fun toLogLevel(severity: Int): com.launchdarkly.observability.api.ObservabilityOptions.LogLevel =
+        com.launchdarkly.observability.api.ObservabilityOptions.LogLevel.values()
+            .firstOrNull { it.level == severity }
+            ?: com.launchdarkly.observability.api.ObservabilityOptions.LogLevel.INFO
 
     private fun printException(prefix: String, t: Throwable) {
         logger.error("$prefix ${t::class.java.name}: ${t.message}")

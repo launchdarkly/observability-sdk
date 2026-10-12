@@ -19,6 +19,17 @@ internal func buildResourceAttributes(_ source: NSDictionary?) -> [String: Attri
     return result
 }
 
+internal func buildCustomHeaders(_ source: NSDictionary?) -> [String: String] {
+    guard let source, source.count > 0 else {
+        return [:]
+    }
+    var result = [String: String](minimumCapacity: source.count)
+    for (key, value) in source {
+        result[String(describing: key)] = (value as? String) ?? String(describing: value)
+    }
+    return result
+}
+
 @objc(ObservabilityBridge)
 public final class ObservabilityBridge: NSObject {
 
@@ -47,6 +58,8 @@ public final class ObservabilityBridge: NSObject {
                 otlpEndpoint: observability.otlpEndpoint,
                 backendUrl: observability.backendUrl,
                 resourceAttributes: buildResourceAttributes(observability.attributes),
+                customHeaders: buildCustomHeaders(observability.customHeaders),
+                logsApiLevel: .init(rawValue: observability.logsApiLevel) ?? .none,
                 crashReporting: .init(source: .none),
                 instrumentation: .init(
                     urlSession: .disabled, // Network tracing happens on the .NET side via System.Net.Http activities.
@@ -66,12 +79,17 @@ public final class ObservabilityBridge: NSObject {
                 observabilityPlugin,
                 SessionReplay(options: .init(
                     isEnabled: replay.isEnabled,
+                    sampleRate: replay.sampleRate,
                     privacy: .init(
                         maskTextInputs: replay.maskTextInputs,
                         maskWebViews: replay.maskWebViews,
                         maskLabels: replay.maskLabels,
-                        maskImages: replay.maskImages
-                    )
+                        maskImages: replay.maskImages,
+                        minimumAlpha: CGFloat(replay.minimumAlpha)
+                    ),
+                    frameRate: replay.frameRate,
+                    scale: CGFloat(replay.scale),
+                    imageQuality: CGFloat(replay.imageQuality)
                 ))
             ]
             

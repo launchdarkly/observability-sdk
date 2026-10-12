@@ -1,12 +1,7 @@
 import { NextConfig } from 'next'
 import { Rewrite } from 'next/dist/lib/load-custom-routes'
 
-import {
-	LD_OTLP_ENDPOINT,
-	LD_PUBLIC_BACKEND_URL,
-	PROXY_BACKEND_PATH,
-	PROXY_ENV_FLAG,
-} from './proxy'
+import { PROXY_BACKEND_PATH, PROXY_ENV_FLAG, resolveLDEndpoints } from './proxy'
 
 /**
  * Packages that the LaunchDarkly observability node SDK relies on and that must
@@ -31,16 +26,30 @@ export interface LaunchDarklyConfigOptions {
 	 * @default true
 	 */
 	configureLaunchDarklyProxy?: boolean
-}
-
-interface LaunchDarklyConfigOptionsDefault {
-	configureLaunchDarklyProxy: boolean
+	/**
+	 * LaunchDarkly events ingest URL that the `/highlight-events` rewrite
+	 * forwards browser telemetry to. Defaults to the production host; override
+	 * to point the proxy at LaunchDarkly staging or a local backend (or set the
+	 * `LAUNCHDARKLY_BACKEND_URL` env var, or `LAUNCHDARKLY_ENV=staging`).
+	 */
+	backendUrl?: string
+	/**
+	 * LaunchDarkly OTLP endpoint that the `/v1/traces`, `/v1/metrics` and
+	 * `/v1/logs` rewrites forward browser OTLP data to. Defaults to the
+	 * production host; override to point the proxy at LaunchDarkly staging or a
+	 * local backend (or set the `LAUNCHDARKLY_OTEL_ENDPOINT` env var, or
+	 * `LAUNCHDARKLY_ENV=staging`).
+	 */
+	otelEndpoint?: string
 }
 
 const getDefaultOpts = (
 	opts?: LaunchDarklyConfigOptions,
-): LaunchDarklyConfigOptionsDefault => ({
+): Required<Pick<LaunchDarklyConfigOptions, 'configureLaunchDarklyProxy'>> &
+	Pick<LaunchDarklyConfigOptions, 'backendUrl' | 'otelEndpoint'> => ({
 	configureLaunchDarklyProxy: opts?.configureLaunchDarklyProxy ?? true,
+	backendUrl: opts?.backendUrl,
+	otelEndpoint: opts?.otelEndpoint,
 })
 
 type NextConfigObject = NextConfig
@@ -65,22 +74,26 @@ const getLaunchDarklyConfig = (
 
 	let newRewrites = config.rewrites
 	if (defaultOpts.configureLaunchDarklyProxy) {
+		const { backendUrl, otlpEndpoint } = resolveLDEndpoints({
+			backendUrl: defaultOpts.backendUrl,
+			otelEndpoint: defaultOpts.otelEndpoint,
+		})
 		const proxyRewrites: Rewrite[] = [
 			{
 				source: PROXY_BACKEND_PATH,
-				destination: LD_PUBLIC_BACKEND_URL,
+				destination: backendUrl,
 			},
 			{
 				source: '/v1/traces',
-				destination: `${LD_OTLP_ENDPOINT}/v1/traces`,
+				destination: `${otlpEndpoint}/v1/traces`,
 			},
 			{
 				source: '/v1/metrics',
-				destination: `${LD_OTLP_ENDPOINT}/v1/metrics`,
+				destination: `${otlpEndpoint}/v1/metrics`,
 			},
 			{
 				source: '/v1/logs',
-				destination: `${LD_OTLP_ENDPOINT}/v1/logs`,
+				destination: `${otlpEndpoint}/v1/logs`,
 			},
 		]
 

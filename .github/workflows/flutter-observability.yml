@@ -4,14 +4,14 @@ on:
     push:
         branches: ['main']
         paths:
-            - 'sdk/@launchdarkly/flutter/packages/observability/**'
-            - 'sdk/@launchdarkly/flutter/example/**'
+            - 'sdk/flutter/packages/observability/**'
+            - 'sdk/flutter/example/**'
             - '.github/workflows/flutter-observability.yml'
     pull_request:
         types: [opened, synchronize]
         paths:
-            - 'sdk/@launchdarkly/flutter/packages/observability/**'
-            - 'sdk/@launchdarkly/flutter/example/**'
+            - 'sdk/flutter/packages/observability/**'
+            - 'sdk/flutter/example/**'
             - '.github/workflows/flutter-observability.yml'
 
 permissions:
@@ -25,7 +25,7 @@ jobs:
         runs-on: ubuntu-latest
         defaults:
             run:
-                working-directory: ./sdk/@launchdarkly/flutter/packages/observability
+                working-directory: ./sdk/flutter/packages/observability
         steps:
             - uses: actions/checkout@v4
 
@@ -75,7 +75,7 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: flutter-observability-test-results
-                  path: sdk/@launchdarkly/flutter/packages/observability/test-results/**
+                  path: sdk/flutter/packages/observability/test-results/**
                   retention-days: 7
 
     # `flutter analyze` and `flutter test` never compile the plugin's Kotlin or
@@ -88,7 +88,7 @@ jobs:
         runs-on: ubuntu-latest
         defaults:
             run:
-                working-directory: ./sdk/@launchdarkly/flutter/example
+                working-directory: ./sdk/flutter/example
         steps:
             - uses: actions/checkout@v4
 
@@ -115,7 +115,7 @@ jobs:
         runs-on: macos-latest
         defaults:
             run:
-                working-directory: ./sdk/@launchdarkly/flutter/example
+                working-directory: ./sdk/flutter/example
         steps:
             - uses: actions/checkout@v4
 

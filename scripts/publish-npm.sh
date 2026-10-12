@@ -10,16 +10,38 @@ fi
 
 # Get the list of publishable @launchdarkly workspaces from yarn,
 # excluding the root workspace and internal-only packages.
-WORKSPACES=$(yarn workspaces list --json | \
+#
+# The list is sorted topologically (dependencies before dependents) so that a
+# package is never published before the workspace packages it depends on, e.g.
+# @launchdarkly/o11y goes out before @launchdarkly/observability and
+# @launchdarkly/session-replay, which declare it as a runtime dependency.
+# Combined with `set -e`, a failed publish also stops its dependents from being
+# published against a version that never made it to npm.
+WORKSPACES=$(yarn workspaces list --json -v | \
   node -e "
     const lines = require('fs').readFileSync('/dev/stdin','utf8').trim().split('\n');
     const exclude = new Set(['@launchdarkly/observability-sdk', '@launchdarkly/observability-shared']);
+    const byLocation = new Map();
     for (const line of lines) {
-      const {name, location} = JSON.parse(line);
-      if (name.startsWith('@launchdarkly/') && !exclude.has(name) && !location.includes('/example')) {
-        console.log(location);
-      }
+      const ws = JSON.parse(line);
+      byLocation.set(ws.location, ws);
     }
+    const publishable = [...byLocation.values()]
+      .filter(({name, location}) => name.startsWith('@launchdarkly/') && !exclude.has(name) && !location.includes('/example'))
+      .map(({location}) => location);
+    const publishableSet = new Set(publishable);
+    const ordered = [];
+    const visited = new Set();
+    const visit = (location) => {
+      if (visited.has(location)) return;
+      visited.add(location);
+      for (const dep of byLocation.get(location).workspaceDependencies) {
+        if (publishableSet.has(dep)) visit(dep);
+      }
+      ordered.push(location);
+    };
+    publishable.forEach(visit);
+    for (const location of ordered) console.log(location);
   ")
 
 TAG_ARGS=""

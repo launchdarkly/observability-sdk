@@ -122,6 +122,7 @@ public static class MauiProgram
 	            var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(0));
 	          
 	            LDObserve.Init(client, observabilityOptions, replayOptions);
+	            Console.WriteLine($"LD native version: {LDObserve.NativeVersion}");
 	         
 	            // standalone variant (no LaunchDarkly client):
 	            //LDObserve.Init(mobileKey, observabilityOptions, replayOptions);

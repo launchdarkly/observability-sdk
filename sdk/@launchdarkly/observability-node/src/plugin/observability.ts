@@ -23,6 +23,14 @@ export class Observability implements LDPlugin {
 		_client: LDClientMin,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	): void {
+		if (_LDObserve.isInitialized()) {
+			// Already initialized (e.g. by instrumentation.ts running from a
+			// different bundle copy): constructing a second ObservabilityClient
+			// would register a second set of OpenTelemetry instrumentations. The
+			// existing client's options win — initialize via instrumentation.ts
+			// for canonical config.
+			return
+		}
 		_LDObserve._init(
 			new ObservabilityClient(
 				environmentMetadata.sdkKey ?? '',

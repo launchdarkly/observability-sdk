@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.13...observability-next-0.3.0) (2026-10-10)
+
+
+### Features
+
+* **next:** full-featured Next 16 e2e example + bundler-safe observability singleton + staging-configurable endpoints ([#822](https://github.com/launchdarkly/observability-sdk/issues/822)) ([51a1010](https://github.com/launchdarkly/observability-sdk/commit/51a1010cd1314b8a7c48238f788372df14199610))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-node bumped to 1.4.0
+
+## [0.2.13](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.12...observability-next-0.2.13) (2026-10-09)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.2.0
+    * @launchdarkly/session-replay bumped to 1.2.0
+
+## [0.2.12](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.11...observability-next-0.2.12) (2026-10-08)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.26
+    * @launchdarkly/session-replay bumped to 1.1.26
+
+## [0.2.11](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.10...observability-next-0.2.11) (2026-10-07)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.25
+    * @launchdarkly/session-replay bumped to 1.1.25
+
+## [0.2.10](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.9...observability-next-0.2.10) (2026-10-06)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.24
+    * @launchdarkly/session-replay bumped to 1.1.24
+
 ## [0.2.9](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.8...observability-next-0.2.9) (2026-09-24)
 
 

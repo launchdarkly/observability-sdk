@@ -36,6 +36,12 @@ namespace LDObserveMaciOS
 
         [Export("launchTimes")]
         bool LaunchTimes { get; set; }
+
+        [NullAllowed, Export("customHeaders")]
+        NSDictionary CustomHeaders { get; set; }
+
+        [Export("logsApiLevel")]
+        nint LogsApiLevel { get; set; }
     }
 
     [BaseType(typeof(NSObject))]
@@ -55,6 +61,21 @@ namespace LDObserveMaciOS
 
         [Export("maskImages")]
         bool MaskImages { get; set; }
+
+        [Export("minimumAlpha")]
+        double MinimumAlpha { get; set; }
+
+        [Export("sampleRate")]
+        double SampleRate { get; set; }
+
+        [Export("frameRate")]
+        double FrameRate { get; set; }
+
+        [Export("scale")]
+        double Scale { get; set; }
+
+        [Export("imageQuality")]
+        double ImageQuality { get; set; }
     }
 
     [BaseType(typeof(NSObject))]

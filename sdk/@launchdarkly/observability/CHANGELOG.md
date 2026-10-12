@@ -1,5 +1,46 @@
 # @launchdarkly/observability
 
+## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.26...observability-1.2.0) (2026-10-09)
+
+
+### Features
+
+* add @launchdarkly/o11y as the shared browser foundation, publish highlight.run as a thin alias ([#756](https://github.com/launchdarkly/observability-sdk/issues/756)) ([6d938c4](https://github.com/launchdarkly/observability-sdk/commit/6d938c48eab054b67a9c1cfc8120445b9d11cd4d))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/o11y bumped to 1.2.0
+
+## [1.1.26](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.25...observability-1.1.26) (2026-10-08)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.7.8
+
+## [1.1.25](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.24...observability-1.1.25) (2026-10-07)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.7.7
+
+## [1.1.24](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.23...observability-1.1.24) (2026-10-06)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.7.6
+
 ## [1.1.23](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.22...observability-1.1.23) (2026-09-15)
 
 

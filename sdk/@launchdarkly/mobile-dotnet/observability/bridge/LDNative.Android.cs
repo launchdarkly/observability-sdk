@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using LaunchDarkly.SessionReplay;
 
 #if ANDROID
@@ -10,12 +11,14 @@ internal static class LDNativeAndroidMapping
         return new global::LDObserveAndroid.LDObservabilityOptions(
             options.IsEnabled,
             options.ServiceName,
-            options.ServiceVersion,
+            options.ResolvedServiceVersion,
             options.OtlpEndpoint,
             options.BackendUrl,
             options.ContextFriendlyName,
             DictionaryTypeConverters.ToJavaDictionary(options.Attributes),
-            options.Instrumentation.LaunchTimes
+            options.Instrumentation.LaunchTimes,
+            options.CustomHeaders is null ? null : new Dictionary<string, string>(options.CustomHeaders),
+            (int)options.LogsApiLevel
         );
     }
 
@@ -32,7 +35,11 @@ internal static class LDNativeAndroidMapping
         return new global::LDObserveAndroid.LDSessionReplayOptions(
             options.IsEnabled,
             options.ServiceName,
-            nativePrivacy
+            nativePrivacy,
+            options.SampleRate,
+            options.FrameRate,
+            options.Scale,
+            options.ImageQuality
         );
     }
 }

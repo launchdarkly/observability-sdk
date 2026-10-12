@@ -491,7 +491,7 @@ export class Highlight {
 	): { span: OtelSpan; ctx: Context } {
 		const ctx = propagation.extract(api.context.active(), headers)
 		const span = this.tracer.startSpan(spanName, options, ctx)
-		const contextWithSpanSet = api.trace.setSpan(ctx, span)
+		let contextWithSpanSet = api.trace.setSpan(ctx, span)
 
 		let { secureSessionId, requestId } = this.parseHeaders(headers)
 		if (!secureSessionId && !requestId) {
@@ -507,9 +507,19 @@ export class Highlight {
 				'highlight.session_id': secureSessionId,
 			})
 
-			propagation.getActiveBaggage()?.setEntry(HIGHLIGHT_REQUEST_HEADER, {
+			// Baggage.setEntry is immutable: it returns a new Baggage rather
+			// than mutating in place, so the result must be stored back on the
+			// context for log() and propagation.inject() to see it.
+			const baggage = (
+				propagation.getBaggage(contextWithSpanSet) ??
+				propagation.createBaggage()
+			).setEntry(HIGHLIGHT_REQUEST_HEADER, {
 				value: `${secureSessionId}/${requestId}`,
 			} as BaggageEntry)
+			contextWithSpanSet = propagation.setBaggage(
+				contextWithSpanSet,
+				baggage,
+			)
 		}
 
 		propagation.inject(contextWithSpanSet, headers)

@@ -33,11 +33,6 @@
     <PackageReference Include="CommunityToolkit.Maui.NativeLibraryInterop.BuildTasks" Version="0.0.1-pre1" PrivateAssets="all" />
   </ItemGroup>
 
-  <!-- KotlinX Serialization (Json) via NuGet so apps get it transitively -->
-  <ItemGroup>
-    <PackageReference Include="Org.Jetbrains.Kotlinx.KotlinxSerializationJson" Version="1.9.0" />
-  </ItemGroup>
-
   <!-- AndroidX Compose UI and Lifecycle -->
   <ItemGroup>
     <!-- These are only needed to build the binding project itself.

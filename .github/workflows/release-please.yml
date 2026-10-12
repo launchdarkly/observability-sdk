@@ -22,8 +22,8 @@ jobs:
             dotnet-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--tag_name'] }}
             ruby-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-ruby--release_created'] }}
             ruby-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-ruby--tag_name'] }}
-            flutter-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/flutter/packages/observability--release_created'] }}
-            flutter-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/flutter/packages/observability--tag_name'] }}
+            flutter-plugin-released: ${{ steps.release.outputs['sdk/flutter/packages/observability--release_created'] }}
+            flutter-plugin-tag-name: ${{ steps.release.outputs['sdk/flutter/packages/observability--tag_name'] }}
         steps:
             # Normally a workflow cannot trigger another workflow. For this workflow we need to run required checks.
             # Github determines that something is created by a workflow/bot based on the token.
