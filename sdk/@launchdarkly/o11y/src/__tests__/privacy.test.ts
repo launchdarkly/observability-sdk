@@ -38,8 +38,8 @@ describe('determineMaskInputOptions', () => {
 			false,
 			{ password: true },
 		])
-		expect(determineMaskInputOptions('none', false, { email: true })).toEqual(
-			[false, { email: true, password: true }],
-		)
+		expect(
+			determineMaskInputOptions('none', false, { email: true }),
+		).toEqual([false, { email: true, password: true }])
 	})
 })
