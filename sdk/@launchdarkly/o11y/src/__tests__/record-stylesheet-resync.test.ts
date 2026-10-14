@@ -73,6 +73,7 @@ const replayRules = (events: eventWithTime[], id: number) => {
 describe('RecordSDK stylesheet resync', () => {
 	const pristineInsertRule = CSSStyleSheet.prototype.insertRule
 	const pristineDeleteRule = CSSStyleSheet.prototype.deleteRule
+	let sdk: RecordSDK | undefined
 
 	beforeEach(() => {
 		emitted.length = 0
@@ -80,6 +81,9 @@ describe('RecordSDK stylesheet resync', () => {
 	})
 
 	afterEach(() => {
+		// Only a manual stop tears down rrweb's observers and CSSOM patches.
+		sdk?.stop(true)
+		sdk = undefined
 		vi.useRealTimers()
 		CSSStyleSheet.prototype.insertRule = pristineInsertRule
 		CSSStyleSheet.prototype.deleteRule = pristineDeleteRule
@@ -87,7 +91,7 @@ describe('RecordSDK stylesheet resync', () => {
 	})
 
 	it('recovers a rule inserted mid-sheet while another script displaced the insertRule patch', async () => {
-		const sdk = new RecordSDK({
+		sdk = new RecordSDK({
 			organizationID: '1',
 			sessionSecureID: 'seed',
 		})
@@ -123,7 +127,5 @@ describe('RecordSDK stylesheet resync', () => {
 		)
 		expect(live).toEqual(['.first', '.missed', '.second', '.third'])
 		expect(replayRules(emitted, id).map(selector)).toEqual(live)
-
-		sdk.stop()
 	})
 })
