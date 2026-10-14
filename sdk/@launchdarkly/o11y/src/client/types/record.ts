@@ -57,12 +57,17 @@ export type RecordOptions = CommonOptions & {
 	privacySetting?: PrivacySettingOption
 
 	/**
-	 * Enable masking all <input/> elements. Only applies if privacySetting is `none`.
+	 * Enable masking all <input/> elements.
+	 * With privacySetting `none`, inputs are unmasked unless this is `true`.
+	 * With privacySetting `default`, all inputs are masked unless this is `false`;
+	 * PII-like text on the page is still masked, and password inputs always are.
+	 * Ignored when privacySetting is `strict`.
 	 */
 	maskAllInputs?: boolean
 
 	/**
-	 * Customize the input element types that are masked. Only applies if privacySetting is `none`.
+	 * Customize the input element types that are masked. Applies if privacySetting is `none`,
+	 * or `default` with `maskAllInputs: false`. Password inputs are always masked.
 	 */
 	maskInputOptions?: MaskInputOptions
 

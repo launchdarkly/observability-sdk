@@ -11,6 +11,9 @@ export const determineMaskInputOptions = (
 		case 'strict':
 			return [true, undefined]
 		case 'default':
+			if (maskAllInputs === false) {
+				return [false, { ...maskInputOptions, password: true }]
+			}
 			return [true, undefined]
 		case 'none': {
 			return [!!maskAllInputs, { ...maskInputOptions, password: true }]
