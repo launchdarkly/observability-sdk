@@ -11,12 +11,24 @@ export const determineMaskInputOptions = (
 		case 'strict':
 			return [true, undefined]
 		case 'default':
-			if (maskAllInputs === false) {
-				return [false, { ...maskInputOptions, password: true }]
-			}
 			return [true, undefined]
 		case 'none': {
 			return [!!maskAllInputs, { ...maskInputOptions, password: true }]
 		}
+	}
+}
+
+// returns the privacy setting passed to rrweb, which only masks PII-like text under `default`
+export const determineTextPrivacySetting = (
+	privacyPolicy: PrivacySettingOption,
+	maskPiiText?: boolean,
+): PrivacySettingOption => {
+	switch (privacyPolicy) {
+		case 'strict':
+			return 'strict'
+		case 'default':
+			return maskPiiText === false ? 'none' : 'default'
+		case 'none':
+			return maskPiiText === true ? 'default' : 'none'
 	}
 }

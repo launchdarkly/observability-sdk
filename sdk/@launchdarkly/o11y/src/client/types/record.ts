@@ -58,19 +58,26 @@ export type RecordOptions = CommonOptions & {
 
 	/**
 	 * Whether to mask the values of all input, textarea, and select elements.
-	 * - `strict`: ignored. All inputs are always masked.
-	 * - `default`: inputs are masked unless this is `false`.
-	 * - `none`: inputs are not masked unless this is `true`.
+	 * Only applies if privacySetting is `none`. `strict` and `default` always mask all inputs.
 	 * Password inputs are always masked.
 	 */
 	maskAllInputs?: boolean
 
 	/**
-	 * Which input types to mask when not all inputs are masked
-	 * (privacySetting `none`, or `default` with `maskAllInputs: false`).
+	 * Which input types to mask when privacySetting is `none` and `maskAllInputs` is not `true`.
 	 * Password inputs are always masked.
 	 */
 	maskInputOptions?: MaskInputOptions
+
+	/**
+	 * Whether to mask text on the page that looks like PII, such as emails, phone numbers,
+	 * credit card numbers, SSNs, street addresses, and IP addresses.
+	 * - `strict`: ignored. All text is always masked.
+	 * - `default`: PII-like text is masked unless this is `false`.
+	 * - `none`: PII-like text is not masked unless this is `true`.
+	 * Does not affect input masking, which is controlled by `maskAllInputs` and `maskInputOptions`.
+	 */
+	maskPiiText?: boolean
 
 	/**
 	 * Customize which elements' text should be masked by specifying a CSS class name or RegExp.
