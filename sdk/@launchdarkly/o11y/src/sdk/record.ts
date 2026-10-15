@@ -23,7 +23,10 @@ import {
 	type SessionDetails,
 	StartOptions,
 } from '../client/types/types'
-import { determineMaskInputOptions } from '../client/utils/privacy'
+import {
+	determineMaskInputOptions,
+	determineTextPrivacySetting,
+} from '../client/utils/privacy'
 
 import {
 	FIRST_SEND_FREQUENCY,
@@ -621,7 +624,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				blockSelector: this.options.blockSelector,
 				emit,
 				recordCrossOriginIframes: this.options.recordCrossOriginIframe,
-				privacySetting: this.privacySetting,
+				privacySetting: determineTextPrivacySetting(
+					this.privacySetting,
+					this.options.maskPiiText,
+				),
 				maskAllInputs,
 				maskInputOptions,
 				maskTextClass: this.options.maskTextClass,

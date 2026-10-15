@@ -17,3 +17,15 @@ export const determineMaskInputOptions = (
 		}
 	}
 }
+
+// rrweb masks all text under `strict`, only PII-like text under `default`, and no text under `none`
+export const determineTextPrivacySetting = (
+	privacyPolicy: PrivacySettingOption,
+	maskPiiText?: boolean,
+): PrivacySettingOption => {
+	if (privacyPolicy === 'strict') {
+		return 'strict'
+	}
+	const shouldMaskPiiText = maskPiiText ?? privacyPolicy === 'default'
+	return shouldMaskPiiText ? 'default' : 'none'
+}
