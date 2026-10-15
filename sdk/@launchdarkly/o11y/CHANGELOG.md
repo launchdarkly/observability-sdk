@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.2.0...o11y-1.3.0) (2026-10-15)
+
+
+### Features
+
+* **o11y:** add maskPiiText option ([#832](https://github.com/launchdarkly/observability-sdk/issues/832)) ([c2f48ec](https://github.com/launchdarkly/observability-sdk/commit/c2f48ece917160ca29d4b4dd92ecdae5c7e88cfa))
+
+
+### Bug Fixes
+
+* **o11y:** cover mid-sheet CSS-in-JS recovery in RecordSDK ([#829](https://github.com/launchdarkly/observability-sdk/issues/829)) ([fbe957c](https://github.com/launchdarkly/observability-sdk/commit/fbe957c3f661cbceb148790fd792ba94450e7eec))
+
 ## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.1.26...o11y-1.2.0) (2026-10-09)
 
 
