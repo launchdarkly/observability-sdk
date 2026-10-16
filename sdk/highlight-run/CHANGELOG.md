@@ -1,5 +1,14 @@
 # highlight.run
 
+## [10.8.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.8.0...highlight.run-10.8.1) (2026-10-15)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/o11y bumped to 1.3.0
+
 ## [10.8.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.8...highlight.run-10.8.0) (2026-10-09)
 
 
