@@ -8,66 +8,67 @@ PODS:
   - hermes-engine (0.78.0):
     - hermes-engine/Pre-built (= 0.78.0)
   - hermes-engine/Pre-built (0.78.0)
-  - KSCrash (2.5.1):
-    - KSCrash/Installations (= 2.5.1)
-  - KSCrash/Core (2.5.1)
-  - KSCrash/DemangleFilter (2.5.1):
+  - KSCrash (2.6.0):
+    - KSCrash/Installations (= 2.6.0)
+  - KSCrash/Core (2.6.0)
+  - KSCrash/DemangleFilter (2.6.0):
     - KSCrash/Recording
-  - KSCrash/Filters (2.5.1):
+  - KSCrash/Filters (2.6.0):
     - KSCrash/Recording
     - KSCrash/RecordingCore
     - KSCrash/ReportingCore
-  - KSCrash/Installations (2.5.1):
+  - KSCrash/Installations (2.6.0):
     - KSCrash/DemangleFilter
     - KSCrash/Filters
     - KSCrash/Recording
     - KSCrash/Sinks
-  - KSCrash/Recording (2.5.1):
+  - KSCrash/Recording (2.6.0):
     - KSCrash/RecordingCore
-  - KSCrash/RecordingCore (2.5.1):
+  - KSCrash/RecordingCore (2.6.0):
     - KSCrash/Core
-  - KSCrash/ReportingCore (2.5.1):
+  - KSCrash/ReportingCore (2.6.0):
     - KSCrash/Core
-  - KSCrash/Sinks (2.5.1):
+  - KSCrash/Sinks (2.6.0):
     - KSCrash/Filters
     - KSCrash/Recording
-  - LaunchDarkly (11.2.0):
-    - LaunchDarkly/Core (= 11.2.0)
-  - LaunchDarkly/Core (11.2.0):
-    - LDSwiftEventSource (= 3.3.0)
-  - LaunchDarklyObservability (0.46.1):
-    - LaunchDarklyObservability/LaunchDarklyObservability (= 0.46.1)
-  - LaunchDarklyObservability/Common (0.46.1):
-    - LaunchDarkly (~> 11.2)
-  - LaunchDarklyObservability/JSONExporters (0.46.1):
+  - LaunchDarkly (11.7.0):
+    - LaunchDarkly/Core (= 11.7.0)
+  - LaunchDarkly/Core (11.7.0):
+    - LDSwiftEventSource (= 3.4.0)
+  - LaunchDarklyObservability (0.56.0):
+    - LaunchDarklyObservability/LaunchDarklyObservability (= 0.56.0)
+  - LaunchDarklyObservability/Common (0.56.0):
+    - LaunchDarkly (~> 11.5)
+  - LaunchDarklyObservability/JSONExporters (0.56.0):
     - OpenTelemetry-Swift-Api (~> 2.3.0)
     - OpenTelemetry-Swift-Sdk (~> 2.3.0)
-  - LaunchDarklyObservability/LaunchDarklyObservability (0.46.1):
+  - LaunchDarklyObservability/LaunchDarklyObservability (0.56.0):
+    - LaunchDarkly (~> 11.5)
     - LaunchDarklyObservability/Common
     - LaunchDarklyObservability/JSONExporters
     - LaunchDarklyObservability/Misc
     - LaunchDarklyObservability/OpenTelemetry
     - LaunchDarklyObservability/SDKResourceExtension
     - LaunchDarklyObservability/URLSessionInstrumentation
-  - LaunchDarklyObservability/Misc (0.46.1):
+  - LaunchDarklyObservability/Misc (0.56.0):
     - KSCrash
-  - LaunchDarklyObservability/NetworkStatus (0.46.1):
+  - LaunchDarklyObservability/NetworkStatus (0.56.0):
     - OpenTelemetry-Swift-Api (~> 2.3.0)
-  - LaunchDarklyObservability/OpenTelemetry (0.46.1):
+  - LaunchDarklyObservability/OpenTelemetry (0.56.0):
     - OpenTelemetry-Swift-Api (~> 2.3.0)
     - OpenTelemetry-Swift-Sdk (~> 2.3.0)
-  - LaunchDarklyObservability/SDKResourceExtension (0.46.1):
+  - LaunchDarklyObservability/SDKResourceExtension (0.56.0):
     - LaunchDarklyObservability/OpenTelemetry
-  - LaunchDarklyObservability/URLSessionInstrumentation (0.46.1):
+  - LaunchDarklyObservability/URLSessionInstrumentation (0.56.0):
     - LaunchDarklyObservability/NetworkStatus
     - OpenTelemetry-Swift-Sdk (~> 2.3.0)
-  - LaunchDarklySessionReplay (0.46.1):
-    - LaunchDarklySessionReplay/LaunchDarklySessionReplay (= 0.46.1)
-  - LaunchDarklySessionReplay/LaunchDarklySessionReplay (0.46.1):
+  - LaunchDarklySessionReplay (0.56.0):
+    - LaunchDarklySessionReplay/LaunchDarklySessionReplay (= 0.56.0)
+  - LaunchDarklySessionReplay/LaunchDarklySessionReplay (0.56.0):
     - LaunchDarklyObservability
     - LaunchDarklySessionReplay/SessionReplayC
-  - LaunchDarklySessionReplay/SessionReplayC (0.46.1)
-  - LDSwiftEventSource (3.3.0)
+  - LaunchDarklySessionReplay/SessionReplayC (0.56.0)
+  - LDSwiftEventSource (3.4.0)
   - OpenTelemetry-Swift-Api (2.3.0)
   - OpenTelemetry-Swift-Sdk (2.3.0):
     - OpenTelemetry-Swift-Api (= 2.3.0)
@@ -1301,6 +1302,8 @@ PODS:
     - React-jsiexecutor
     - React-RCTFBReactNativeSpec
     - ReactCommon/turbomodule/core
+  - react-native-safe-area-context (5.6.1):
+    - React-Core
   - react-native-webview (13.16.1):
     - DoubleConversion
     - glog
@@ -1611,11 +1614,33 @@ PODS:
     - React-utils (= 0.78.0)
   - RNCAsyncStorage (2.2.0):
     - React-Core
-  - SessionReplayReactNative (0.17.0):
+  - RNScreens (4.13.1):
     - DoubleConversion
     - glog
     - hermes-engine
-    - LaunchDarklySessionReplay (~> 0.46.1)
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-RCTImage
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
+  - SessionReplayReactNative (0.24.0):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - LaunchDarklySessionReplay (~> 0.56.0)
     - RCT-Folly (= 2024.11.18.00)
     - RCTRequired
     - RCTTypeSafety
@@ -1676,6 +1701,7 @@ DEPENDENCIES:
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
+  - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-webview (from `../node_modules/react-native-webview`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-perflogger (from `../node_modules/react-native/ReactCommon/reactperflogger`)
@@ -1706,6 +1732,7 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
+  - RNScreens (from `../node_modules/react-native-screens`)
   - SessionReplayReactNative (from `../..`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -1796,6 +1823,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
+  react-native-safe-area-context:
+    :path: "../node_modules/react-native-safe-area-context"
   react-native-webview:
     :path: "../node_modules/react-native-webview"
   React-NativeModulesApple:
@@ -1856,6 +1885,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   RNCAsyncStorage:
     :path: "../node_modules/@react-native-async-storage/async-storage"
+  RNScreens:
+    :path: "../node_modules/react-native-screens"
   SessionReplayReactNative:
     :path: "../.."
   Yoga:
@@ -1869,11 +1900,11 @@ SPEC CHECKSUMS:
   fmt: b85d977e8fe789fd71c77123f9f4920d88c4d170
   glog: 4d0897e15160938a2f597257740aff78251ee509
   hermes-engine: b3bd049767e1993c0e344ea63c8bc048ba7cfa22
-  KSCrash: 8c4464fd5da7de520f2ce4a00fdf63f169a80f18
-  LaunchDarkly: 196f8e6c8b3ae801762fcf328704c495a36bdeee
-  LaunchDarklyObservability: a0b489bb28649b3de749d1c083ea1804138f26f6
-  LaunchDarklySessionReplay: 602daf827c4aa92635a6c70910d61c3e094a98db
-  LDSwiftEventSource: b0826ca826ca890609a9833a05cae1f357fd3b99
+  KSCrash: 8515730b020ffc714bb10406a3bd289b28a81c6f
+  LaunchDarkly: 588d2c650a9e50c6af9fbd1ca15f796cc5f0793d
+  LaunchDarklyObservability: 6c445720bb9f7d06ccb2343895eea4f07d715269
+  LaunchDarklySessionReplay: 19fc615442e6c5b08efb94ae2e016f63111aff74
+  LDSwiftEventSource: b281dcf0d3c893930fa98a9db0b73b6c4a108b61
   OpenTelemetry-Swift-Api: 3d77582ab6837a63b65bf7d2eacc57d8f2595edd
   OpenTelemetry-Swift-Sdk: 69d60f0242e830366e359481edd575d6776eb983
   RCT-Folly: 031db300533e2dfa954cdc5a859b792d5c14ed7b
@@ -1906,6 +1937,7 @@ SPEC CHECKSUMS:
   React-logger: 018826bfd51b9f18e87f67db1590bc510ad20664
   React-Mapbuffer: 3c11cee7737609275c7b66bd0b1de475f094cedf
   React-microtasksnativemodule: 843f352b32aacbe13a9c750190d34df44c3e6c2c
+  react-native-safe-area-context: 2243039f43d10cb1ea30ec5ac57fc6d1448413f4
   react-native-webview: 1af76726e76eb4a02e4225e0ecc8725eda03a65b
   React-NativeModulesApple: 88433b6946778bea9c153e27b671de15411bf225
   React-perflogger: 9e8d3c0dc0194eb932162812a168aa5dc662f418
@@ -1936,7 +1968,8 @@ SPEC CHECKSUMS:
   ReactCodegen: 008c319179d681a6a00966edfc67fda68f9fbb2e
   ReactCommon: 0c097b53f03d6bf166edbcd0915da32f3015dd90
   RNCAsyncStorage: b44e8a4e798c3e1f56bffccd0f591f674fb9198f
-  SessionReplayReactNative: 4c03c3ee6168775338e63b6a93d4241474c7e81b
+  RNScreens: 9f99e18ee2c72a203651a9bbe322825fe5525d2f
+  SessionReplayReactNative: bfaef07919c6440e73efa727e08bc33c1bc8afa3
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: afd04ff05ebe0121a00c468a8a3c8080221cb14c
 

@@ -157,6 +157,84 @@ rather than resuming the previous one.
 See the [event taxonomy](../../../analytics-taxonomy.md) for the full `event.*` payload
 of each event.
 
+## Screen views
+
+Screens are the one signal that cannot be captured automatically. React Native renders
+every route into the single host `UIViewController` / `Activity`, so a native screen
+detector sees one screen for the whole app and nothing at all when you navigate —
+automatic detection is therefore turned off on both platforms, and screens are reported
+from JavaScript.
+
+Each report emits a `screen_view` span and a Session Replay `Navigate` timeline event.
+`event.previous_screen` is resolved natively from a shared navigation stack, so one call
+per appearance is enough — back-navigation and re-appearance are handled for you.
+
+```tsx
+import { trackScreenView } from '@launchdarkly/session-replay-react-native';
+
+trackScreenView('Checkout', { category: 'Commerce' });
+```
+
+`trackScreenView` is fire-and-forget: failures are logged rather than thrown, so it is
+safe to call from a navigation callback or a render effect. A screen view reported before
+session replay has finished starting is held and sent once it has, so the screen your app
+opens on is not lost to the race.
+
+### React Navigation
+
+Spread `createNavigationObserver` onto your container to report every route change:
+
+```tsx
+import { createNavigationContainerRef, NavigationContainer } from '@react-navigation/native';
+import { createNavigationObserver } from '@launchdarkly/session-replay-react-native';
+
+const navigationRef = createNavigationContainerRef();
+
+<NavigationContainer ref={navigationRef} {...createNavigationObserver(navigationRef)}>
+  {/* ... */}
+</NavigationContainer>;
+```
+
+Pass `screenNameExtractor` to rename or skip routes — returning `null` leaves a route
+unreported, which is what you want for an unnamed dialog or bottom sheet that should not
+read as a navigation:
+
+```tsx
+createNavigationObserver(navigationRef, {
+  category: 'navigation',
+  screenNameExtractor: (route) =>
+    route.name === 'ConfirmDialog' ? null : route.name,
+});
+```
+
+### Expo Router and other value-based routers
+
+When the current screen is a value rather than a navigator, report it with the hook:
+
+```tsx
+import { usePathname } from 'expo-router';
+import { useLDScreenView } from '@launchdarkly/session-replay-react-native';
+
+useLDScreenView(usePathname());
+```
+
+### Navigation the router cannot see
+
+Switching tabs held in component state, or paging a `ScrollView`, never touches the route
+stack, so no observer can detect it. Report those directly:
+
+```tsx
+useEffect(() => {
+  trackScreenView(TAB_SCREEN_NAMES[tab]);
+}, [tab]);
+```
+
+Path-style route names have their query string and fragment stripped, since that is the
+part of a name that carries values rather than structure — `'/reset?token=abc123'` is
+reported as `'/reset'`. Path parameters are kept (`'/orders/42'` stays as it is), because
+only your app knows which segments are ids; collapse them in a `screenNameExtractor` if
+you want `'/orders/:id'`.
+
 ## Expo
 
 Expo SDK `51+` is supported. Session replay is a **native module**, so it does

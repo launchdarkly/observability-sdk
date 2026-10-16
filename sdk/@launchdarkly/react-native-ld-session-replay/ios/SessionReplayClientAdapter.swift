@@ -129,7 +129,12 @@ public class SessionReplayClientAdapter: NSObject {
       backendUrl: self.backendUrl,
       sessionBackgroundTimeout: 10,
       /// Disable the underlying KSCrash-based crash reporter that
-      crashReporting: .init(source: .none)
+      crashReporting: .init(source: .none),
+      // React Native navigation is reported explicitly through trackScreenView. The
+      // UIViewController swizzle only ever sees the single host view controller — which RN
+      // creates as a plain `UIViewController`, so it is filtered out anyway — and would
+      // overwrite the active RN route when a modal appears or the session is reseeded.
+      instrumentation: .init(screens: .disabled)
     )
     // The session replay options carry no version, so apply the forwarded
     // `service.version` to the observability plugin only.
@@ -248,6 +253,42 @@ public class SessionReplayClientAdapter: NSObject {
     }
   }
 
+  /// Forwards a screen view to the native observability SDK, which emits the `screen_view` span
+  /// and broadcasts a Session Replay `Navigate` timeline event. `event.previous_screen` is
+  /// resolved there from the shared navigation stack.
+  ///
+  /// React Native owns its routing inside one host view controller, so automatic screen
+  /// detection is disabled (see makeConfig) and screens arrive here from JS instead.
+  @objc public func trackScreenView(name: String, options: NSDictionary?) {
+    let screenClass = Self.stringOption(options, key: "screenClass")
+    let screenId = Self.stringOption(options, key: "screenId")
+    let category = Self.stringOption(options, key: "category")
+    let properties = (options?["properties"] as? [String: Any])
+      .map { Self.withoutNulls($0) }
+
+    lock.lock()
+    defer { lock.unlock() }
+    let prev = lastTask
+    lastTask = Task { @MainActor [weak self] in
+      await prev.value
+      guard let self else { return }
+      // Queued behind start(), so a screen view reported while initialization was still in
+      // flight lands after it rather than against an observability instance that has not
+      // started. One reported before start() was ever called has nothing to record it.
+      guard self.initialized else {
+        NSLog("%@ trackScreenView: dropped '%@' — session replay is not initialized", Self.logPrefix, name)
+        return
+      }
+      LDObserve.shared.trackScreenView(
+        name: name,
+        screenClass: screenClass,
+        screenId: screenId,
+        category: category,
+        properties: properties
+      )
+    }
+  }
+
   @objc public func afterIdentify(contextKeys: NSDictionary, canonicalKey: String, completed: Bool) {
     var keys = [String: String]()
     for (k, v) in contextKeys {
@@ -297,6 +338,19 @@ public class SessionReplayClientAdapter: NSObject {
 }
 
 extension SessionReplayClientAdapter {
+  /// A trimmed, non-empty string from an options dictionary, or nil — so an absent key and a
+  /// blank value both fall back to the native default.
+  fileprivate static func stringOption(_ dictionary: NSDictionary?, key: String) -> String? {
+    guard let value = (dictionary?[key] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return nil }
+    return value
+  }
+
+  /// Drops the `NSNull`s a JS `null` arrives as, which an attribute value cannot represent.
+  fileprivate static func withoutNulls(_ dictionary: [String: Any]) -> [String: Any] {
+    return dictionary.filter { !($0.value is NSNull) }
+  }
+
   private func doubleOption(
     _ dictionary: NSDictionary,
     key: String,
