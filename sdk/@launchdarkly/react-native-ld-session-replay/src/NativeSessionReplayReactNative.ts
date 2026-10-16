@@ -119,6 +119,18 @@ export interface Spec extends TurboModule {
    */
   startSessionReplay(): Promise<void>;
   stopSessionReplay(): Promise<void>;
+
+  /**
+   * Records a screen view natively, emitting the `screen_view` span and the Session Replay
+   * `Navigate` timeline event.
+   *
+   * React Native renders every route into the single host `UIViewController` / `Activity`, so
+   * native automatic screen detection never sees a route change; it is disabled on both
+   * platforms and screens are reported through here instead.
+   *
+   * `options` carries the optional `screenClass`, `screenId`, `category` and `properties`.
+   */
+  trackScreenView(name: string, options?: Object): Promise<void>;
   afterIdentify(
     contextKeys: Object,
     canonicalKey: string,

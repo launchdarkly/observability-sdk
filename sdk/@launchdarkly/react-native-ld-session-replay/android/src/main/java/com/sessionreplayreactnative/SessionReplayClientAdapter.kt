@@ -13,6 +13,7 @@ import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.SessionReplayStartResult
 import com.launchdarkly.observability.replay.plugin.SessionReplay
+import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
@@ -188,6 +189,43 @@ internal class SessionReplayClientAdapter private constructor() {
         }
     }
 
+    /**
+     * Forwards a screen view to the native observability SDK, which emits the `screen_view` span
+     * and broadcasts a Session Replay `Navigate` timeline event. `event.previous_screen` is
+     * resolved there from the shared navigation stack.
+     *
+     * React Native owns its routing inside one host Activity, so automatic screen detection is
+     * disabled (see [initLDClient]) and screens arrive here from JS instead.
+     */
+    fun trackScreenView(name: String, options: ReadableMap?) {
+        val screenClass = stringOption(options, "screenClass")
+        val screenId = stringOption(options, "screenId")
+        val category = stringOption(options, "category")
+        val properties = options?.takeIf { it.hasKey("properties") }
+            ?.getMap("properties")
+            ?.toHashMap()
+
+        // Posted so it queues behind an in-progress start(), matching afterIdentify.
+        Handler(Looper.getMainLooper()).post {
+            if (!initialized) {
+                logger.warn("$LOG_PREFIX trackScreenView: dropped '$name' — session replay is not initialized")
+                return@post
+            }
+            try {
+                LDObserve.trackScreenView(name, screenClass, screenId, category, properties)
+            } catch (e: Exception) {
+                logger.error("$LOG_PREFIX trackScreenView: threw {0}: {1}", e::class.simpleName, e.message)
+            }
+        }
+    }
+
+    /**
+     * A non-blank string from an options map, or null — so an absent key and a blank value both
+     * fall back to the native default.
+     */
+    private fun stringOption(options: ReadableMap?, key: String): String? =
+        options?.takeIf { it.hasKey(key) }?.getString(key)?.takeIf { it.isNotBlank() }
+
     fun afterIdentify(contextKeys: ReadableMap, canonicalKey: String, completed: Boolean) {
         val keys = mutableMapOf<String, String>()
         val iterator = contextKeys.keySetIterator()
@@ -240,6 +278,11 @@ internal class SessionReplayClientAdapter private constructor() {
             // Disable the OpenTelemetry Android CrashReporterInstrumentation
             instrumentations = ObservabilityOptions.Instrumentations(
                 crashReporting = false,
+                // React Native navigation is reported explicitly through trackScreenView.
+                // Activity lifecycle detection only ever sees the single host Activity, so it
+                // would report one generic screen and then overwrite the active RN route on
+                // every foreground or session reseed.
+                screens = false,
             ),
         )
         if (serviceVersion != null) {

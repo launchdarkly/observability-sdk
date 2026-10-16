@@ -2,6 +2,7 @@ import { View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
 import SessionReplayReactNative from './NativeSessionReplayReactNative';
 import type { SessionReplayOptions } from './NativeSessionReplayReactNative';
+import { notifyNativeStarted } from './screenView';
 import {
   LDObserve,
   type LDPlugin,
@@ -125,7 +126,11 @@ export function configureSessionReplay(
  * regardless of it, use {@link startSessionReplay}.
  */
 export function initializeSessionReplay(): Promise<void> {
-  return SessionReplayReactNative.initializeSessionReplay();
+  // Native observability is up once this resolves, so any screen view reported while it was
+  // starting (the first route, typically) can be released.
+  return SessionReplayReactNative.initializeSessionReplay().then(
+    notifyNativeStarted
+  );
 }
 
 /**
@@ -139,7 +144,7 @@ export function initializeSessionReplay(): Promise<void> {
  * already excluded stays excluded until `stopSessionReplay()` resets the decision.
  */
 export function startSessionReplay(): Promise<void> {
-  return SessionReplayReactNative.startSessionReplay();
+  return SessionReplayReactNative.startSessionReplay().then(notifyNativeStarted);
 }
 
 export function stopSessionReplay(): Promise<void> {
@@ -332,5 +337,21 @@ export function createSessionReplayPlugin(
 ): LDPlugin {
   return new SessionReplayPluginAdapter(options);
 }
+
+export { trackScreenView } from './screenView';
+export type { LDScreenViewOptions } from './screenView';
+export {
+  createNavigationObserver,
+  defaultScreenNameExtractor,
+  screenNameFromRouteName,
+  useLDScreenView,
+} from './navigation';
+export type {
+  LDNavigationObserver,
+  LDNavigationObserverOptions,
+  LDNavigationRef,
+  LDRoute,
+  LDScreenNameExtractor,
+} from './navigation';
 
 export type { SessionReplayOptions };
