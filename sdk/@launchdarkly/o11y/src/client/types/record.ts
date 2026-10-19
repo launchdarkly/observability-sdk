@@ -67,6 +67,16 @@ export type RecordOptions = CommonOptions & {
 	maskInputOptions?: MaskInputOptions
 
 	/**
+	 * Whether to mask text on the page that looks like PII, such as emails, phone numbers,
+	 * credit card numbers, SSNs, street addresses, and IP addresses.
+	 * - `strict`: ignored. All text is always masked.
+	 * - `default`: PII-like text is masked unless this is `false`.
+	 * - `none`: PII-like text is not masked unless this is `true`.
+	 * Does not affect input masking, which is controlled by `maskAllInputs` and `maskInputOptions`.
+	 */
+	maskPiiText?: boolean
+
+	/**
 	 * Customize which elements' text should be masked by specifying a CSS class name or RegExp.
 	 * Default class is 'highlight-mask'.
 	 */
