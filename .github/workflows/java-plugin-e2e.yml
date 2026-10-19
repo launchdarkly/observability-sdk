@@ -52,19 +52,23 @@ jobs:
 
             - name: Smoke-test the Spring Boot backend
               working-directory: ./e2e/java-plugin-spring-boot
+              # The app under test runs on this runner, so it is reached on the
+              # loopback address. DevSkim DS162092 flags that as debug code.
+              env:
+                  APP: http://localhost:8080 # DevSkim: ignore DS162092
               run: |
                   java -jar build/libs/*.jar > app.log 2>&1 &
                   APP_PID=$!
                   for i in $(seq 1 120); do
-                      if curl -sf -o /dev/null localhost:8080/; then break; fi
+                      if curl -sf -o /dev/null "$APP/"; then break; fi
                       if ! kill -0 "$APP_PID" 2>/dev/null; then echo "app exited early"; cat app.log; exit 1; fi
                       sleep 1
                   done
-                  curl -sf localhost:8080/ || { cat app.log; exit 1; }
-                  curl -sf -H 'X-User-Key: ci' localhost:8080/rolldice || { cat app.log; exit 1; }
-                  curl -sf localhost:8080/flags/example-greeting || { cat app.log; exit 1; }
-                  curl -sf localhost:8080/actuator/health || { cat app.log; exit 1; }
-                  code=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/error)
+                  curl -sf "$APP/" || { cat app.log; exit 1; }
+                  curl -sf -H 'X-User-Key: ci' "$APP/rolldice" || { cat app.log; exit 1; }
+                  curl -sf "$APP/flags/example-greeting" || { cat app.log; exit 1; }
+                  curl -sf "$APP/actuator/health" || { cat app.log; exit 1; }
+                  code=$(curl -s -o /dev/null -w '%{http_code}' "$APP/error")
                   [ "$code" = "500" ] || { echo "expected 500 from /error, got $code"; cat app.log; exit 1; }
                   kill -TERM "$APP_PID"
                   wait "$APP_PID" || true
