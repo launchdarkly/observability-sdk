@@ -14,7 +14,15 @@ jobs:
         runs-on: ubuntu-22.04-8core-32gb
         strategy:
             matrix:
-                app: ['dotnet', 'dotnet4', 'go', 'java-plugin-spring-boot', 'python', 'ruby']
+                app:
+                    [
+                        'dotnet',
+                        'dotnet4',
+                        'go',
+                        'java-plugin-spring-boot',
+                        'python',
+                        'ruby',
+                    ]
 
         steps:
             - uses: actions/checkout@v4
