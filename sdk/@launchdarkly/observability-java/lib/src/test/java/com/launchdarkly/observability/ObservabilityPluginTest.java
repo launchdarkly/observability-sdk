@@ -2,9 +2,14 @@ package com.launchdarkly.observability;
 
 import com.launchdarkly.sdk.server.integrations.Hook;
 import com.launchdarkly.sdk.server.integrations.PluginMetadata;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
 import org.junit.jupiter.api.Test;
 
+import java.net.Proxy;
+import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -41,6 +46,60 @@ class ObservabilityPluginTest {
         assertFalse(options.isManualStart());
         assertEquals("https://otel.observability.app.launchdarkly.com:4318", options.getOtlpEndpoint());
         assertEquals("https://pub.observability.app.launchdarkly.com", options.getBackendUrl());
+        assertTrue(options.isEnabled());
+        assertEquals(Attributes.empty(), options.getResourceAttributes());
+        assertTrue(options.getCustomHeaders().isEmpty());
+        assertNull(options.getProxySelector());
+        assertEquals(ObservabilityOptions.LogLevel.INFO, options.getLogsApiLevel());
+    }
+
+    @Test
+    void disabledPluginRegistersNoHooks() {
+        ObservabilityOptions options = new ObservabilityOptions.Builder().enabled(false).build();
+        ObservabilityPlugin plugin = new ObservabilityPlugin(options);
+
+        assertFalse(options.isEnabled());
+        assertTrue(plugin.getHooks(null).isEmpty(), "a disabled plugin must not add a flag-evaluation hook");
+    }
+
+    @Test
+    void customHeadersAccumulateAndAreCopied() {
+        Map<String, String> initial = new java.util.HashMap<>();
+        initial.put("Authorization", "Bearer one");
+        ObservabilityOptions.Builder builder = new ObservabilityOptions.Builder()
+                .customHeaders(initial)
+                .customHeader("X-Tenant", "acme");
+        initial.put("X-Leaked", "later");
+        ObservabilityOptions options = builder.build();
+
+        assertEquals(Map.of("Authorization", "Bearer one", "X-Tenant", "acme"), options.getCustomHeaders());
+        assertThrows(UnsupportedOperationException.class, () -> options.getCustomHeaders().put("a", "b"));
+    }
+
+    @Test
+    void proxyHostAndPortBuildsAnHttpProxySelector() {
+        ObservabilityOptions options = new ObservabilityOptions.Builder()
+                .proxyHostAndPort("proxy.example.test", 3128)
+                .build();
+
+        List<Proxy> proxies = options.getProxySelector().select(URI.create("https://otel.example.test/v1/traces"));
+        assertEquals(1, proxies.size());
+        assertEquals(Proxy.Type.HTTP, proxies.get(0).type());
+        assertEquals("proxy.example.test:3128", proxies.get(0).address().toString().replace("/<unresolved>", ""));
+    }
+
+    @Test
+    void resourceAttributesAndLogLevelAreKept() {
+        Attributes attrs = Attributes.of(AttributeKey.stringKey("team"), "payments");
+        ObservabilityOptions options = new ObservabilityOptions.Builder()
+                .resourceAttributes(attrs)
+                .logsApiLevel(ObservabilityOptions.LogLevel.WARN)
+                .build();
+
+        assertEquals(attrs, options.getResourceAttributes());
+        assertEquals(ObservabilityOptions.LogLevel.WARN, options.getLogsApiLevel());
+        assertEquals(13, ObservabilityOptions.LogLevel.WARN.getSeverityNumber());
+        assertTrue(ObservabilityOptions.LogLevel.NONE.getSeverityNumber() > ObservabilityOptions.LogLevel.FATAL.getSeverityNumber());
     }
 
     @Test

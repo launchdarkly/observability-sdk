@@ -15,9 +15,13 @@ import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter;
+import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporterBuilder;
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter;
+import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporterBuilder;
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
+import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporterBuilder;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.common.export.ProxyOptions;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
@@ -27,6 +31,7 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
@@ -110,14 +115,22 @@ public final class OtelManager {
     private static OtelManager create(String sdkKey, ObservabilityOptions options) {
         Resource resource = buildResource(sdkKey, options);
         String endpoint = options.getOtlpEndpoint();
+        Map<String, String> headers = options.getCustomHeaders();
+        ProxyOptions proxy = options.getProxySelector() == null
+                ? null
+                : ProxyOptions.create(options.getProxySelector());
 
         CustomSampler customSampler = new CustomSampler();
 
         // Trace exporter with sampling
-        OtlpHttpSpanExporter rawSpanExporter = OtlpHttpSpanExporter.builder()
+        OtlpHttpSpanExporterBuilder spanExporterBuilder = OtlpHttpSpanExporter.builder()
                 .setEndpoint(endpoint + Constants.TRACES_PATH)
                 .setCompression("gzip")
-                .build();
+                .setHeaders(() -> headers);
+        if (proxy != null) {
+            spanExporterBuilder.setProxy(proxy);
+        }
+        OtlpHttpSpanExporter rawSpanExporter = spanExporterBuilder.build();
         SamplingTraceExporter samplingTraceExporter =
                 new SamplingTraceExporter(rawSpanExporter, customSampler);
 
@@ -129,27 +142,37 @@ public final class OtelManager {
                 .setResource(resource)
                 .build();
 
-        // Log exporter with sampling
-        OtlpHttpLogRecordExporter rawLogExporter = OtlpHttpLogRecordExporter.builder()
+        // Log exporter with level filter and sampling
+        OtlpHttpLogRecordExporterBuilder logExporterBuilder = OtlpHttpLogRecordExporter.builder()
                 .setEndpoint(endpoint + Constants.LOGS_PATH)
                 .setCompression("gzip")
-                .build();
+                .setHeaders(() -> headers);
+        if (proxy != null) {
+            logExporterBuilder.setProxyOptions(proxy);
+        }
+        OtlpHttpLogRecordExporter rawLogExporter = logExporterBuilder.build();
         BatchLogRecordProcessor batchLogProcessor = BatchLogRecordProcessor.builder(rawLogExporter)
                 .setExporterTimeout(Duration.ofSeconds(30))
                 .build();
         SamplingLogProcessor samplingLogProcessor =
                 new SamplingLogProcessor(batchLogProcessor, customSampler);
+        LogLevelFilterProcessor levelFilter = new LogLevelFilterProcessor(
+                samplingLogProcessor, options.getLogsApiLevel().getSeverityNumber());
 
         SdkLoggerProvider loggerProvider = SdkLoggerProvider.builder()
-                .addLogRecordProcessor(samplingLogProcessor)
+                .addLogRecordProcessor(levelFilter)
                 .setResource(resource)
                 .build();
 
         // Metric exporter
-        OtlpHttpMetricExporter metricExporter = OtlpHttpMetricExporter.builder()
+        OtlpHttpMetricExporterBuilder metricExporterBuilder = OtlpHttpMetricExporter.builder()
                 .setEndpoint(endpoint + Constants.METRICS_PATH)
                 .setCompression("gzip")
-                .build();
+                .setHeaders(() -> headers);
+        if (proxy != null) {
+            metricExporterBuilder.setProxyOptions(proxy);
+        }
+        OtlpHttpMetricExporter metricExporter = metricExporterBuilder.build();
 
         SdkMeterProvider meterProvider = SdkMeterProvider.builder()
                 .registerMetricReader(PeriodicMetricReader.builder(metricExporter)
@@ -318,6 +341,9 @@ public final class OtelManager {
             attrs.put("deployment.environment.name", options.getEnvironment());
         }
 
-        return Resource.getDefault().merge(Resource.create(attrs.build()));
+        // User attributes are merged last so they can override the defaults.
+        return Resource.getDefault()
+                .merge(Resource.create(attrs.build()))
+                .merge(Resource.create(options.getResourceAttributes()));
     }
 }

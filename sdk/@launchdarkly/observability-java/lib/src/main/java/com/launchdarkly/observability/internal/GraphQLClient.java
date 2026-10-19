@@ -4,35 +4,62 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.ProxySelector;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * Simple GraphQL client using {@link HttpURLConnection} and Gson.
+ * Minimal GraphQL client on {@link HttpClient} (Java 11) and Gson.
+ *
+ * <p>Uses the same HTTP stack as the OTLP exporters, so proxy settings and
+ * custom headers behave the same for the sampling request as for exports.
+ * Instances are immutable and safe to share between threads.</p>
  */
 public final class GraphQLClient {
 
     private static final Logger log = Logger.getLogger(GraphQLClient.class.getName());
-    private static final int CONNECT_TIMEOUT = 10_000;
-    private static final int READ_TIMEOUT = 10_000;
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final Gson GSON = new Gson();
-    private static final ConcurrentHashMap<String, String> QUERY_CACHE = new ConcurrentHashMap<>();
 
-    private final String endpoint;
+    private final URI endpoint;
+    private final Map<String, String> headers;
+    private final HttpClient httpClient;
 
+    /**
+     * Creates a client that uses the JVM default proxy selector and sends no
+     * extra headers.
+     */
     public GraphQLClient(String backendUrl) {
-        this.endpoint = backendUrl;
+        this(backendUrl, Collections.emptyMap(), null);
+    }
+
+    /**
+     * @param backendUrl    the GraphQL endpoint
+     * @param headers       headers added to every request; may be empty
+     * @param proxySelector the proxy selector for requests, or null for the JVM default
+     */
+    public GraphQLClient(String backendUrl, Map<String, String> headers, ProxySelector proxySelector) {
+        this.endpoint = URI.create(backendUrl);
+        this.headers = Collections.unmodifiableMap(new LinkedHashMap<>(headers));
+        HttpClient.Builder builder = HttpClient.newBuilder()
+                .connectTimeout(CONNECT_TIMEOUT)
+                .followRedirects(HttpClient.Redirect.NORMAL);
+        if (proxySelector != null) {
+            builder.proxy(proxySelector);
+        }
+        this.httpClient = builder.build();
     }
 
     /**
@@ -49,58 +76,38 @@ public final class GraphQLClient {
 
         byte[] payload = gzip(GSON.toJson(body).getBytes(StandardCharsets.UTF_8));
 
-        HttpURLConnection conn = (HttpURLConnection) new URL(endpoint).openConnection();
+        HttpRequest.Builder request = HttpRequest.newBuilder(endpoint)
+                .timeout(REQUEST_TIMEOUT)
+                .header("Content-Type", "application/json")
+                .header("Content-Encoding", "gzip")
+                .POST(HttpRequest.BodyPublishers.ofByteArray(payload));
+        for (Map.Entry<String, String> header : headers.entrySet()) {
+            request.header(header.getKey(), header.getValue());
+        }
+
+        HttpResponse<String> response;
         try {
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("Content-Encoding", "gzip");
-            conn.setConnectTimeout(CONNECT_TIMEOUT);
-            conn.setReadTimeout(READ_TIMEOUT);
-            conn.setDoOutput(true);
-
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(payload);
-            }
-
-            int status = conn.getResponseCode();
-            if (status < 200 || status >= 300) {
-                log.warning("GraphQL request failed with status " + status);
-                return null;
-            }
-
-            String responseBody = readStream(conn.getInputStream());
-            JsonObject response = GSON.fromJson(responseBody, JsonObject.class);
-
-            if (response.has("errors") && !response.getAsJsonArray("errors").isEmpty()) {
-                log.warning("GraphQL errors: " + response.getAsJsonArray("errors"));
-            }
-
-            return response.has("data") ? response.get("data") : null;
-        } finally {
-            conn.disconnect();
+            response = httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while waiting for the GraphQL response", e);
         }
-    }
 
-    /**
-     * Loads a GraphQL query from a classpath resource.
-     *
-     * <p>The resource is read at most once per path. Concurrent callers share
-     * the cached string, so a server process does not re-read the query for
-     * every request or every client.</p>
-     */
-    public static String loadQuery(String resourcePath) {
-        return QUERY_CACHE.computeIfAbsent(resourcePath, GraphQLClient::readQuery);
-    }
-
-    private static String readQuery(String resourcePath) {
-        try (InputStream is = GraphQLClient.class.getClassLoader().getResourceAsStream(resourcePath)) {
-            if (is == null) {
-                throw new IllegalArgumentException("Resource not found: " + resourcePath);
-            }
-            return readStream(is);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load query from " + resourcePath, e);
+        int status = response.statusCode();
+        if (status < 200 || status >= 300) {
+            log.warning("GraphQL request failed with status " + status);
+            return null;
         }
+
+        JsonObject envelope = GSON.fromJson(response.body(), JsonObject.class);
+        if (envelope == null) {
+            log.warning("GraphQL response had no body");
+            return null;
+        }
+        if (envelope.has("errors") && !envelope.getAsJsonArray("errors").isEmpty()) {
+            log.warning("GraphQL errors: " + envelope.getAsJsonArray("errors"));
+        }
+        return envelope.has("data") ? envelope.get("data") : null;
     }
 
     private static byte[] gzip(byte[] data) throws IOException {
@@ -109,16 +116,5 @@ public final class GraphQLClient {
             gzos.write(data);
         }
         return bos.toByteArray();
-    }
-
-    private static String readStream(InputStream is) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append('\n');
-            }
-        }
-        return sb.toString();
     }
 }

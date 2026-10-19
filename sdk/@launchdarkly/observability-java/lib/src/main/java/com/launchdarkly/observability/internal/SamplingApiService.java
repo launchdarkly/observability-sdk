@@ -25,9 +25,66 @@ import java.util.logging.Logger;
 public final class SamplingApiService {
 
     private static final Logger log = Logger.getLogger(SamplingApiService.class.getName());
-    private static final String QUERY_FILE = "graphql/GetSamplingConfigQuery.graphql";
-
-    private static final String QUERY = GraphQLClient.loadQuery(QUERY_FILE);
+    /**
+     * The sampling query as a compile-time constant. Go, .NET, Android and
+     * Node keep the query in code too: a classpath resource can be dropped by
+     * shaded jars built with minimize(), by ProGuard, and by some app-server
+     * and OSGi classloaders, and reading it at runtime adds I/O on a server.
+     */
+    static final String QUERY = ""
+            + "fragment MatchParts on MatchConfig {\n"
+            + "  regexValue\n"
+            + "  matchValue\n"
+            + "}\n"
+            + "\n"
+            + "query GetSamplingConfig($organization_verbose_id: String!) {\n"
+            + "  sampling(organization_verbose_id: $organization_verbose_id) {\n"
+            + "    spans {\n"
+            + "      name {\n"
+            + "        ...MatchParts\n"
+            + "      }\n"
+            + "      attributes {\n"
+            + "        key {\n"
+            + "          ...MatchParts\n"
+            + "        }\n"
+            + "        attribute {\n"
+            + "          ...MatchParts\n"
+            + "        }\n"
+            + "      }\n"
+            + "      events {\n"
+            + "        name {\n"
+            + "          ...MatchParts\n"
+            + "        }\n"
+            + "        attributes {\n"
+            + "          key {\n"
+            + "            ...MatchParts\n"
+            + "          }\n"
+            + "          attribute {\n"
+            + "            ...MatchParts\n"
+            + "          }\n"
+            + "        }\n"
+            + "      }\n"
+            + "      samplingRatio\n"
+            + "    }\n"
+            + "    logs {\n"
+            + "      message {\n"
+            + "        ...MatchParts\n"
+            + "      }\n"
+            + "      severityText {\n"
+            + "        ...MatchParts\n"
+            + "      }\n"
+            + "      attributes {\n"
+            + "        key {\n"
+            + "          ...MatchParts\n"
+            + "        }\n"
+            + "        attribute {\n"
+            + "          ...MatchParts\n"
+            + "        }\n"
+            + "      }\n"
+            + "      samplingRatio\n"
+            + "    }\n"
+            + "  }\n"
+            + "}\n";
 
     private final GraphQLClient client;
 

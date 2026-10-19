@@ -35,6 +35,15 @@ import java.util.logging.Logger;
  *     .build();
  * LDClient client = new LDClient("YOUR_SDK_KEY", config);
  * }</pre>
+ *
+ * <p>Outbound HTTP (OTLP exports and the sampling-configuration request) goes
+ * through {@code java.net.http.HttpClient}. It honours the JVM proxy system
+ * properties by default; use
+ * {@link ObservabilityOptions.Builder#proxySelector(java.net.ProxySelector)} or
+ * {@link ObservabilityOptions.Builder#proxyHostAndPort(String, int)} to set
+ * one explicitly, and
+ * {@link ObservabilityOptions.Builder#customHeaders(java.util.Map)} to add
+ * headers to every request.</p>
  */
 public class ObservabilityPlugin extends Plugin {
 
@@ -64,6 +73,13 @@ public class ObservabilityPlugin extends Plugin {
 
     @Override
     public void register(LDClient client, EnvironmentMetadata metadata) {
+        if (!options.isEnabled()) {
+            if (options.isDebug()) {
+                log.info("Observability plugin is disabled; no telemetry will be exported");
+            }
+            return;
+        }
+
         String sdkKey = metadata.getSdkKey();
 
         if (!options.isManualStart()) {
@@ -73,7 +89,8 @@ public class ObservabilityPlugin extends Plugin {
         // Fetch sampling config in background
         Thread samplingThread = new Thread(() -> {
             try {
-                GraphQLClient graphQLClient = new GraphQLClient(options.getBackendUrl());
+                GraphQLClient graphQLClient = new GraphQLClient(
+                        options.getBackendUrl(), options.getCustomHeaders(), options.getProxySelector());
                 SamplingApiService samplingService = new SamplingApiService(graphQLClient);
                 SamplingConfig config = samplingService.getSamplingConfig(sdkKey);
                 if (config != null) {
@@ -92,6 +109,9 @@ public class ObservabilityPlugin extends Plugin {
 
     @Override
     public List<Hook> getHooks(EnvironmentMetadata metadata) {
+        if (!options.isEnabled()) {
+            return Collections.emptyList();
+        }
         TracingHook hook = new TracingHook.Builder()
                 .withSpans()
                 .withValue()
