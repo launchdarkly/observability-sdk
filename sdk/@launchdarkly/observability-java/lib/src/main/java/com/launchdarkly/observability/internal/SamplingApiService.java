@@ -106,7 +106,7 @@ public final class SamplingApiService {
             if (data == null || !data.isJsonObject()) {
                 return null;
             }
-            JsonObject sampling = data.getAsJsonObject().getAsJsonObject("sampling");
+            JsonObject sampling = objectOrNull(data.getAsJsonObject(), "sampling");
             if (sampling == null) {
                 return null;
             }
@@ -121,17 +121,21 @@ public final class SamplingApiService {
         List<SpanSamplingConfig> spans = new ArrayList<>();
         List<LogSamplingConfig> logs = new ArrayList<>();
 
-        JsonArray spansArray = sampling.getAsJsonArray("spans");
+        JsonArray spansArray = arrayOrNull(sampling, "spans");
         if (spansArray != null) {
             for (JsonElement el : spansArray) {
-                spans.add(parseSpanConfig(el.getAsJsonObject()));
+                if (el.isJsonObject()) {
+                    spans.add(parseSpanConfig(el.getAsJsonObject()));
+                }
             }
         }
 
-        JsonArray logsArray = sampling.getAsJsonArray("logs");
+        JsonArray logsArray = arrayOrNull(sampling, "logs");
         if (logsArray != null) {
             for (JsonElement el : logsArray) {
-                logs.add(parseLogConfig(el.getAsJsonObject()));
+                if (el.isJsonObject()) {
+                    logs.add(parseLogConfig(el.getAsJsonObject()));
+                }
             }
         }
 
@@ -139,44 +143,72 @@ public final class SamplingApiService {
     }
 
     private SpanSamplingConfig parseSpanConfig(JsonObject obj) {
-        MatchConfig name = parseMatchConfig(obj.getAsJsonObject("name"));
-        List<AttributeMatchConfig> attributes = parseAttributeConfigs(obj.getAsJsonArray("attributes"));
+        MatchConfig name = parseMatchConfig(objectOrNull(obj, "name"));
+        List<AttributeMatchConfig> attributes = parseAttributeConfigs(arrayOrNull(obj, "attributes"));
         List<SpanEventMatchConfig> events = new ArrayList<>();
 
-        JsonArray eventsArray = obj.getAsJsonArray("events");
+        JsonArray eventsArray = arrayOrNull(obj, "events");
         if (eventsArray != null) {
             for (JsonElement el : eventsArray) {
+                if (!el.isJsonObject()) {
+                    continue;
+                }
                 JsonObject eventObj = el.getAsJsonObject();
                 events.add(new SpanEventMatchConfig(
-                        parseMatchConfig(eventObj.getAsJsonObject("name")),
-                        parseAttributeConfigs(eventObj.getAsJsonArray("attributes"))
+                        parseMatchConfig(objectOrNull(eventObj, "name")),
+                        parseAttributeConfigs(arrayOrNull(eventObj, "attributes"))
                 ));
             }
         }
 
-        int ratio = obj.has("samplingRatio") ? obj.get("samplingRatio").getAsInt() : 1;
-        return new SpanSamplingConfig(name, attributes, events, ratio);
+        return new SpanSamplingConfig(name, attributes, events, ratioOrDefault(obj));
     }
 
     private LogSamplingConfig parseLogConfig(JsonObject obj) {
-        MatchConfig message = parseMatchConfig(obj.getAsJsonObject("message"));
-        MatchConfig severityText = parseMatchConfig(obj.getAsJsonObject("severityText"));
-        List<AttributeMatchConfig> attributes = parseAttributeConfigs(obj.getAsJsonArray("attributes"));
-        int ratio = obj.has("samplingRatio") ? obj.get("samplingRatio").getAsInt() : 1;
-        return new LogSamplingConfig(message, severityText, attributes, ratio);
+        MatchConfig message = parseMatchConfig(objectOrNull(obj, "message"));
+        MatchConfig severityText = parseMatchConfig(objectOrNull(obj, "severityText"));
+        List<AttributeMatchConfig> attributes = parseAttributeConfigs(arrayOrNull(obj, "attributes"));
+        return new LogSamplingConfig(message, severityText, attributes, ratioOrDefault(obj));
     }
 
     private List<AttributeMatchConfig> parseAttributeConfigs(JsonArray array) {
         if (array == null) return Collections.emptyList();
         List<AttributeMatchConfig> result = new ArrayList<>();
         for (JsonElement el : array) {
+            if (!el.isJsonObject()) {
+                continue;
+            }
             JsonObject obj = el.getAsJsonObject();
             result.add(new AttributeMatchConfig(
-                    parseMatchConfig(obj.getAsJsonObject("key")),
-                    parseMatchConfig(obj.getAsJsonObject("attribute"))
+                    parseMatchConfig(objectOrNull(obj, "key")),
+                    parseMatchConfig(objectOrNull(obj, "attribute"))
             ));
         }
         return result;
+    }
+
+    /**
+     * GraphQL returns {@code null} for optional fields that are unset, and
+     * Gson's {@code getAsJsonObject} / {@code getAsJsonArray} throw on
+     * {@code JsonNull}. One null field must not abort the whole payload, so
+     * every lookup goes through these and treats null like absent.
+     */
+    private static JsonObject objectOrNull(JsonObject parent, String key) {
+        JsonElement el = parent.get(key);
+        return el != null && el.isJsonObject() ? el.getAsJsonObject() : null;
+    }
+
+    private static JsonArray arrayOrNull(JsonObject parent, String key) {
+        JsonElement el = parent.get(key);
+        return el != null && el.isJsonArray() ? el.getAsJsonArray() : null;
+    }
+
+    private static int ratioOrDefault(JsonObject obj) {
+        JsonElement el = obj.get("samplingRatio");
+        if (el == null || !el.isJsonPrimitive() || !el.getAsJsonPrimitive().isNumber()) {
+            return 1;
+        }
+        return el.getAsInt();
     }
 
     private MatchConfig parseMatchConfig(JsonObject obj) {

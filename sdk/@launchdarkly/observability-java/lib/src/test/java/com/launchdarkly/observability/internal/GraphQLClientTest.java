@@ -75,6 +75,29 @@ class GraphQLClientTest {
     }
 
     @Test
+    void samplingPayloadWithJsonNullsStillParses() throws Exception {
+        // GraphQL returns null for unset optional fields. A single null must not
+        // abort the payload, or sampling silently never applies.
+        response = "{\"data\":{\"sampling\":{\"spans\":["
+                + "{\"name\":null,\"attributes\":null,\"events\":null,\"samplingRatio\":null},"
+                + "{\"name\":{\"matchValue\":\"health-check\",\"regexValue\":null},"
+                + "\"attributes\":[{\"key\":{\"matchValue\":\"k\"},\"attribute\":null}],"
+                + "\"events\":[{\"name\":null,\"attributes\":null}],\"samplingRatio\":0}"
+                + "],\"logs\":[{\"message\":null,\"severityText\":{\"matchValue\":\"ERROR\"},"
+                + "\"attributes\":null,\"samplingRatio\":3}]}}}";
+        GraphQLClient client = new GraphQLClient(url("/graphql"));
+
+        SamplingConfig config = new SamplingApiService(client).getSamplingConfig("sdk-test");
+
+        assertNotNull(config, "nulls in optional fields must not abort parsing");
+        assertEquals(2, config.getSpans().size());
+        assertEquals(1, config.getSpans().get(0).getSamplingRatio(), "null ratio defaults to 1");
+        assertEquals(0, config.getSpans().get(1).getSamplingRatio());
+        assertEquals(1, config.getLogs().size());
+        assertEquals(3, config.getLogs().get(0).getSamplingRatio());
+    }
+
+    @Test
     void customHeadersAreSentWithEveryRequest() throws Exception {
         GraphQLClient client = new GraphQLClient(url("/graphql"), Map.of("X-Test-Header", "abc"), null);
 

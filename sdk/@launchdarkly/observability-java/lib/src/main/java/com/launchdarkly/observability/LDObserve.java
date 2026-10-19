@@ -74,8 +74,11 @@ public final class LDObserve {
      */
     public static void recordLog(String message, Severity severity, Attributes attributes) {
         Logger logger = OtelManager.getLogger();
+        // Severity number and text are separate OTLP fields; the backend UI
+        // and severityText sampling rules read the text.
         logger.logRecordBuilder()
                 .setSeverity(severity)
+                .setSeverityText(severity.name())
                 .setBody(message)
                 .setAllAttributes(attributes)
                 .emit();

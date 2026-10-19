@@ -153,6 +153,8 @@ class PluginOptionsFlowTest {
         assertTrue(waitFor("/v1/logs"), "no log export");
         assertTrue(anyBodyContains("/v1/logs", "warn-signal"));
         assertTrue(anyBodyContains("/v1/logs", "error-signal"));
+        assertTrue(anyBodyContains("/v1/logs", "WARN"), "severity text missing on exported log");
+        assertTrue(anyBodyContains("/v1/logs", "ERROR"), "severity text missing on exported log");
         assertFalse(anyBodyContains("/v1/logs", "debug-noise"), "DEBUG record exported below WARN threshold");
         assertFalse(anyBodyContains("/v1/logs", "info-noise"), "INFO record exported below WARN threshold");
     }
