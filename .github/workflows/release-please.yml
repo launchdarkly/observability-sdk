@@ -24,6 +24,8 @@ jobs:
             ruby-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-ruby--tag_name'] }}
             flutter-plugin-released: ${{ steps.release.outputs['sdk/flutter/packages/observability--release_created'] }}
             flutter-plugin-tag-name: ${{ steps.release.outputs['sdk/flutter/packages/observability--tag_name'] }}
+            java-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-java--release_created'] }}
+            java-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-java--tag_name'] }}
         steps:
             # Normally a workflow cannot trigger another workflow. For this workflow we need to run required checks.
             # Github determines that something is created by a workflow/bot based on the token.
@@ -99,6 +101,24 @@ jobs:
               uses: ./.github/actions/publish-android-sdk
               with:
                   workspace-path: sdk/@launchdarkly/observability-android
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+
+    release-java-plugin:
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write # Used for publishing secrets.
+            contents: write
+        needs: ['release-package']
+        if: ${{ needs.release-package.outputs.java-plugin-released == 'true' }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Publish Java SDK
+              id: publish
+              uses: ./.github/actions/publish-java-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-java
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
 
     release-dotnet-plugin:
