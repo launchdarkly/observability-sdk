@@ -23,12 +23,15 @@
 			"extra-files": ["gradle.properties"]
 		},
 		"sdk/@launchdarkly/observability-java": {
-			"package-name": "launchdarkly-observability-java",
+			"package-name": "launchdarkly-java-server-sdk-observability",
 			"release-type": "simple",
 			"versioning": "default",
 			"include-v-in-tag": false,
 			"include-component-in-tag": true,
-			"extra-files": ["gradle.properties"]
+			"extra-files": [
+				"gradle.properties",
+				"lib/src/main/java/com/launchdarkly/observability/internal/Constants.java"
+			]
 		},
 		"sdk/flutter/packages/observability": {
 			"package-name": "launchdarkly_flutter_observability",
