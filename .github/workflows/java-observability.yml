@@ -5,11 +5,13 @@ on:
         branches: ['main']
         paths:
             - 'sdk/@launchdarkly/observability-java/**'
+            - 'e2e/java-plugin/**'
             - '.github/workflows/java-observability.yml'
     pull_request:
         types: [opened, synchronize]
         paths:
             - 'sdk/@launchdarkly/observability-java/**'
+            - 'e2e/java-plugin/**'
             - '.github/workflows/java-observability.yml'
 
 permissions:
@@ -18,8 +20,14 @@ permissions:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
     test:
-        name: Unit Tests
+        # The library targets Java 11, so it is built and tested on every LTS
+        # a server might run it on, not only the newest.
+        name: Unit Tests (JDK ${{ matrix.java }})
         runs-on: ubuntu-22.04-8core-32gb
+        strategy:
+            fail-fast: false
+            matrix:
+                java: [11, 17, 21]
         defaults:
             run:
                 working-directory: ./sdk/@launchdarkly/observability-java
@@ -28,19 +36,51 @@ jobs:
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Set up JDK 21
+            - name: Set up JDK ${{ matrix.java }}
               uses: actions/setup-java@v4
               with:
                   distribution: 'temurin'
-                  java-version: 21
+                  java-version: ${{ matrix.java }}
+                  cache: 'gradle'
 
-            - name: Build and test
-              run: ./gradlew :lib:build
+            # `build` includes `check`, which runs the unit tests plus the
+            # runtime-classpath guard (no OkHttp/Okio/Kotlin) and the POM
+            # guard (opentelemetry-api at compile scope, JDK sender at runtime).
+            - name: Build, test and verify the published POM
+              run: ./gradlew :lib:build --no-daemon --console=plain
 
             - name: Upload test reports
               if: always()
               uses: actions/upload-artifact@v4
               with:
-                  name: java-unit-test-results
+                  name: java-unit-test-results-jdk${{ matrix.java }}
                   path: sdk/@launchdarkly/observability-java/**/build/test-results/**/TEST-*.xml
                   retention-days: 7
+
+    consumer:
+        # Builds the e2e example against the artifact as a consumer sees it:
+        # published to Maven local and resolved through its POM, with no
+        # composite build to paper over scope or transitive-dependency mistakes.
+        name: Consumer check (JDK ${{ matrix.java }})
+        runs-on: ubuntu-22.04-8core-32gb
+        strategy:
+            fail-fast: false
+            matrix:
+                java: [11, 21]
+        defaults:
+            run:
+                working-directory: ./e2e/java-plugin
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Set up JDK ${{ matrix.java }}
+              uses: actions/setup-java@v4
+              with:
+                  distribution: 'temurin'
+                  java-version: ${{ matrix.java }}
+                  cache: 'gradle'
+
+            - name: Publish the plugin to Maven local and build the example against it
+              run: make consumer-check

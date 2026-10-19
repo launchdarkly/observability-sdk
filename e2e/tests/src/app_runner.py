@@ -179,6 +179,7 @@ def main():
             "dotnet",
             "dotnet4",
             "go",
+            "java",
             "python",
             "ruby",
         ],

@@ -48,3 +48,10 @@ services:
             args:
                 IMAGE_NAME_BASE: ${IMAGE_NAME_BASE-ghcr.io/highlight/e2e:latest}
         container_name: ruby
+    java:
+        image: ${IMAGE_NAME-ghcr.io/highlight/e2e-java:latest}
+        build:
+            # The plugin is compiled from source, so the context is the repo root.
+            context: ..
+            dockerfile: e2e/java-plugin/Dockerfile
+        container_name: java

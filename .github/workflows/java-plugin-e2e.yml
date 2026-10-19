@@ -35,6 +35,31 @@ jobs:
               with:
                   distribution: 'temurin'
                   java-version: 21
+                  cache: 'gradle'
 
-            - name: Run the plugin example
+            - name: Run the self-checking example
               run: make run
+
+            # Starts the HTTP server example offline (no SDK key) and drives
+            # every route. The server must come up, answer, and shut down
+            # cleanly on SIGTERM with the plugin flushing on the way out.
+            - name: Smoke-test the HTTP server example
+              run: |
+                  make serve > server.log 2>&1 &
+                  SERVER_PID=$!
+                  for i in $(seq 1 120); do
+                      if curl -sf -o /dev/null localhost:8080/; then break; fi
+                      if ! kill -0 "$SERVER_PID" 2>/dev/null; then echo "server exited early"; cat server.log; exit 1; fi
+                      sleep 1
+                  done
+                  curl -sf localhost:8080/ || { cat server.log; exit 1; }
+                  curl -sf localhost:8080/rolldice || { cat server.log; exit 1; }
+                  code=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/error)
+                  [ "$code" = "500" ] || { echo "expected 500 from /error, got $code"; cat server.log; exit 1; }
+                  kill -TERM "$SERVER_PID"
+                  wait "$SERVER_PID" || true
+                  echo "server example OK"
+
+            - name: Build the dockerized server example
+              working-directory: .
+              run: docker build -f e2e/java-plugin/Dockerfile -t e2e-java-plugin .
