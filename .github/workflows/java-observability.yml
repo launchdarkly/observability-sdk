@@ -6,12 +6,14 @@ on:
         paths:
             - 'sdk/@launchdarkly/observability-java/**'
             - 'e2e/java-plugin/**'
+            - 'e2e/java-plugin-spring-boot/**'
             - '.github/workflows/java-observability.yml'
     pull_request:
         types: [opened, synchronize]
         paths:
             - 'sdk/@launchdarkly/observability-java/**'
             - 'e2e/java-plugin/**'
+            - 'e2e/java-plugin-spring-boot/**'
             - '.github/workflows/java-observability.yml'
 
 permissions:
@@ -83,4 +85,11 @@ jobs:
                   cache: 'gradle'
 
             - name: Publish the plugin to Maven local and build the example against it
+              run: make consumer-check
+
+            # Spring Boot 3 needs Java 17, so the web backend is checked as a
+            # consumer on the newer JDK only.
+            - name: Build the Spring Boot backend against the Maven local artifact
+              if: matrix.java != 11
+              working-directory: ./e2e/java-plugin-spring-boot
               run: make consumer-check

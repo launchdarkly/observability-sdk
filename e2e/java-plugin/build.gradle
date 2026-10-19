@@ -30,7 +30,7 @@ dependencies {
 }
 
 application {
-    mainClass = project.findProperty('mainClass') ?: 'com.launchdarkly.observability.example.PluginExample'
+    mainClass = 'com.launchdarkly.observability.example.PluginExample'
 }
 
 // Groups that must never reach a consumer's runtime classpath through the plugin.

@@ -70,6 +70,7 @@ jobs:
                         - '!sdk/@launchdarkly/observability-ruby/**'
                         - '!e2e/android/**'
                         - '!e2e/java-plugin/**'
+                        - '!e2e/java-plugin-spring-boot/**'
                         - '!.github/workflows/android-observability.yml'
                         - '!.github/workflows/android-e2e.yml'
                         - '!.github/workflows/flutter-observability.yml'

@@ -53,5 +53,5 @@ services:
         build:
             # The plugin is compiled from source, so the context is the repo root.
             context: ..
-            dockerfile: e2e/java-plugin/Dockerfile
+            dockerfile: e2e/java-plugin-spring-boot/Dockerfile
         container_name: java
