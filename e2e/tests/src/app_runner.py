@@ -179,7 +179,7 @@ def main():
             "dotnet",
             "dotnet4",
             "go",
-            "java",
+            "java-plugin-spring-boot",
             "python",
             "ruby",
         ],

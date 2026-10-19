@@ -51,7 +51,7 @@ Kotlin onto the application's classpath.
 ## Docker
 
 The image is built from the repository root so the plugin can be compiled
-from source. It is the `java` service in `e2e/compose.yml`, which the
+from source. It is the `java-plugin-spring-boot` service in `e2e/compose.yml`, which the
 dockerized e2e workflow builds, starts and health-checks.
 
 ```bash
