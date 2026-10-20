@@ -117,7 +117,8 @@ public final class SamplingApiService {
         }
     }
 
-    private SamplingConfig parseSamplingConfig(JsonObject sampling) {
+    /** Parses the {@code sampling} object of the GraphQL response. Visible for the shared scenario tests. */
+    static SamplingConfig parseSamplingConfig(JsonObject sampling) {
         List<SpanSamplingConfig> spans = new ArrayList<>();
         List<LogSamplingConfig> logs = new ArrayList<>();
 
@@ -142,7 +143,7 @@ public final class SamplingApiService {
         return new SamplingConfig(spans, logs);
     }
 
-    private SpanSamplingConfig parseSpanConfig(JsonObject obj) {
+    private static SpanSamplingConfig parseSpanConfig(JsonObject obj) {
         MatchConfig name = parseMatchConfig(objectOrNull(obj, "name"));
         List<AttributeMatchConfig> attributes = parseAttributeConfigs(arrayOrNull(obj, "attributes"));
         List<SpanEventMatchConfig> events = new ArrayList<>();
@@ -164,14 +165,14 @@ public final class SamplingApiService {
         return new SpanSamplingConfig(name, attributes, events, ratioOrDefault(obj));
     }
 
-    private LogSamplingConfig parseLogConfig(JsonObject obj) {
+    private static LogSamplingConfig parseLogConfig(JsonObject obj) {
         MatchConfig message = parseMatchConfig(objectOrNull(obj, "message"));
         MatchConfig severityText = parseMatchConfig(objectOrNull(obj, "severityText"));
         List<AttributeMatchConfig> attributes = parseAttributeConfigs(arrayOrNull(obj, "attributes"));
         return new LogSamplingConfig(message, severityText, attributes, ratioOrDefault(obj));
     }
 
-    private List<AttributeMatchConfig> parseAttributeConfigs(JsonArray array) {
+    private static List<AttributeMatchConfig> parseAttributeConfigs(JsonArray array) {
         if (array == null) return Collections.emptyList();
         List<AttributeMatchConfig> result = new ArrayList<>();
         for (JsonElement el : array) {
@@ -211,7 +212,7 @@ public final class SamplingApiService {
         return el.getAsInt();
     }
 
-    private MatchConfig parseMatchConfig(JsonObject obj) {
+    private static MatchConfig parseMatchConfig(JsonObject obj) {
         if (obj == null) return null;
         if (obj.has("regexValue") && !obj.get("regexValue").isJsonNull()) {
             return MatchConfig.ofRegex(obj.get("regexValue").getAsString());

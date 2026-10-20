@@ -159,6 +159,8 @@ Levels are `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` and `NONE`, matchi
 
 `:lib:build` fails if OkHttp, Okio or Kotlin appear on the runtime classpath, or if the generated POM does not expose `opentelemetry-api` at compile scope.
 
+The unit tests run the sampling scenarios shared with the Go, .NET, Python and Node SDKs (`lib/src/test/resources/sampling`, copied from `go/internal/otel`). `:lib:build` also fails if those copies drift from Go's; copy the files over when the scenarios change.
+
 ## License
 
 Apache-2.0

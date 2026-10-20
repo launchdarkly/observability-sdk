@@ -97,8 +97,10 @@ public final class CustomSampler {
 
     private boolean matchesLogConfig(SamplingConfig.LogSamplingConfig config, LogRecordData log) {
         if (config.getSeverityText() != null) {
-            String severity = log.getSeverity() != null ? log.getSeverity().name() : null;
-            if (!matchesValue(config.getSeverityText(), severity)) {
+            // Match the OTLP severityText field, as the other SDKs do, not
+            // the Severity enum name: a rule for "error" must match a log
+            // whose text is "error".
+            if (!matchesValue(config.getSeverityText(), log.getSeverityText())) {
                 return false;
             }
         }

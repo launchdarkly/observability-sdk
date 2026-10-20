@@ -2,10 +2,14 @@ package com.launchdarkly.observability.internal.sampling;
 
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.Value;
+import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.TraceFlags;
 import io.opentelemetry.api.trace.TraceState;
+import io.opentelemetry.sdk.logs.data.LogRecordData;
+import io.opentelemetry.sdk.testing.logs.TestLogRecordData;
 import io.opentelemetry.sdk.testing.trace.TestSpanData;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
@@ -216,6 +220,101 @@ class CustomSamplerTest {
 
         assertTrue(sampler.sampleSpan(createTestSpan("[broken", Attributes.empty())).isSampled());
         assertFalse(sampler.sampleSpan(createTestSpan("health-check", Attributes.empty())).isSampled());
+    }
+
+    @Test
+    void sampleLogWithoutConfigAlwaysSamples() {
+        CustomSampler.SamplingResult result = new CustomSampler().sampleLog(createTestLog("anything", "INFO", Attributes.empty()));
+        assertTrue(result.isSampled());
+        assertNull(result.getAttributes());
+    }
+
+    @Test
+    void sampleLogMatchesSeverityTextField() {
+        CustomSampler sampler = new CustomSampler(ratio -> false);
+        sampler.setConfig(logConfig(new SamplingConfig.LogSamplingConfig(
+                null, SamplingConfig.MatchConfig.ofValue("error"), Collections.emptyList(), 7)));
+
+        CustomSampler.SamplingResult matched = sampler.sampleLog(createTestLog("boom", "error", Attributes.empty()));
+        assertFalse(matched.isSampled());
+        assertEquals(7L, matched.getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+
+        // The rule reads severityText, not the Severity enum: a log with
+        // only the ERROR number and no text does not match "error".
+        LogRecordData numberOnly = TestLogRecordData.builder()
+                .setSeverity(Severity.ERROR)
+                .setBodyValue(Value.of("boom"))
+                .build();
+        assertTrue(sampler.sampleLog(numberOnly).isSampled());
+        assertTrue(sampler.sampleLog(createTestLog("boom", "info", Attributes.empty())).isSampled());
+    }
+
+    @Test
+    void sampleLogMatchesMessageByValueAndSubstringRegex() {
+        CustomSampler sampler = new CustomSampler(ratio -> false);
+        sampler.setConfig(new SamplingConfig(Collections.emptyList(), List.of(
+                new SamplingConfig.LogSamplingConfig(
+                        SamplingConfig.MatchConfig.ofValue("exact message"), null, Collections.emptyList(), 2),
+                new SamplingConfig.LogSamplingConfig(
+                        SamplingConfig.MatchConfig.ofRegex("timed out"), null, Collections.emptyList(), 3))));
+
+        assertEquals(2L, sampler.sampleLog(createTestLog("exact message", null, Attributes.empty()))
+                .getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+        assertEquals(3L, sampler.sampleLog(createTestLog("Error: request timed out after 30s", null, Attributes.empty()))
+                .getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+        assertTrue(sampler.sampleLog(createTestLog("exact message, but longer", null, Attributes.empty())).isSampled());
+        assertTrue(sampler.sampleLog(createTestLog(null, null, Attributes.empty())).isSampled());
+    }
+
+    @Test
+    void sampleLogMatchesTypedAttributes() {
+        CustomSampler sampler = new CustomSampler(ratio -> false);
+        sampler.setConfig(logConfig(new SamplingConfig.LogSamplingConfig(null, null, List.of(
+                new SamplingConfig.AttributeMatchConfig(
+                        SamplingConfig.MatchConfig.ofValue("http.status_code"), SamplingConfig.MatchConfig.ofValue("503")),
+                new SamplingConfig.AttributeMatchConfig(
+                        SamplingConfig.MatchConfig.ofValue("retry.enabled"), SamplingConfig.MatchConfig.ofValue("true"))),
+                4)));
+
+        Attributes both = Attributes.of(
+                AttributeKey.longKey("http.status_code"), 503L,
+                AttributeKey.booleanKey("retry.enabled"), true);
+        assertFalse(sampler.sampleLog(createTestLog("x", null, both)).isSampled());
+
+        Attributes onlyOne = Attributes.of(AttributeKey.longKey("http.status_code"), 503L);
+        assertTrue(sampler.sampleLog(createTestLog("x", null, onlyOne)).isSampled(),
+                "every attribute rule must match");
+    }
+
+    @Test
+    void sampleLogFirstMatchingRuleWins() {
+        CustomSampler sampler = new CustomSampler(ratio -> ratio == 1);
+        sampler.setConfig(new SamplingConfig(Collections.emptyList(), List.of(
+                new SamplingConfig.LogSamplingConfig(null, SamplingConfig.MatchConfig.ofValue("debug"), Collections.emptyList(), 1),
+                new SamplingConfig.LogSamplingConfig(null, null, Collections.emptyList(), 100))));
+
+        CustomSampler.SamplingResult debug = sampler.sampleLog(createTestLog("x", "debug", Attributes.empty()));
+        assertTrue(debug.isSampled());
+        assertEquals(1L, debug.getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+
+        CustomSampler.SamplingResult other = sampler.sampleLog(createTestLog("x", "info", Attributes.empty()));
+        assertFalse(other.isSampled());
+        assertEquals(100L, other.getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+    }
+
+    private static SamplingConfig logConfig(SamplingConfig.LogSamplingConfig rule) {
+        return new SamplingConfig(Collections.emptyList(), List.of(rule));
+    }
+
+    private static LogRecordData createTestLog(String message, String severityText, Attributes attributes) {
+        TestLogRecordData.Builder builder = TestLogRecordData.builder().setAttributes(attributes);
+        if (message != null) {
+            builder.setBodyValue(Value.of(message));
+        }
+        if (severityText != null) {
+            builder.setSeverityText(severityText);
+        }
+        return builder.build();
     }
 
     @Test

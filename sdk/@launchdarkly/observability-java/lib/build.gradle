@@ -112,8 +112,26 @@ tasks.register('checkPublishedPom') {
     }
 }
 
+// The sampling scenario fixtures are copies of the Go SDK's, which the other
+// server SDKs share. Fail when they drift instead of silently testing less.
+tasks.register('checkSamplingFixtures') {
+    group = 'verification'
+    description = 'Fails when the shared sampling scenario fixtures differ from the Go SDK copies.'
+    def pairs = ['span-test-scenarios.json', 'log-test-scenarios.json'].collect { name ->
+        [file("src/test/resources/sampling/${name}"), rootProject.file("../../../go/internal/otel/${name}")]
+    }
+    inputs.files(pairs.flatten())
+    doLast {
+        def drifted = pairs.findAll { local, upstream -> local.bytes != upstream.bytes }
+                .collect { local, upstream -> "${local} differs from ${upstream}" }
+        if (!drifted.isEmpty()) {
+            throw new GradleException("Sampling fixtures drifted; copy them from go/internal/otel:\n${drifted.join('\n')}")
+        }
+    }
+}
+
 tasks.named('check') {
-    dependsOn 'checkRuntimeClasspath', 'checkPublishedPom'
+    dependsOn 'checkRuntimeClasspath', 'checkPublishedPom', 'checkSamplingFixtures'
 }
 
 publishing {
