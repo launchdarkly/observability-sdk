@@ -33,6 +33,7 @@ import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+import io.opentelemetry.sdk.trace.samplers.Sampler;
 
 import java.time.Duration;
 import java.util.Map;
@@ -145,7 +146,13 @@ public final class OtelManager {
         SamplingTraceExporter samplingTraceExporter =
                 new SamplingTraceExporter(rawSpanExporter, customSampler);
 
+        // Always record, as the Node plugin does. The default parent-based
+        // sampler would drop a span, flag evaluations included, whenever the
+        // current parent comes unsampled from the Java agent, another SDK or
+        // an upstream service. Volume is governed by the backend rules that
+        // SamplingTraceExporter applies at export.
         SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
+                .setSampler(Sampler.alwaysOn())
                 .addSpanProcessor(BatchSpanProcessor.builder(samplingTraceExporter)
                         .setScheduleDelay(Duration.ofSeconds(1))
                         .setExporterTimeout(Duration.ofSeconds(30))

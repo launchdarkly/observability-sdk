@@ -21,6 +21,7 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import io.opentelemetry.sdk.trace.samplers.Sampler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -211,6 +212,43 @@ class PluginUserFlowTest {
             assertEquals("feature_flag", appSpans.get(0).getEvents().get(0).getName());
             assertEquals("checkout-enabled", appSpans.get(0).getEvents().get(0).getAttributes()
                     .get(AttributeKey.stringKey("feature_flag.key")));
+        } finally {
+            appTracerProvider.shutdown();
+        }
+    }
+
+    @Test
+    void flagEvaluationExportsUnderUnsampledForeignParent() throws Exception {
+        // The application's SDK (or the agent) samples this request out.
+        SdkTracerProvider appTracerProvider = SdkTracerProvider.builder()
+                .setSampler(Sampler.alwaysOff())
+                .build();
+        OpenTelemetrySdk appSdk = OpenTelemetrySdk.builder()
+                .setTracerProvider(appTracerProvider)
+                .buildAndRegisterGlobal();
+
+        startCollector();
+        LDConfig config = new LDConfig.Builder()
+                .offline(true)
+                .startWait(Duration.ofSeconds(5))
+                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options(false)))))
+                .build();
+
+        try (LDClient client = new LDClient("sdk-test", config)) {
+            Span request = appSdk.getTracer("app").spanBuilder("GET /checkout").startSpan();
+            assertFalse(request.getSpanContext().isSampled());
+            try (Scope ignored = request.makeCurrent()) {
+                client.boolVariation("checkout-enabled", LDContext.create("user-key-test"), false);
+                LDObserve.startSpan("user-checkout", Attributes.empty()).end();
+            } finally {
+                request.end();
+            }
+            LDObserve.flush();
+
+            assertTrue(payloadContains(traces, "checkout-enabled"),
+                    "flag evaluation under an unsampled parent was dropped: " + summarize(traces));
+            assertTrue(payloadContains(traces, "user-checkout"),
+                    "LDObserve span under an unsampled parent was dropped");
         } finally {
             appTracerProvider.shutdown();
         }

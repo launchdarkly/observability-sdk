@@ -69,8 +69,9 @@ def main():
     app_jar, agent_jar = sys.argv[1], sys.argv[2]
     collector = http.server.ThreadingHTTPServer((LOOPBACK, 0), Collector)
     threading.Thread(target=collector.serve_forever, daemon=True).start()
-    collector_url = "http://%s:%d" % (LOOPBACK, collector.server_address[1])
-    app_url = "http://%s:%d" % (LOOPBACK, free_port())
+    # Both ends run on this machine over loopback, so plain HTTP is intended.
+    collector_url = "http://%s:%d" % (LOOPBACK, collector.server_address[1])  # DevSkim: ignore DS137138
+    app_url = "http://%s:%d" % (LOOPBACK, free_port())  # DevSkim: ignore DS137138
 
     env = dict(os.environ)
     env.pop("LAUNCHDARKLY_SDK_KEY", None)
