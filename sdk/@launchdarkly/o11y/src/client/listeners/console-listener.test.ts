@@ -7,7 +7,7 @@ import { sdkLog, setSdkDebugLogging } from '../utils/sdkLogger'
 // streaming and polling URLs. The payload is not a real person.
 const CONTEXT_B64 =
 	'eyJraW5kIjoidXNlciIsImtleSI6InUxIiwibmFtZSI6IkphbmUiLCJlbWFpbCI6ImphbmVAZXhhbXBsZS5jb20ifQ'
-const STREAM_URL = `https://clientstream.launchdarkly.com/eval/abc123/${CONTEXT_B64}?h=deadbeef&withReasons=true`
+const STREAM_URL = `https://clientstream.launchdarkly.com/eval/6ac3ffaf1d5ff3065c65987b/${CONTEXT_B64}?h=deadbeef&withReasons=true`
 
 const stringifyOptions = {
 	depthOfLimit: 10,
@@ -114,7 +114,9 @@ describe('ConsoleListener and the LaunchDarkly SDK logger', () => {
 		expect(recorded).toHaveLength(1)
 		const line = recorded[0].value?.join(' ') ?? ''
 		expect(line).toContain('[LaunchDarkly] Opening stream connection to')
-		expect(line).toContain('/eval/abc123/REDACTED?h=deadbeef')
+		expect(line).toContain(
+			'/eval/6ac3ffaf1d5ff3065c65987b/REDACTED?h=deadbeef',
+		)
 		expect(line).not.toContain(CONTEXT_B64)
 	})
 
@@ -128,15 +130,17 @@ describe('ConsoleListener and the LaunchDarkly SDK logger', () => {
 		})
 
 		fakeConsole.error(
-			`request failed: https://clientsdk.launchdarkly.com/sdk/evalx/abc123/contexts/${CONTEXT_B64}`,
+			`request failed: https://clientsdk.launchdarkly.com/sdk/evalx/6ac3ffaf1d5ff3065c65987b/contexts/${CONTEXT_B64}`,
 			{ url: STREAM_URL },
 		)
 
 		expect(recorded).toHaveLength(1)
 		expect(recorded[0].value?.[0]).toBe(
-			'request failed: https://clientsdk.launchdarkly.com/sdk/evalx/abc123/contexts/REDACTED',
+			'request failed: https://clientsdk.launchdarkly.com/sdk/evalx/6ac3ffaf1d5ff3065c65987b/contexts/REDACTED',
 		)
-		expect(recorded[0].attributes).toContain('/eval/abc123/REDACTED')
+		expect(recorded[0].attributes).toContain(
+			'/eval/6ac3ffaf1d5ff3065c65987b/REDACTED',
+		)
 		expect(JSON.stringify(recorded[0])).not.toContain(CONTEXT_B64)
 	})
 

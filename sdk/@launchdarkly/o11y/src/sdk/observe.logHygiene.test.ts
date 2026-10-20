@@ -49,7 +49,7 @@ describe('ObserveSDK log hygiene', () => {
 	it('redacts the LaunchDarkly context segment from recorded log messages', () => {
 		const observe = new ObserveSDK(baseOptions)
 		observe.recordLog(
-			`[LaunchDarkly] Opening stream connection to https://clientstream.launchdarkly.com/eval/abc123/${B64}?h=x`,
+			`[LaunchDarkly] Opening stream connection to https://clientstream.launchdarkly.com/eval/6ac3ffaf1d5ff3065c65987b/${B64}?h=x`,
 			'info',
 		)
 
@@ -61,7 +61,7 @@ describe('ObserveSDK log hygiene', () => {
 		const [eventName, attributes] = addEvent.mock.calls[0]
 		expect(eventName).toBe('log')
 		expect(attributes[otel.ATTR_LOG_MESSAGE]).toBe(
-			'[LaunchDarkly] Opening stream connection to https://clientstream.launchdarkly.com/eval/abc123/REDACTED?h=x',
+			'[LaunchDarkly] Opening stream connection to https://clientstream.launchdarkly.com/eval/6ac3ffaf1d5ff3065c65987b/REDACTED?h=x',
 		)
 		expect(attributes[otel.ATTR_LOG_SEVERITY]).toBe('info')
 	})

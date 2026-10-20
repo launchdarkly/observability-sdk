@@ -132,11 +132,14 @@ const SENSITIVE_FRAGMENT_PARAMS = [
  *
  * optionally followed by `?h=<hash>&withReasons=true`. The context routinely
  * holds a name and email, so that segment must not leave the browser inside a
- * recorded URL or log line. The first group keeps everything up to the
+ * recorded URL or log line. Only those exact shapes match: the environment id
+ * must be a 24-character hex client-side ID, and the polling form must carry
+ * its `contexts/` or `users/` segment, so an application route such as
+ * `/eval/batch/42` is left alone. The first group keeps everything up to the
  * segment, the second is the segment itself.
  */
 const LD_CONTEXT_URL_SEGMENT =
-	/(\/(?:sdk\/)?evalx?\/[^/?#\s]+\/(?:(?:contexts|users)\/)?)([A-Za-z0-9+_=%-]+)/g
+	/(\/eval\/[0-9a-f]{24}\/|\/sdk\/evalx?\/[0-9a-f]{24}\/(?:contexts|users)\/)([A-Za-z0-9+_=%-]{8,})/g
 
 /**
  * Replaces the base64 evaluation-context segment of any LaunchDarkly SDK
