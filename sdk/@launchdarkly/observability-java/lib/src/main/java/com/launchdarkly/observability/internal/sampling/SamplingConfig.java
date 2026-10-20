@@ -2,6 +2,7 @@ package com.launchdarkly.observability.internal.sampling;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -32,10 +33,7 @@ public final class SamplingConfig {
      * it on every span or log.
      */
     public static final class MatchConfig {
-        private static final int MAX_REGEX_LENGTH = 128;
-        private static final String ALLOWED_REGEX_CHARS =
-                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-                        + ".*+?^$|()[]{}\\-_:/ @#,";
+        private static final Logger log = Logger.getLogger(MatchConfig.class.getName());
 
         private final String value;
         private final String regexPattern;
@@ -52,126 +50,24 @@ public final class SamplingConfig {
         }
 
         public static MatchConfig ofRegex(String pattern) {
-            return new MatchConfig(null, pattern, compileBounded(pattern));
+            return new MatchConfig(null, pattern, compile(pattern));
         }
 
         /**
-         * Compiles a sampling regex once, or returns null when the rule must
-         * not be used. The pattern comes from LaunchDarkly sampling config
-         * (or a custom backend URL). A bad pattern never throws and never
-         * matches. Only an allowlisted copy is compiled, length is capped,
-         * and nested quantifiers and backreferences are rejected so a rule
-         * cannot ReDoS the export path.
+         * Compiles a sampling regex as sent by the backend, like the Go SDK.
+         * A pattern that does not compile is logged and the rule is skipped:
+         * it never matches, and parsing the rest of the config carries on.
          */
-        private static Pattern compileBounded(String pattern) {
-            if (pattern == null || pattern.isEmpty() || pattern.length() > MAX_REGEX_LENGTH) {
-                return null;
-            }
-            if (isCatastrophic(pattern)) {
-                return null;
-            }
-            String allowlisted = allowlistedCopy(pattern);
-            if (allowlisted == null) {
+        private static Pattern compile(String pattern) {
+            if (pattern == null) {
                 return null;
             }
             try {
-                // codeql[java/regex-injection]: allowlisted copy of sampling config, length-capped, nested quantifiers rejected
-                return Pattern.compile(allowlisted);
-            } catch (PatternSyntaxException ignored) {
+                return Pattern.compile(pattern);
+            } catch (PatternSyntaxException e) {
+                log.warning("Skipping sampling rule with invalid regex " + pattern + ": " + e.getDescription());
                 return null;
             }
-        }
-
-        private static String allowlistedCopy(String pattern) {
-            StringBuilder copy = new StringBuilder(pattern.length());
-            for (int i = 0; i < pattern.length(); i++) {
-                int index = ALLOWED_REGEX_CHARS.indexOf(pattern.charAt(i));
-                if (index < 0) {
-                    return null;
-                }
-                copy.append(ALLOWED_REGEX_CHARS.charAt(index));
-            }
-            return copy.toString();
-        }
-
-        private static boolean isCatastrophic(String pattern) {
-            boolean[] groupHasQuantifier = new boolean[pattern.length() + 1];
-            int depth = 0;
-            boolean prevWasQuantifier = false;
-            boolean prevWasGroup = false;
-            boolean prevGroupHadQuantifier = false;
-            for (int i = 0; i < pattern.length(); i++) {
-                char c = pattern.charAt(i);
-                if (c == '\\') {
-                    if (i + 1 >= pattern.length()) {
-                        return true;
-                    }
-                    char escaped = pattern.charAt(++i);
-                    if (escaped >= '1' && escaped <= '9') {
-                        return true;
-                    }
-                    prevWasQuantifier = false;
-                    prevWasGroup = false;
-                    continue;
-                }
-                if (c == '(') {
-                    if (i + 1 < pattern.length() && pattern.charAt(i + 1) == '?') {
-                        i++;
-                        if (i + 1 < pattern.length()) {
-                            char flag = pattern.charAt(i + 1);
-                            if (flag == ':' || flag == '=' || flag == '!') {
-                                i++;
-                            }
-                        }
-                    }
-                    if (++depth >= groupHasQuantifier.length) {
-                        return true;
-                    }
-                    groupHasQuantifier[depth] = false;
-                    prevWasQuantifier = false;
-                    prevWasGroup = false;
-                    continue;
-                }
-                if (c == ')') {
-                    if (depth <= 0) {
-                        return true;
-                    }
-                    boolean closedHadQuantifier = groupHasQuantifier[depth];
-                    depth--;
-                    if (closedHadQuantifier && depth > 0) {
-                        groupHasQuantifier[depth] = true;
-                    }
-                    prevGroupHadQuantifier = closedHadQuantifier;
-                    prevWasGroup = true;
-                    prevWasQuantifier = false;
-                    continue;
-                }
-                if (c == '?' && prevWasQuantifier) {
-                    prevWasQuantifier = false;
-                    continue;
-                }
-                if (c == '*' || c == '+' || c == '?' || c == '{') {
-                    if (prevWasQuantifier || (prevWasGroup && prevGroupHadQuantifier)) {
-                        return true;
-                    }
-                    if (c == '{') {
-                        int end = pattern.indexOf('}', i);
-                        if (end < 0) {
-                            return true;
-                        }
-                        i = end;
-                    }
-                    if (depth > 0) {
-                        groupHasQuantifier[depth] = true;
-                    }
-                    prevWasQuantifier = true;
-                    prevWasGroup = false;
-                    continue;
-                }
-                prevWasQuantifier = false;
-                prevWasGroup = false;
-            }
-            return false;
         }
 
         public boolean isRegex() { return regexPattern != null; }
@@ -183,7 +79,7 @@ public final class SamplingConfig {
                 return false;
             }
             if (regexPattern != null) {
-                return compiledRegex != null && compiledRegex.matcher(actual).matches();
+                return compiledRegex != null && compiledRegex.matcher(actual).find();
             }
             return value != null && value.equals(actual);
         }

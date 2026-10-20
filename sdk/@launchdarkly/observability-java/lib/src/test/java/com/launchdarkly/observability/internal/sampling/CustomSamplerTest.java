@@ -13,6 +13,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -149,19 +154,68 @@ class CustomSamplerTest {
     }
 
     @Test
-    void unsafeRegexNeverMatchesAndDoesNotThrow() {
-        assertDoesNotThrow(() -> SamplingConfig.MatchConfig.ofRegex("(a+)+"));
-        assertFalse(CustomSampler.matchesValue(
-                SamplingConfig.MatchConfig.ofRegex("(a+)+"), "aaaa"));
-        assertDoesNotThrow(() -> SamplingConfig.MatchConfig.ofRegex("((a+))+"));
-        assertFalse(CustomSampler.matchesValue(
-                SamplingConfig.MatchConfig.ofRegex("((a+))+"), "aaaa"));
-        assertFalse(CustomSampler.matchesValue(
-                SamplingConfig.MatchConfig.ofRegex("("), "x"));
-        assertFalse(CustomSampler.matchesValue(
-                SamplingConfig.MatchConfig.ofRegex("a\\1"), "a"));
+    void regexMatchesSubstringLikeOtherSdks() {
         assertTrue(CustomSampler.matchesValue(
-                SamplingConfig.MatchConfig.ofRegex("health.*"), "health-check"));
+                SamplingConfig.MatchConfig.ofRegex("health"), "GET /health-check"));
+        assertTrue(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("check$"), "health-check"));
+        assertFalse(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("^check"), "health-check"));
+    }
+
+    @Test
+    void validRegexIsCompiledAsSent() {
+        // Constructs outside a character allowlist still compile and match.
+        assertTrue(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("(?i)^HEALTH\\b"), "health check"));
+        assertTrue(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("(a+)+b"), "aaab"));
+    }
+
+    @Test
+    void invalidRegexIsSkippedWithWarning() {
+        Logger logger = Logger.getLogger(SamplingConfig.MatchConfig.class.getName());
+        List<LogRecord> records = new CopyOnWriteArrayList<>();
+        Handler handler = new Handler() {
+            @Override public void publish(LogRecord record) { records.add(record); }
+            @Override public void flush() {}
+            @Override public void close() {}
+        };
+        logger.addHandler(handler);
+        try {
+            SamplingConfig.MatchConfig invalid =
+                    assertDoesNotThrow(() -> SamplingConfig.MatchConfig.ofRegex("(unclosed"));
+            assertFalse(CustomSampler.matchesValue(invalid, "(unclosed"));
+        } finally {
+            logger.removeHandler(handler);
+        }
+        assertEquals(1, records.size());
+        assertEquals(Level.WARNING, records.get(0).getLevel());
+        assertTrue(records.get(0).getMessage().contains("(unclosed"));
+    }
+
+    @Test
+    void invalidRegexRuleIsSkippedAndOtherRulesStillApply() {
+        SamplingConfig config = new SamplingConfig(
+                List.of(
+                        new SamplingConfig.SpanSamplingConfig(
+                                SamplingConfig.MatchConfig.ofRegex("[broken"),
+                                Collections.emptyList(),
+                                Collections.emptyList(),
+                                0),
+                        new SamplingConfig.SpanSamplingConfig(
+                                SamplingConfig.MatchConfig.ofRegex("health"),
+                                Collections.emptyList(),
+                                Collections.emptyList(),
+                                0)
+                ),
+                Collections.emptyList()
+        );
+        CustomSampler sampler = new CustomSampler();
+        sampler.setConfig(config);
+
+        assertTrue(sampler.sampleSpan(createTestSpan("[broken", Attributes.empty())).isSampled());
+        assertFalse(sampler.sampleSpan(createTestSpan("health-check", Attributes.empty())).isSampled());
     }
 
     @Test
