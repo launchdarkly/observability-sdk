@@ -7,15 +7,19 @@ import { isSdkConsoleOutput } from '../utils/sdkLogger'
 import { redactLaunchDarklyContext } from './network-listener/utils/network-sanitizer'
 
 /**
- * The LaunchDarkly JavaScript SDK's own logger prefixes every line it writes
- * to the console with this. Those lines are the SDK talking about itself
- * (`Opening stream connection to .../eval/<id>/<base64 context>`, `Closing
- * stream connection`, ...), not the application's logs: they are noisy and
- * the streaming URL carries the full evaluation context, name and email
- * included. The plugin cannot hook the LD client's logger structurally (the
- * client does not expose it to plugins), so the prefix is the marker.
+ * The LaunchDarkly JavaScript SDK's own logger tags every line it writes to
+ * the console with `[LaunchDarkly]`: the 3.x line (`js-sdk-common`) writes
+ * `[LaunchDarkly] <message>`, the 4.x line (`js-core` BasicLogger) writes
+ * `<level>: [LaunchDarkly] <message>`. Those lines are the SDK talking about
+ * itself (`Opening stream connection to .../eval/<id>/<base64 context>`,
+ * `Closing stream connection`, ...), not the application's logs: they are
+ * noisy and the streaming URL carries the full evaluation context, name and
+ * email included. The plugin cannot hook the LD client's logger structurally
+ * (the client does not expose it to plugins), so the tag is the marker.
  */
 export const LD_SDK_LOG_PREFIX = '[LaunchDarkly]'
+const LD_SDK_LOG_LINE =
+	/^\s*(?:(?:debug|info|warn|error|none):\s*)?\[LaunchDarkly\]/
 
 /**
  * Whether a console call's arguments are a line written by the LaunchDarkly
@@ -23,10 +27,7 @@ export const LD_SDK_LOG_PREFIX = '[LaunchDarkly]'
  */
 export const isLaunchDarklySdkLogLine = (data: ReadonlyArray<unknown>) => {
 	const first = data[0]
-	return (
-		typeof first === 'string' &&
-		first.trimStart().startsWith(LD_SDK_LOG_PREFIX)
-	)
+	return typeof first === 'string' && LD_SDK_LOG_LINE.test(first)
 }
 
 export type StringifyOptions = {

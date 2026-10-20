@@ -38,17 +38,37 @@ describe('ConsoleListener and the LaunchDarkly SDK logger', () => {
 			]),
 		).toBe(true)
 		expect(
-			isLaunchDarklySdkLogLine(['[LaunchDarkly] Closing stream connection']),
+			isLaunchDarklySdkLogLine([
+				'[LaunchDarkly] Closing stream connection',
+			]),
 		).toBe(true)
 		expect(isLaunchDarklySdkLogLine(['checkout failed', { id: 1 }])).toBe(
 			false,
 		)
-		expect(isLaunchDarklySdkLogLine([{ msg: '[LaunchDarkly]' }])).toBe(false)
+		expect(isLaunchDarklySdkLogLine([{ msg: '[LaunchDarkly]' }])).toBe(
+			false,
+		)
 		expect(isLaunchDarklySdkLogLine([])).toBe(false)
+		// js-core (JS client SDK 4.x) BasicLogger format: `<level>: [name] ...`
+		expect(
+			isLaunchDarklySdkLogLine([
+				`info: [LaunchDarkly] Opening stream connection to ${STREAM_URL}`,
+			]),
+		).toBe(true)
+		expect(
+			isLaunchDarklySdkLogLine([
+				'warn: [LaunchDarkly] Stream connection error, retrying',
+			]),
+		).toBe(true)
+		expect(
+			isLaunchDarklySdkLogLine(['error: [MyApp] something broke']),
+		).toBe(false)
 	})
 
 	it('does not record the LaunchDarkly SDK logger output by default', () => {
 		const fakeConsole = makeFakeConsole()
+		// The listener replaces the methods, so keep the originals to assert on.
+		const { info: originalInfo, warn: originalWarn } = fakeConsole
 		const recorded: ConsoleMessage[] = []
 		cleanup = ConsoleListener((c) => recorded.push(c), {
 			level: ['log', 'info', 'warn', 'error'],
@@ -65,8 +85,8 @@ describe('ConsoleListener and the LaunchDarkly SDK logger', () => {
 		)
 
 		// The application still sees the lines on its console...
-		expect(fakeConsole.info).toHaveBeenCalledTimes(2)
-		expect(fakeConsole.warn).toHaveBeenCalledTimes(1)
+		expect(originalInfo).toHaveBeenCalledTimes(2)
+		expect(originalWarn).toHaveBeenCalledTimes(1)
 		// ...but none of them becomes a log record.
 		expect(recorded).toHaveLength(0)
 
@@ -122,9 +142,7 @@ describe('ConsoleListener and the LaunchDarkly SDK logger', () => {
 
 	it("never records the SDK's own diagnostics, even in debug mode", () => {
 		// Spy first so the listener wraps the spy, not the real console.
-		const errorSpy = vi
-			.spyOn(console, 'error')
-			.mockImplementation(() => {})
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 		const recorded: ConsoleMessage[] = []
 		cleanup = ConsoleListener((c) => recorded.push(c), {
@@ -154,9 +172,7 @@ describe('ConsoleListener and the LaunchDarkly SDK logger', () => {
 	})
 
 	it("keeps the SDK's own diagnostics off the console outside debug mode", () => {
-		const errorSpy = vi
-			.spyOn(console, 'error')
-			.mockImplementation(() => {})
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 		setSdkDebugLogging(false)
 		sdkLog('error', '[@launchdarkly/observability] failed to export')
 		expect(errorSpy).not.toHaveBeenCalled()

@@ -238,7 +238,9 @@ describe('OTLPMetricExporterBrowser export failures', () => {
 		const result = await exportUntilExhausted()
 
 		expect(result.code).toBe(ExportResultCode.FAILED)
-		expect(result.error?.message).toBe('Export failed with retryable status')
+		expect(result.error?.message).toBe(
+			'Export failed with retryable status',
+		)
 		expect(exportSpy.mock.calls.length).toBeGreaterThan(1)
 		expect(errorSpy).not.toHaveBeenCalled()
 		expect(warnSpy).not.toHaveBeenCalled()

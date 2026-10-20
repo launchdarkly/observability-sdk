@@ -33,7 +33,10 @@ describe('redactLaunchDarklyContext', () => {
 		],
 		// relative / path-only forms
 		[`/eval/abc123/${B64}`, '/eval/abc123/REDACTED'],
-		[`/sdk/evalx/abc123/contexts/${B64}`, '/sdk/evalx/abc123/contexts/REDACTED'],
+		[
+			`/sdk/evalx/abc123/contexts/${B64}`,
+			'/sdk/evalx/abc123/contexts/REDACTED',
+		],
 	])('redacts the context segment in %s', (input, expected) => {
 		expect(redactLaunchDarklyContext(input)).toBe(expected)
 		expect(redactLaunchDarklyContext(input)).not.toContain(B64)
@@ -89,7 +92,9 @@ describe('sanitizeUrl and LaunchDarkly SDK endpoints', () => {
 
 	it('still redacts sensitive query parameters alongside it', () => {
 		expect(
-			sanitizeUrl(`https://host.example.com/eval/abc123/${B64}?token=s3cret`),
+			sanitizeUrl(
+				`https://host.example.com/eval/abc123/${B64}?token=s3cret`,
+			),
 		).toBe('https://host.example.com/eval/abc123/REDACTED?token=REDACTED')
 	})
 })

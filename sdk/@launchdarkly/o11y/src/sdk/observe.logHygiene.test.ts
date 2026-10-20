@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ObserveSDK } from './observe'
 import * as otel from '../client/otel'
-import { isSdkDebugLogging, setSdkDebugLogging } from '../client/utils/sdkLogger'
+import {
+	isSdkDebugLogging,
+	setSdkDebugLogging,
+} from '../client/utils/sdkLogger'
 
 // base64url of a context JSON; not a real person.
 const B64 =
