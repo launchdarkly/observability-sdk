@@ -1,4 +1,5 @@
 import ErrorStackParser from 'error-stack-parser'
+import { sdkLog } from './sdkLogger'
 
 export function parseError(err: Error) {
 	try {
@@ -7,7 +8,7 @@ export function parseError(err: Error) {
 		try {
 			return ErrorStackParser.parse(new Error())
 		} catch (secondaryError) {
-			console.warn(`Highlight Warning: failed to parse error`, {
+			sdkLog('warn', `Highlight Warning: failed to parse error`, {
 				originalError,
 				secondaryError,
 			})

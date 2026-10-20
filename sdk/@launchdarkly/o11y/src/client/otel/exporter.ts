@@ -14,6 +14,7 @@ import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { ResourceMetrics } from '@opentelemetry/sdk-metrics'
 import { ExportSampler } from './sampling/ExportSampler'
 import { sampleSpans } from './sampling/sampleSpans'
+import { sdkLog } from '../utils/sdkLogger'
 
 export type TraceExporterConfig = ConstructorParameters<
 	typeof OTLPTraceExporter
@@ -229,8 +230,11 @@ export class OTLPMetricExporterBrowser extends OTLPMetricExporter {
 				})
 			}
 			retries++
+			// Export failures are the SDK's problem, not the application's:
+			// surface them only in debug mode, and never as recorded logs.
 			if (retries > MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS) {
-				console.error(
+				sdkLog(
+					'error',
 					`[@launchdarkly/observability] failed to export OTeL metrics: ${result.error?.message}`,
 					result.error,
 				)
@@ -245,7 +249,8 @@ export class OTLPMetricExporterBrowser extends OTLPMetricExporter {
 						BASE_DELAY_MS + BACKOFF_DELAY_MS * Math.pow(2, retries),
 					),
 				).then(() => {
-					console.warn(
+					sdkLog(
+						'warn',
 						`[@launchdarkly/observability] retry ${retries}, failed to export OTeL metrics: ${result.error?.message}`,
 						result.error,
 					)

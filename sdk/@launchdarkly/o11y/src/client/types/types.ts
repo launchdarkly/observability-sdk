@@ -212,6 +212,14 @@ export type HighlightOptions = CommonOptions & {
 	 * @example consoleMethodsToRecord: ['log', 'info', 'error']
 	 */
 	consoleMethodsToRecord?: ConsoleMethods[]
+	/**
+	 * Specifies whether console output written by the LaunchDarkly SDK's own
+	 * logger (lines prefixed `[LaunchDarkly]`) is recorded. Skipped by default:
+	 * the lines describe the SDK, and the streaming URL they contain embeds
+	 * the evaluation context.
+	 * @default false
+	 */
+	recordLaunchDarklySdkLogs?: boolean
 	enableSegmentIntegration?: boolean
 	/**
 	 * Specifies the environment your application is running in.

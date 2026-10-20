@@ -8,11 +8,15 @@ import {
 	type MockInstance,
 } from 'vitest'
 import { ExportResultCode } from '@opentelemetry/core'
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
 	OTLPMetricExporterBrowser,
 	OTLPTraceExporterBrowserWithXhrRetry,
 } from './exporter'
 import type { ExportSampler } from './sampling/ExportSampler'
+import { ConsoleListener } from '../listeners/console-listener'
+import type { ConsoleMessage } from '../types/shared-types'
+import { setSdkDebugLogging } from '../utils/sdkLogger'
 
 const TRACES_URL = 'https://pub.test.invalid/v1/traces'
 const METRICS_URL = 'https://pub.test.invalid/v1/metrics'
@@ -183,6 +187,100 @@ describe('OTLPMetricExporterBrowser', () => {
 			method: 'POST',
 			keepalive: true,
 		})
+	})
+})
+
+describe('OTLPMetricExporterBrowser export failures', () => {
+	let exporter: OTLPMetricExporterBrowser
+	let errorSpy: MockInstance
+	let warnSpy: MockInstance
+	let restoreListener: (() => void) | undefined
+
+	// Make every underlying export fail the way the browser transport does
+	// when the request errors or the server answers with a retryable status.
+	const failAllExports = () =>
+		vi
+			.spyOn(OTLPMetricExporter.prototype, 'export')
+			.mockImplementation((_items, resultCallback) => {
+				const error = new Error('Export failed with retryable status')
+				error.name = 'OTLPExporterError'
+				resultCallback({ code: ExportResultCode.FAILED, error })
+			})
+
+	const exportUntilExhausted = async () => {
+		const done = new Promise<{ code: ExportResultCode; error?: Error }>(
+			(resolve) => exporter.export(fakeMetricsPayload(), resolve),
+		)
+		// Walk through every retry back-off.
+		await vi.advanceTimersByTimeAsync(60_000)
+		return done
+	}
+
+	beforeEach(() => {
+		vi.useFakeTimers()
+		errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+		warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		exporter = new OTLPMetricExporterBrowser({ url: METRICS_URL })
+	})
+
+	afterEach(() => {
+		restoreListener?.()
+		restoreListener = undefined
+		setSdkDebugLogging(false)
+		vi.useRealTimers()
+		vi.restoreAllMocks()
+	})
+
+	it('gives up after the retries and stays silent on the console by default', async () => {
+		const exportSpy = failAllExports()
+		setSdkDebugLogging(false)
+
+		const result = await exportUntilExhausted()
+
+		expect(result.code).toBe(ExportResultCode.FAILED)
+		expect(result.error?.message).toBe('Export failed with retryable status')
+		expect(exportSpy.mock.calls.length).toBeGreaterThan(1)
+		expect(errorSpy).not.toHaveBeenCalled()
+		expect(warnSpy).not.toHaveBeenCalled()
+	})
+
+	it('reports the failure on the console in debug mode', async () => {
+		failAllExports()
+		setSdkDebugLogging(true)
+
+		const result = await exportUntilExhausted()
+
+		expect(result.code).toBe(ExportResultCode.FAILED)
+		expect(errorSpy).toHaveBeenCalledTimes(1)
+		expect(errorSpy.mock.calls[0][0]).toBe(
+			'[@launchdarkly/observability] failed to export OTeL metrics: Export failed with retryable status',
+		)
+		expect(warnSpy.mock.calls.length).toBeGreaterThan(0)
+		expect(warnSpy.mock.calls[0][0]).toContain(
+			'failed to export OTeL metrics: Export failed with retryable status',
+		)
+	})
+
+	it('is never recorded as a customer log record, even in debug mode', async () => {
+		failAllExports()
+		setSdkDebugLogging(true)
+		const recorded: ConsoleMessage[] = []
+		// Installed after the spies, so it wraps them like it would wrap the
+		// application's console.
+		restoreListener = ConsoleListener((c) => recorded.push(c), {
+			level: ['error', 'warn'],
+			logger: console,
+			stringifyOptions: {
+				depthOfLimit: 10,
+				numOfKeysLimit: 100,
+				stringLengthLimit: 1000,
+			},
+		})
+
+		await exportUntilExhausted()
+
+		expect(errorSpy).toHaveBeenCalledTimes(1)
+		expect(recorded).toHaveLength(0)
 	})
 })
 
