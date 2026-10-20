@@ -11,8 +11,10 @@ import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.common.Value;
 import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.api.trace.SpanId;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.TraceFlags;
+import io.opentelemetry.api.trace.TraceId;
 import io.opentelemetry.api.trace.TraceState;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.testing.logs.TestLogRecordData;
@@ -126,7 +128,7 @@ class SamplingScenariosTest {
                 .setName(input.get("name").getAsString())
                 .setKind(SpanKind.INTERNAL)
                 .setSpanContext(SpanContext.create(
-                        "0123456789abcdef0123456789abcdef", "0123456789abcdef",
+                        TraceId.fromLongs(1, 1), SpanId.fromLong(1),
                         TraceFlags.getSampled(), TraceState.getDefault()))
                 .setStatus(StatusData.unset())
                 .setHasEnded(true)
