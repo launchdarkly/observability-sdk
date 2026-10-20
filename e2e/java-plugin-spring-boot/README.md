@@ -43,6 +43,7 @@ Environment the app honours:
 | `LD_OBSERVABILITY_BACKEND_URL` | Sampling-config URL for a local stack. |
 | `HTTPS_PROXY` | `host:port` of an egress proxy; applied to exports and the sampling request. |
 | `SERVICE_VERSION` | Reported as `service.version`, default `dev`. |
+| `LD_BASE_URI`, `LD_STREAM_URI`, `LD_EVENTS_URI` | Flag SDK polling, streaming and events URLs for a non-default LaunchDarkly instance. Used only when all three are set. |
 
 `make build` produces the executable jar in `build/libs/`, and `make test`
 runs the tests plus a guard that fails if the plugin leaks OkHttp, Okio or

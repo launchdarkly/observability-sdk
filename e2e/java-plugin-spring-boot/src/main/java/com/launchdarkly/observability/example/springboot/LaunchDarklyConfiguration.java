@@ -31,7 +31,10 @@ public class LaunchDarklyConfiguration {
             @Value("${OTEL_EXPORTER_OTLP_ENDPOINT:}") String otlpEndpoint,
             @Value("${LD_OBSERVABILITY_BACKEND_URL:}") String backendUrl,
             @Value("${HTTPS_PROXY:${https_proxy:}}") String httpsProxy,
-            @Value("${SERVICE_VERSION:dev}") String serviceVersion) {
+            @Value("${SERVICE_VERSION:dev}") String serviceVersion,
+            @Value("${LD_BASE_URI:}") String baseUri,
+            @Value("${LD_STREAM_URI:}") String streamUri,
+            @Value("${LD_EVENTS_URI:}") String eventsUri) {
         ObservabilityOptions.Builder options = new ObservabilityOptions.Builder()
                 .serviceName("java-plugin-spring-boot-example")
                 .serviceVersion(serviceVersion)
@@ -53,12 +56,19 @@ public class LaunchDarklyConfiguration {
         }
 
         boolean offline = sdkKey.isEmpty();
-        LDConfig config = new LDConfig.Builder()
+        LDConfig.Builder config = new LDConfig.Builder()
                 .offline(offline)
                 .startWait(Duration.ofSeconds(5))
-                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options.build()))))
-                .build();
-        LDClient client = new LDClient(offline ? "offline" : sdkKey, config);
+                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options.build()))));
+        // Point the flag SDK at another LaunchDarkly instance (e.g. an
+        // internal one) when all three are set; otherwise the defaults apply.
+        if (!baseUri.isEmpty() && !streamUri.isEmpty() && !eventsUri.isEmpty()) {
+            config.serviceEndpoints(Components.serviceEndpoints()
+                    .polling(baseUri)
+                    .streaming(streamUri)
+                    .events(eventsUri));
+        }
+        LDClient client = new LDClient(offline ? "offline" : sdkKey, config.build());
         log.info("LaunchDarkly client initialized={}{}", client.isInitialized(),
                 offline ? " (offline: LAUNCHDARKLY_SDK_KEY not set)" : "");
         return client;
