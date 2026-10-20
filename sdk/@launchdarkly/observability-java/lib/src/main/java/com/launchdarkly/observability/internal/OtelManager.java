@@ -9,6 +9,10 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Logger;
+import io.opentelemetry.api.metrics.DoubleGauge;
+import io.opentelemetry.api.metrics.DoubleHistogram;
+import io.opentelemetry.api.metrics.LongCounter;
+import io.opentelemetry.api.metrics.LongUpDownCounter;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
@@ -32,9 +36,9 @@ import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
 
 /**
  * Manages OpenTelemetry provider setup and lifecycle for LaunchDarkly Observability.
@@ -57,6 +61,13 @@ public final class OtelManager {
     private final Logger logger;
     private final Meter meter;
     private final CustomSampler customSampler;
+
+    // Instruments are cached by name so recording a metric does not run the
+    // SDK's builder and registration lookup on every call.
+    private final Map<String, DoubleGauge> gauges = new ConcurrentHashMap<>();
+    private final Map<String, LongCounter> counters = new ConcurrentHashMap<>();
+    private final Map<String, DoubleHistogram> histograms = new ConcurrentHashMap<>();
+    private final Map<String, LongUpDownCounter> upDownCounters = new ConcurrentHashMap<>();
 
     private OtelManager(
             SdkTracerProvider tracerProvider,
@@ -193,11 +204,13 @@ public final class OtelManager {
                     .setPropagators(ContextPropagators.create(propagator))
                     .buildAndRegisterGlobal();
         } catch (IllegalStateException e) {
-            // GlobalOpenTelemetry was already set (e.g., by user's own config).
-            // Build without registering globally; TracingHook will use whatever
-            // is globally registered.
-            log.log(Level.WARNING,
-                    "GlobalOpenTelemetry already set. Building SDK without global registration.", e);
+            // GlobalOpenTelemetry was already set (the OTel Java agent, the
+            // application's own SDK, or a library that called
+            // GlobalOpenTelemetry.get() first). Build without registering
+            // globally. LDObserve and EvaluationTracingHook use this SDK
+            // through OtelManager, so they keep exporting to LaunchDarkly.
+            log.warning("GlobalOpenTelemetry already set. Building SDK without global registration;"
+                    + " LaunchDarkly telemetry is still exported through the plugin's own providers.");
             sdk = OpenTelemetrySdk.builder()
                     .setTracerProvider(tracerProvider)
                     .setLoggerProvider(loggerProvider)
@@ -237,8 +250,20 @@ public final class OtelManager {
         }
         // OpenTelemetry.noop() does not install a process-wide global. Calling
         // GlobalOpenTelemetry.getTracer before init would lock the JVM onto a
-        // no-op, and TracingHook would never see the plugin's exporters.
+        // no-op for everything else in the process.
         return OpenTelemetry.noop().getTracer(Constants.INSTRUMENTATION_SCOPE_NAME);
+    }
+
+    /**
+     * Returns a tracer from the plugin's own SDK under another
+     * instrumentation scope, whether or not that SDK is also the global.
+     */
+    public static Tracer getTracer(String instrumentationScopeName) {
+        OtelManager manager = INSTANCE.get();
+        if (manager != null) {
+            return manager.openTelemetrySdk.getTracer(instrumentationScopeName);
+        }
+        return OpenTelemetry.noop().getTracer(instrumentationScopeName);
     }
 
     public static Logger getLogger() {
@@ -255,6 +280,45 @@ public final class OtelManager {
             return manager.meter;
         }
         return OpenTelemetry.noop().getMeter(Constants.INSTRUMENTATION_SCOPE_NAME);
+    }
+
+    /**
+     * Returns the gauge with this name, built once per provider. Before
+     * initialization it is a no-op and is not cached.
+     */
+    public static DoubleGauge getGauge(String name) {
+        OtelManager manager = INSTANCE.get();
+        if (manager == null) {
+            return getMeter().gaugeBuilder(name).build();
+        }
+        return manager.gauges.computeIfAbsent(name, n -> manager.meter.gaugeBuilder(n).build());
+    }
+
+    /** Returns the counter with this name; see {@link #getGauge}. */
+    public static LongCounter getCounter(String name) {
+        OtelManager manager = INSTANCE.get();
+        if (manager == null) {
+            return getMeter().counterBuilder(name).build();
+        }
+        return manager.counters.computeIfAbsent(name, n -> manager.meter.counterBuilder(n).build());
+    }
+
+    /** Returns the histogram with this name; see {@link #getGauge}. */
+    public static DoubleHistogram getHistogram(String name) {
+        OtelManager manager = INSTANCE.get();
+        if (manager == null) {
+            return getMeter().histogramBuilder(name).build();
+        }
+        return manager.histograms.computeIfAbsent(name, n -> manager.meter.histogramBuilder(n).build());
+    }
+
+    /** Returns the up/down counter with this name; see {@link #getGauge}. */
+    public static LongUpDownCounter getUpDownCounter(String name) {
+        OtelManager manager = INSTANCE.get();
+        if (manager == null) {
+            return getMeter().upDownCounterBuilder(name).build();
+        }
+        return manager.upDownCounters.computeIfAbsent(name, n -> manager.meter.upDownCounterBuilder(n).build());
     }
 
     /**

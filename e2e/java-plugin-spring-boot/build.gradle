@@ -25,6 +25,10 @@ def sdkProperties = new Properties()
 file('../../sdk/@launchdarkly/observability-java/gradle.properties').withInputStream { sdkProperties.load(it) }
 def pluginVersion = sdkProperties.getProperty('version')
 
+configurations {
+    javaagent
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -34,6 +38,17 @@ dependencies {
     // through the plugin's compile-scoped dependency.
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Agent release that ships the OpenTelemetry SDK version the plugin uses.
+    javaagent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.17.0'
+}
+
+// Copies the OpenTelemetry Java agent to build/agent/opentelemetry-javaagent.jar
+// for `make javaagent-smoke`.
+tasks.register('javaagentJar', Copy) {
+    from configurations.javaagent
+    into layout.buildDirectory.dir('agent')
+    rename { 'opentelemetry-javaagent.jar' }
 }
 
 tasks.named('test') {

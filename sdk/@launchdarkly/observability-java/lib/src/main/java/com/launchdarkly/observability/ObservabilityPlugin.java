@@ -1,6 +1,6 @@
 package com.launchdarkly.observability;
 
-import com.launchdarkly.integrations.TracingHook;
+import com.launchdarkly.observability.internal.EvaluationTracingHook;
 import com.launchdarkly.observability.internal.GraphQLClient;
 import com.launchdarkly.observability.internal.OtelManager;
 import com.launchdarkly.observability.internal.SamplingApiService;
@@ -112,10 +112,6 @@ public class ObservabilityPlugin extends Plugin {
         if (!options.isEnabled()) {
             return Collections.emptyList();
         }
-        TracingHook hook = new TracingHook.Builder()
-                .withSpans()
-                .withValue()
-                .build();
-        return Collections.singletonList(hook);
+        return Collections.singletonList(new EvaluationTracingHook(true, true));
     }
 }

@@ -1,5 +1,6 @@
 package com.launchdarkly.observability;
 
+import com.launchdarkly.observability.internal.EvaluationTracingHook;
 import com.launchdarkly.sdk.server.integrations.Hook;
 import com.launchdarkly.sdk.server.integrations.PluginMetadata;
 import io.opentelemetry.api.common.AttributeKey;
@@ -32,8 +33,9 @@ class ObservabilityPluginTest {
         List<Hook> hooks = plugin.getHooks(null);
         assertNotNull(hooks);
         assertEquals(1, hooks.size());
-        // The hook should be a TracingHook instance
-        assertNotNull(hooks.get(0));
+        // The plugin's own hook, so evaluations export even when another SDK
+        // owns GlobalOpenTelemetry.
+        assertInstanceOf(EvaluationTracingHook.class, hooks.get(0));
     }
 
     @Test

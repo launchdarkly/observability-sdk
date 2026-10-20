@@ -39,6 +39,8 @@ jobs:
                   java-version: 21
                   cache: 'gradle'
 
+            # Runs once per owner of GlobalOpenTelemetry: the plugin, a no-op
+            # claimed before the client starts, and the Java agent.
             - name: Run the self-checking example
               run: make run
 
@@ -74,6 +76,14 @@ jobs:
                   wait "$APP_PID" || true
                   grep -q "Closing LaunchDarkly Client" app.log || { echo "client did not close on shutdown"; cat app.log; exit 1; }
                   echo "Spring Boot backend OK"
+
+            # The OpenTelemetry Java agent owns GlobalOpenTelemetry here, as
+            # it does in many production services. Flag evaluations and
+            # request spans must still reach the plugin's exporter, checked
+            # against a local collector.
+            - name: Smoke-test the Spring Boot backend under the Java agent
+              working-directory: ./e2e/java-plugin-spring-boot
+              run: make javaagent-smoke
 
             - name: Build the dockerized Spring Boot backend
               working-directory: .

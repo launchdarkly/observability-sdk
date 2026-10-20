@@ -16,6 +16,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OtelManagerTest {
@@ -69,6 +71,23 @@ class OtelManagerTest {
 
         assertEqualsZero(failures.get());
         assertTrue(OtelManager.isInitialized());
+    }
+
+    @Test
+    void instrumentsAreCachedByNamePerProvider() {
+        OtelManager.initialize("sdk-test", options());
+
+        assertSame(OtelManager.getGauge("cpu"), OtelManager.getGauge("cpu"));
+        assertSame(OtelManager.getCounter("orders"), OtelManager.getCounter("orders"));
+        assertSame(OtelManager.getHistogram("latency"), OtelManager.getHistogram("latency"));
+        assertSame(OtelManager.getUpDownCounter("queue"), OtelManager.getUpDownCounter("queue"));
+        assertNotSame(OtelManager.getGauge("cpu"), OtelManager.getGauge("memory"));
+
+        Object gaugeBeforeRestart = OtelManager.getGauge("cpu");
+        OtelManager.shutdown();
+        OtelManager.initialize("sdk-test", options());
+        assertNotSame(gaugeBeforeRestart, OtelManager.getGauge("cpu"),
+                "a restarted provider must not reuse instruments from the old one");
     }
 
     private static void assertEqualsZero(int failures) {

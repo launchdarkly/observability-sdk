@@ -5,11 +5,6 @@ import com.launchdarkly.observability.internal.OtelManager;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.logs.Severity;
-import io.opentelemetry.api.metrics.DoubleGauge;
-import io.opentelemetry.api.metrics.DoubleHistogram;
-import io.opentelemetry.api.metrics.LongCounter;
-import io.opentelemetry.api.metrics.LongUpDownCounter;
-import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
@@ -30,18 +25,14 @@ public final class LDObserve {
      * Records a gauge metric.
      */
     public static void recordMetric(String name, double value, Attributes attributes) {
-        Meter meter = OtelManager.getMeter();
-        DoubleGauge gauge = meter.gaugeBuilder(name).build();
-        gauge.set(value, attributes);
+        OtelManager.getGauge(name).set(value, attributes);
     }
 
     /**
      * Records a counter metric.
      */
     public static void recordCount(String name, long value, Attributes attributes) {
-        Meter meter = OtelManager.getMeter();
-        LongCounter counter = meter.counterBuilder(name).build();
-        counter.add(value, attributes);
+        OtelManager.getCounter(name).add(value, attributes);
     }
 
     /**
@@ -55,18 +46,14 @@ public final class LDObserve {
      * Records a histogram metric.
      */
     public static void recordHistogram(String name, double value, Attributes attributes) {
-        Meter meter = OtelManager.getMeter();
-        DoubleHistogram histogram = meter.histogramBuilder(name).build();
-        histogram.record(value, attributes);
+        OtelManager.getHistogram(name).record(value, attributes);
     }
 
     /**
      * Records an up/down counter metric.
      */
     public static void recordUpDownCounter(String name, long value, Attributes attributes) {
-        Meter meter = OtelManager.getMeter();
-        LongUpDownCounter counter = meter.upDownCounterBuilder(name).build();
-        counter.add(value, attributes);
+        OtelManager.getUpDownCounter(name).add(value, attributes);
     }
 
     /**

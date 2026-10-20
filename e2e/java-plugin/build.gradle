@@ -22,15 +22,51 @@ def sdkProperties = new Properties()
 file('../../sdk/@launchdarkly/observability-java/gradle.properties').withInputStream { sdkProperties.load(it) }
 def pluginVersion = sdkProperties.getProperty('version')
 
+configurations {
+    javaagent
+}
+
 dependencies {
     implementation "com.launchdarkly:launchdarkly-java-server-sdk-observability:${pluginVersion}"
     implementation 'com.launchdarkly:launchdarkly-java-server-sdk:7.12.0'
     // No explicit opentelemetry-api: the example uses Attributes and Severity,
     // which must arrive through the plugin's compile-scoped dependency.
+
+    // Agent release that ships the OpenTelemetry SDK version the plugin uses.
+    javaagent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.17.0'
 }
 
 application {
     mainClass = 'com.launchdarkly.observability.example.PluginExample'
+}
+
+// The plugin must export flag evaluations whoever owns GlobalOpenTelemetry.
+// `run` is the plain case where the plugin registers its SDK as the global;
+// these cover the global being claimed first and the Java agent owning it.
+tasks.register('runClaimedGlobal', JavaExec) {
+    group = 'verification'
+    description = 'Runs the self-check with GlobalOpenTelemetry claimed before the client starts.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = application.mainClass
+    args 'claimed-global'
+}
+
+tasks.register('runWithJavaAgent', JavaExec) {
+    group = 'verification'
+    description = 'Runs the self-check under the OpenTelemetry Java agent.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = application.mainClass
+    args 'javaagent'
+    def agent = configurations.javaagent
+    inputs.files(agent)
+    doFirst {
+        jvmArgs "-javaagent:${agent.singleFile}",
+                // The agent's own exporters have no collector here.
+                '-Dotel.traces.exporter=none',
+                '-Dotel.metrics.exporter=none',
+                '-Dotel.logs.exporter=none',
+                '-Dotel.javaagent.logging=none'
+    }
 }
 
 // Groups that must never reach a consumer's runtime classpath through the plugin.

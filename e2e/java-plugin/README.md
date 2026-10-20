@@ -15,8 +15,14 @@ For a web backend that uses the plugin the way a service does, see
 make run
 ```
 
-A passing run prints one `RESULT` line. `checkout-enabled` is the
-flag-evaluation span from `TracingHook`. `kept-checkout` is kept by the
+`make run` runs the check three times, once per owner of
+`GlobalOpenTelemetry`: the plugin (`run`), a no-op claimed by
+`GlobalOpenTelemetry.get()` before the client starts (`runClaimedGlobal`), and
+the OpenTelemetry Java agent (`runWithJavaAgent`). The flag evaluation must
+reach the plugin's exporter in all three.
+
+Each passing run prints one `RESULT` line. `checkout-enabled` is the
+flag-evaluation span from the plugin's tracing hook. `kept-checkout` is kept by the
 sampling rule and carries `launchdarkly.sampling.ratio`. `health-check` is
 dropped. A call to `LDObserve` before the client starts must not install the
 OpenTelemetry no-op global; the flag span only arrives when the hook is on the

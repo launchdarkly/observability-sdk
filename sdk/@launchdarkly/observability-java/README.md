@@ -67,8 +67,12 @@ LDClient client = new LDClient("YOUR_SDK_KEY", config);
 The plugin automatically:
 
 1. Sets up OpenTelemetry TracerProvider, LoggerProvider, and MeterProvider with OTLP HTTP exporters pointed at the LaunchDarkly observability backend.
-2. Registers a `TracingHook` that adds span events for each flag evaluation, enabling guarded rollouts and observability.
-3. Fetches sampling configuration from the backend to control telemetry volume.
+2. Registers a tracing hook that records a span for each flag evaluation and adds a `feature_flag` event to the current span, enabling guarded rollouts and observability.
+3. Fetches sampling configuration from the backend to control telemetry volume. Regex rules match anywhere in the value, as in the other SDKs; a rule whose pattern does not compile is skipped with a warning.
+
+### Running alongside other OpenTelemetry setups
+
+The plugin registers its SDK as `GlobalOpenTelemetry` when it can. When the global is already taken (the OpenTelemetry Java agent, your own SDK, a library that called `GlobalOpenTelemetry.get()` first, or `manualStart(true)` after such a call), the plugin keeps its own providers. Evaluation spans and everything sent through `LDObserve` still go to LaunchDarkly. The `feature_flag` event is added to whichever span is current, so it is exported by whoever owns that span.
 
 ## Manual Instrumentation
 

@@ -11,8 +11,16 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Severity;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.data.SpanData;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +35,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,6 +52,7 @@ class PluginUserFlowTest {
 
     private HttpServer server;
     private final List<String> traces = new CopyOnWriteArrayList<>();
+    private final List<byte[]> rawTraces = new CopyOnWriteArrayList<>();
     private final List<String> logs = new CopyOnWriteArrayList<>();
     private final List<String> metrics = new CopyOnWriteArrayList<>();
     private final List<String> samplingQueries = new CopyOnWriteArrayList<>();
@@ -140,6 +150,91 @@ class PluginUserFlowTest {
         }
     }
 
+    @Test
+    void flagEvaluationExportsWhenGlobalWasClaimedFirst() throws Exception {
+        // A library that calls GlobalOpenTelemetry.get() before the LDClient is
+        // built locks the global onto a no-op, so the plugin cannot register.
+        GlobalOpenTelemetry.get();
+
+        startCollector();
+        LDConfig config = new LDConfig.Builder()
+                .offline(true)
+                .startWait(Duration.ofSeconds(5))
+                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options(false)))))
+                .build();
+
+        try (LDClient client = new LDClient("sdk-test", config)) {
+            client.boolVariation("checkout-enabled", LDContext.create("user-key-test"), false);
+            LDObserve.flush();
+            assertTrue(payloadContains(traces, "checkout-enabled"),
+                    "flag evaluation was not exported with a pre-claimed global: " + summarize(traces));
+            assertTrue(payloadContains(traces, "feature_flag.key"));
+        }
+    }
+
+    @Test
+    void flagEvaluationExportsUnderApplicationOwnedGlobal() throws Exception {
+        // The application (or the OpenTelemetry Java agent) owns the global.
+        InMemorySpanExporter appExporter = InMemorySpanExporter.create();
+        SdkTracerProvider appTracerProvider = SdkTracerProvider.builder()
+                .addSpanProcessor(SimpleSpanProcessor.create(appExporter))
+                .build();
+        OpenTelemetrySdk appSdk = OpenTelemetrySdk.builder()
+                .setTracerProvider(appTracerProvider)
+                .buildAndRegisterGlobal();
+
+        startCollector();
+        LDConfig config = new LDConfig.Builder()
+                .offline(true)
+                .startWait(Duration.ofSeconds(5))
+                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options(false)))))
+                .build();
+
+        try (LDClient client = new LDClient("sdk-test", config)) {
+            Span request = appSdk.getTracer("app").spanBuilder("GET /checkout").startSpan();
+            try (Scope ignored = request.makeCurrent()) {
+                client.boolVariation("checkout-enabled", LDContext.create("user-key-test"), false);
+            } finally {
+                request.end();
+            }
+            LDObserve.flush();
+
+            assertTrue(payloadContains(traces, "checkout-enabled"),
+                    "flag evaluation was not exported under an application-owned global: " + summarize(traces));
+            assertTrue(rawPayloadContains(rawTraces, request.getSpanContext().getTraceIdBytes()),
+                    "evaluation span is not in the application's trace");
+
+            // The feature_flag event still lands on the caller's current span.
+            List<SpanData> appSpans = appExporter.getFinishedSpanItems();
+            assertEquals(1, appSpans.size());
+            assertEquals(1, appSpans.get(0).getEvents().size());
+            assertEquals("feature_flag", appSpans.get(0).getEvents().get(0).getName());
+            assertEquals("checkout-enabled", appSpans.get(0).getEvents().get(0).getAttributes()
+                    .get(AttributeKey.stringKey("feature_flag.key")));
+        } finally {
+            appTracerProvider.shutdown();
+        }
+    }
+
+    @Test
+    void flagEvaluationExportsAfterManualStart() throws Exception {
+        startCollector();
+        ObservabilityOptions options = options(true);
+        LDConfig config = new LDConfig.Builder()
+                .offline(true)
+                .startWait(Duration.ofSeconds(5))
+                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options))))
+                .build();
+
+        try (LDClient client = new LDClient("sdk-test", config)) {
+            LDObserve.start("sdk-test", options);
+            client.boolVariation("checkout-enabled", LDContext.create("user-key-test"), false);
+            LDObserve.flush();
+            assertTrue(payloadContains(traces, "checkout-enabled"),
+                    "flag evaluation was not exported after manual start: " + summarize(traces));
+        }
+    }
+
     private ObservabilityOptions options(boolean manualStart) {
         String base = "http".concat("://") + server.getAddress().getHostString() + ":" + server.getAddress().getPort();
         return new ObservabilityOptions.Builder()
@@ -159,7 +254,9 @@ class PluginUserFlowTest {
             respond(exchange, 200, "application/json", SAMPLING_RESPONSE.getBytes(StandardCharsets.UTF_8));
         });
         server.createContext("/v1/traces", exchange -> {
-            traces.add(bodyAsString(exchange));
+            byte[] body = bodyBytes(exchange);
+            rawTraces.add(body);
+            traces.add(new String(body, StandardCharsets.UTF_8));
             respond(exchange, 200, "application/x-protobuf", new byte[0]);
         });
         server.createContext("/v1/logs", exchange -> {
@@ -229,7 +326,26 @@ class PluginUserFlowTest {
         return false;
     }
 
+    private static boolean rawPayloadContains(List<byte[]> payloads, byte[] needle) {
+        for (byte[] payload : payloads) {
+            outer:
+            for (int i = 0; i + needle.length <= payload.length; i++) {
+                for (int j = 0; j < needle.length; j++) {
+                    if (payload[i + j] != needle[j]) {
+                        continue outer;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static String bodyAsString(HttpExchange exchange) throws IOException {
+        return new String(bodyBytes(exchange), StandardCharsets.UTF_8);
+    }
+
+    private static byte[] bodyBytes(HttpExchange exchange) throws IOException {
         byte[] raw = exchange.getRequestBody().readAllBytes();
         String encoding = exchange.getRequestHeaders().getFirst("Content-Encoding");
         if (encoding != null && encoding.toLowerCase().contains("gzip")) {
@@ -237,7 +353,7 @@ class PluginUserFlowTest {
                 raw = in.readAllBytes();
             }
         }
-        return new String(raw, StandardCharsets.UTF_8);
+        return raw;
     }
 
     private static void respond(HttpExchange exchange, int status, String contentType, byte[] body) throws IOException {

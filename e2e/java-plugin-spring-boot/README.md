@@ -48,6 +48,18 @@ Environment the app honours:
 runs the tests plus a guard that fails if the plugin leaks OkHttp, Okio or
 Kotlin onto the application's classpath.
 
+## Under the OpenTelemetry Java agent
+
+```bash
+make javaagent-smoke
+```
+
+Runs the jar with the OpenTelemetry Java agent attached, so the agent owns
+`GlobalOpenTelemetry`, and drives the routes against a local collector. It
+fails unless the evaluation spans and the request spans with their
+`feature_flag` events reach the plugin's exporter. CI runs it on every change
+to the plugin.
+
 ## Docker
 
 The image is built from the repository root so the plugin can be compiled
