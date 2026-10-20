@@ -2,6 +2,8 @@ module github.com/highlight/highlight/e2e/go
 
 go 1.25.0
 
+toolchain go1.26.10
+
 replace github.com/highlight/highlight/sdk/highlight-go => ../../sdk/highlight-go
 
 require (
