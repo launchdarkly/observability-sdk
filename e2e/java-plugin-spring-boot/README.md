@@ -45,9 +45,13 @@ Environment the app honours:
 | `SERVICE_VERSION` | Reported as `service.version`, default `dev`. |
 | `LD_BASE_URI`, `LD_STREAM_URI`, `LD_EVENTS_URI` | Flag SDK polling, streaming and events URLs for a non-default LaunchDarkly instance. Used only when all three are set. |
 
-`make build` produces the executable jar in `build/libs/`, and `make test`
-runs the tests plus a guard that fails if the plugin leaks OkHttp, Okio or
-Kotlin onto the application's classpath.
+`make build` produces the executable jar in `build/libs/`. `make test` boots
+the application against a local OTLP collector and sampling endpoint
+(`ApplicationTelemetryTest`), drives every route, and checks the exported
+request spans, evaluation spans and `feature_flag` events, the recorded error,
+logs, metrics, resource attributes and a backend sampling rule. It also runs a
+guard that fails if the plugin leaks OkHttp, Okio or Kotlin onto the
+application's classpath.
 
 ## Under the OpenTelemetry Java agent
 
