@@ -13,7 +13,10 @@ import {
   AutoEnvAttributes,
 } from '@launchdarkly/react-native-client-sdk';
 import {useEffect, useState} from 'react';
-import {createSessionReplayPlugin} from '@launchdarkly/session-replay-react-native';
+import {
+  createSessionReplayPlugin,
+  trackScreenView,
+} from '@launchdarkly/session-replay-react-native';
 import {
   LDObserve,
   Observability,
@@ -30,6 +33,7 @@ import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
 import ApiScreen from './ApiScreen';
+import SmoothieScreens from './SmoothieScreens';
 
 // Pick the LaunchDarkly instance once for the client-side URLs (they must stay
 // paired with the mobile key, or identify fails with a 401). The observability
@@ -144,7 +148,16 @@ const ARCH_LABEL = `${
   IS_NEW_ARCH ? 'New' : 'Legacy'
 } Architecture · React Native ${RN_VERSION}`;
 
-type Tab = 'masking' | 'dialogs' | 'api' | 'tracing';
+type Tab = 'masking' | 'dialogs' | 'api' | 'tracing' | 'smoothies';
+
+// The smoothies tab hosts a React Navigation stack whose observer reports its own screens, so it
+// has no entry here.
+const TAB_SCREEN_NAMES: Partial<Record<Tab, string>> = {
+  masking: 'Masking',
+  dialogs: 'Dialogs',
+  api: 'API',
+  tracing: 'Tracing',
+};
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('masking');
@@ -159,6 +172,16 @@ export default function App() {
         setStatus(`identify failed: ${String(e)}`);
       });
   }, []);
+
+  // The tabs are component state, not a navigator, so no new Activity or view controller
+  // appears and nothing native can detect the switch. Report it explicitly — this also covers
+  // the opening screen, which is buffered until native session replay finishes starting.
+  useEffect(() => {
+    const screenName = TAB_SCREEN_NAMES[tab];
+    if (screenName) {
+      trackScreenView(screenName, {category: 'navigation'});
+    }
+  }, [tab]);
 
   return (
     <LDProvider client={client}>
@@ -210,11 +233,17 @@ export default function App() {
             active={tab === 'tracing'}
             onPress={() => setTab('tracing')}
           />
+          <TabButton
+            label="Smoothies"
+            active={tab === 'smoothies'}
+            onPress={() => setTab('smoothies')}
+          />
         </View>
         {tab === 'masking' && <MaskingScreen />}
         {tab === 'dialogs' && <DialogsScreen />}
         {tab === 'api' && <ApiScreen />}
         {tab === 'tracing' && <TracingScreen />}
+        {tab === 'smoothies' && <SmoothieScreens />}
       </SafeAreaView>
     </LDProvider>
   );

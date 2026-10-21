@@ -69,6 +69,15 @@ class SessionReplayReactNativeModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun trackScreenView(name: String, options: ReadableMap?, promise: Promise) {
+    try {
+      SessionReplayClientAdapter.shared.trackScreenView(name, options)
+      promise.resolve(null)
+    } catch (e: Exception) {
+      promise.reject("track_screen_view_failed", e.message, e)
+    }
+  }
+
   override fun afterIdentify(
     contextKeys: ReadableMap,
     canonicalKey: String,
