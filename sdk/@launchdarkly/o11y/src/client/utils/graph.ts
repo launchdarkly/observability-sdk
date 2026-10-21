@@ -1,5 +1,6 @@
 import { ClientError } from 'graphql-request'
 import { PublicGraphError } from '../graph/generated/schemas'
+import { sdkLog } from './sdkLogger'
 
 export const MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS = 3
 
@@ -48,7 +49,8 @@ export const getGraphQLRequestWrapper = () => {
 					retries + 1,
 				)
 			}
-			console.error(
+			sdkLog(
+				'error',
 				`highlight.io: data request failed after ${retries} retries`,
 			)
 			throw error
