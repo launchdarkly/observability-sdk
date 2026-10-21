@@ -1,9 +1,11 @@
 package com.launchdarkly.observability.sampling
 
+import com.launchdarkly.observability.context.ObserveLogger
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import io.mockk.verify
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -589,6 +592,139 @@ class CustomSamplerTest {
 
             assertTrue(result.sample)
             assertEquals(90L, result.attributes?.get(AttributeKey.longKey("launchdarkly.sampling.ratio")))
+        }
+    }
+
+    @Nested
+    @DisplayName("Regex Matching Tests")
+    inner class RegexMatchingTests {
+
+        private fun spanNameConfig(pattern: String, ratio: Int = 42) = SamplingConfig(
+            spans = listOf(SpanSamplingConfig(name = MatchConfig.Regex(pattern), samplingRatio = ratio))
+        )
+
+        @Test
+        fun `should match regex as a substring of the value`() {
+            every { mockSamplerFunction(42) } returns false
+            customSampler.setConfig(spanNameConfig("health"))
+
+            val result = customSampler.sampleSpan(createMockSpan("GET /health-check"))
+
+            assertFalse(result.sample)
+            assertEquals(42L, result.attributes?.get(AttributeKey.longKey("launchdarkly.sampling.ratio")))
+        }
+
+        @Test
+        fun `should respect start anchor`() {
+            every { mockSamplerFunction(42) } returns false
+            customSampler.setConfig(spanNameConfig("^health"))
+
+            assertFalse(customSampler.sampleSpan(createMockSpan("health-check")).sample)
+            customSampler.sampleSpan(createMockSpan("GET /health-check")).also {
+                assertTrue(it.sample)
+                assertNull(it.attributes)
+            }
+        }
+
+        @Test
+        fun `should respect end anchor`() {
+            every { mockSamplerFunction(42) } returns false
+            customSampler.setConfig(spanNameConfig("check$"))
+
+            assertFalse(customSampler.sampleSpan(createMockSpan("GET /health-check")).sample)
+            customSampler.sampleSpan(createMockSpan("GET /health-check/status")).also {
+                assertTrue(it.sample)
+                assertNull(it.attributes)
+            }
+        }
+
+        @Test
+        fun `should respect full anchors`() {
+            every { mockSamplerFunction(42) } returns false
+            customSampler.setConfig(spanNameConfig("^health$"))
+
+            assertFalse(customSampler.sampleSpan(createMockSpan("health")).sample)
+            customSampler.sampleSpan(createMockSpan("GET /health-check")).also {
+                assertTrue(it.sample)
+                assertNull(it.attributes)
+            }
+        }
+
+        @Test
+        fun `should match log message regex as a substring`() {
+            every { mockSamplerFunction(7) } returns false
+            customSampler.setConfig(
+                SamplingConfig(
+                    logs = listOf(LogSamplingConfig(message = MatchConfig.Regex("timeout"), samplingRatio = 7))
+                )
+            )
+
+            val result = customSampler.sampleLog(createMockLog("Request failed: timeout after 30s"))
+
+            assertFalse(result.sample)
+            assertEquals(7L, result.attributes?.get(AttributeKey.longKey("launchdarkly.sampling.ratio")))
+        }
+
+        @Test
+        fun `should not throw and never match for an invalid regex`() {
+            customSampler.setConfig(spanNameConfig("([unclosed"))
+
+            val result = assertDoesNotThrow { customSampler.sampleSpan(createMockSpan("([unclosed")) }
+
+            assertTrue(result.sample)
+            assertNull(result.attributes)
+            verify(exactly = 0) { mockSamplerFunction(any()) }
+        }
+
+        @Test
+        fun `should skip invalid regex rule and still apply other rules`() {
+            every { mockSamplerFunction(10) } returns false
+            customSampler.setConfig(
+                SamplingConfig(
+                    spans = listOf(
+                        SpanSamplingConfig(name = MatchConfig.Regex("*bad"), samplingRatio = 99),
+                        SpanSamplingConfig(name = MatchConfig.Regex("good"), samplingRatio = 10)
+                    ),
+                    logs = listOf(
+                        LogSamplingConfig(message = MatchConfig.Regex("[bad"), samplingRatio = 99),
+                        LogSamplingConfig(message = MatchConfig.Regex("good"), samplingRatio = 10)
+                    )
+                )
+            )
+
+            customSampler.sampleSpan(createMockSpan("a good span")).also {
+                assertFalse(it.sample)
+                assertEquals(10L, it.attributes?.get(AttributeKey.longKey("launchdarkly.sampling.ratio")))
+            }
+            customSampler.sampleLog(createMockLog("a good log")).also {
+                assertFalse(it.sample)
+                assertEquals(10L, it.attributes?.get(AttributeKey.longKey("launchdarkly.sampling.ratio")))
+            }
+            verify(exactly = 0) { mockSamplerFunction(99) }
+        }
+
+        @Test
+        fun `should log a warning once per invalid regex`() {
+            val logger = mockk<ObserveLogger>(relaxed = true)
+            val sampler = CustomSampler(mockSamplerFunction, logger)
+            sampler.setConfig(spanNameConfig("([unclosed"))
+
+            repeat(5) { sampler.sampleSpan(createMockSpan("span-$it")) }
+
+            verify(exactly = 1) { logger.warn(match { it.contains("([unclosed") }, any<Throwable>()) }
+        }
+
+        @Test
+        fun `should not log a warning for a valid regex`() {
+            val logger = mockk<ObserveLogger>(relaxed = true)
+            every { mockSamplerFunction(42) } returns true
+            val sampler = CustomSampler(mockSamplerFunction, logger)
+            sampler.setConfig(spanNameConfig("span-\\d+"))
+
+            repeat(3) { sampler.sampleSpan(createMockSpan("span-$it")) }
+
+            verify(exactly = 0) { logger.warn(any<String>(), any<Throwable>()) }
+            verify(exactly = 0) { logger.warn(any<String>()) }
         }
     }
 
