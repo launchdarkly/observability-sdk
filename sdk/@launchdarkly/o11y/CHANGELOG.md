@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.3.0...o11y-1.3.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **o11y:** keep LaunchDarkly SDK and SDK-internal output out of customer logs ([#835](https://github.com/launchdarkly/observability-sdk/issues/835)) ([fef617d](https://github.com/launchdarkly/observability-sdk/commit/fef617df3c44db9b0d04a833f82dc77c6af7e764))
+
 ## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.2.0...o11y-1.3.0) (2026-10-15)
 
 
