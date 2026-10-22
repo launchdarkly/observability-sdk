@@ -8,6 +8,7 @@ Official LaunchDarkly Observability plugin for the [Java Server SDK](https://git
 
 - Java 11+
 - LaunchDarkly Java Server SDK 7.10.1+ (the first release with the plugin API). The plugin does not bring the SDK with it; declare it yourself. Older SDKs, such as the 7.4.0 that `launchdarkly-java-server-sdk-otel` 0.2.0 depends on, have no `Plugin` class and fail with `NoClassDefFoundError`.
+- OpenTelemetry Java SDK 1.38.0+ on the runtime classpath. The plugin is built against 1.51.0, but a BOM in your build (Spring Boot's, for one) can change that version; see [OpenTelemetry versions](#opentelemetry-versions).
 
 ## Installation
 
@@ -30,13 +31,48 @@ dependencies {
     <artifactId>launchdarkly-java-server-sdk-observability</artifactId>
     <version>0.1.0</version>
 </dependency>
+<dependency>
+    <groupId>com.launchdarkly</groupId>
+    <artifactId>launchdarkly-java-server-sdk</artifactId>
+    <version>7.12.0</version>
+</dependency>
 ```
+
+The plugin does not bring the LaunchDarkly SDK with it, so you choose its version; declare both.
 
 ### Dependencies you get
 
 - `io.opentelemetry:opentelemetry-api` is a compile-scoped (`api`) dependency, because `LDObserve` and `ObservabilityOptions` take OpenTelemetry API types such as `Attributes` and `Severity`. You do not need to declare it yourself.
 - OTLP is sent over HTTP with OpenTelemetry's JDK sender, which uses `java.net.http.HttpClient`. The plugin does **not** pull OkHttp, Okio or the Kotlin standard library onto your classpath. The build fails if any of those leak in.
 - The OpenTelemetry SDK and exporters are runtime dependencies, and they are the only ones: JSON is handled with the LaunchDarkly SDK's own `LDValue`, so no Gson or other JSON library is added. The plugin records flag evaluations with its own hook and does not depend on `launchdarkly-java-server-sdk-otel` or on the LaunchDarkly SDK itself. The build fails if the POM names anything outside `io.opentelemetry`.
+
+### OpenTelemetry versions
+
+The plugin needs OpenTelemetry Java 1.38.0 or newer at runtime. Dependency-management BOMs override the version the plugin asks for, so check what your build resolves (`./gradlew dependencies --configuration runtimeClasspath` or `mvn dependency:tree -Dincludes=io.opentelemetry`):
+
+| Spring Boot | OpenTelemetry it manages | Plugin |
+|-------------|--------------------------|--------|
+| 3.2 | 1.31.0 | Too old: the plugin logs an error and stays off. Override the version. |
+| 3.3 | 1.38.0 | Works |
+| 3.4 | 1.43.0 | Works |
+| 3.5 | 1.49.0 | Works |
+| 4.1 | 1.62.0 | Works |
+
+To override Spring Boot's version, set its `opentelemetry.version` property:
+
+```groovy
+// build.gradle, with io.spring.dependency-management
+ext['opentelemetry.version'] = '1.51.0'
+```
+
+```xml
+<!-- pom.xml, with spring-boot-starter-parent -->
+<properties>
+    <opentelemetry.version>1.51.0</opentelemetry.version>
+</properties>
+```
+
+Keep every `io.opentelemetry` artifact on one version. If you add OpenTelemetry instrumentation libraries (such as the Logback appender below), pick the release built on the same core version (instrumentation 2.17.x is built on 1.51.0) or override `opentelemetry.version` to match it. Mixing them fails at runtime with `AbstractMethodError` or `NoSuchMethodError`.
 
 ## Usage
 
@@ -70,15 +106,121 @@ The plugin automatically:
 2. Registers a tracing hook that records a span for each flag evaluation and adds a `feature_flag` event to the current span, enabling guarded rollouts and observability.
 3. Fetches sampling configuration from the backend to control telemetry volume. Regex rules match anywhere in the value, as in the other SDKs; a rule whose pattern does not compile is skipped with a warning.
 
+Flag-evaluation spans are children of whatever span is current when you evaluate. The plugin does not create request spans itself: in a web service, connect your HTTP instrumentation to the plugin (see [Spring Boot](#spring-boot)) or each evaluation becomes its own trace.
+
+On startup the plugin logs one line saying where it exports and under which service name, and warns if no service name is set. If it cannot start (a malformed endpoint, an OpenTelemetry version that is too old) it logs the cause as an error and stays a no-op; the LaunchDarkly client and your application keep running.
+
 ### Running alongside other OpenTelemetry setups
 
 The plugin registers its SDK as `GlobalOpenTelemetry` when it can. When the global is already taken (the OpenTelemetry Java agent, your own SDK, a library that called `GlobalOpenTelemetry.get()` first, or `manualStart(true)` after such a call), the plugin keeps its own providers. Evaluation spans and everything sent through `LDObserve` still go to LaunchDarkly. The `feature_flag` event is added to whichever span is current, so it is exported by whoever owns that span.
+
+`LDObserve.getOpenTelemetry()` returns the plugin's OpenTelemetry whether or not it is the global, for instrumentation that should export to LaunchDarkly through the plugin.
 
 ### Lifecycle and multiple clients
 
 The OpenTelemetry providers are process-wide. The first `LDClient` that registers the plugin starts them and its SDK key identifies the project for everything exported. Another `LDClient` with the same SDK key shares them. An `LDClient` with a different SDK key logs a warning and its plugin starts nothing: its flag evaluations are still recorded, under the first client's SDK key.
 
 Closing an `LDClient` does not stop the providers. Call `LDObserve.shutdown()` when your application stops (for example after closing the client) to flush and stop them; the plugin also registers one JVM shutdown hook that does the same, unless you turn it off with `shutdownHook(false)` (see [Spring Boot](#spring-boot)).
+
+### OpenTelemetry Java agent
+
+With the agent attached, the agent owns the global and creates the request spans, and exports them to its own endpoint. The plugin's evaluation spans point at those request spans, so for whole traces in LaunchDarkly send the agent's data there too:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://otel.observability.app.launchdarkly.com:4318
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+export OTEL_SERVICE_NAME=my-service
+export OTEL_RESOURCE_ATTRIBUTES=highlight.project_id=YOUR_SDK_KEY
+java -javaagent:opentelemetry-javaagent.jar -jar app.jar
+```
+
+`highlight.project_id` is the resource attribute the plugin itself sets to the SDK key. The agent also captures Logback and Log4j records and exports them the same way.
+
+## Spring Boot
+
+Build one `LDClient` bean with the plugin and let Spring close it. Spring Boot shuts down from its own JVM hook, after draining in-flight requests, so switch off the plugin's hook and stop the plugin from a bean instead; otherwise telemetry from requests that finish during the drain is lost.
+
+```java
+@Configuration
+public class LaunchDarklyConfig {
+    @Bean(destroyMethod = "close")
+    public LDClient ldClient(@Value("${launchdarkly.sdk-key}") String sdkKey) {
+        ObservabilityOptions options = new ObservabilityOptions.Builder()
+                .serviceName("my-service")
+                .serviceVersion("1.0.0")
+                .environment("production")
+                .shutdownHook(false)
+                .build();
+        LDConfig config = new LDConfig.Builder()
+                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options))))
+                .build();
+        return new LDClient(sdkKey, config);
+    }
+
+    /** Flushes and stops the plugin when the context closes. */
+    @Bean(destroyMethod = "shutdown")
+    public ObservabilityShutdown observabilityShutdown() {
+        return new ObservabilityShutdown();
+    }
+
+    public static class ObservabilityShutdown {
+        public void shutdown() {
+            LDObserve.shutdown();
+        }
+    }
+}
+```
+
+### Request spans and errors
+
+Spring Boot's Micrometer tracing creates a span per HTTP request and records unhandled exceptions on it. Add the OpenTelemetry bridge and hand it the plugin's OpenTelemetry; Boot then exports request spans to LaunchDarkly with the flag-evaluation spans as children, the `feature_flag` events on the request span, and exceptions as error events. The `LDClient` parameter makes Spring start the plugin first.
+
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-actuator'
+implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+```
+
+```java
+@Bean
+public OpenTelemetry openTelemetry(LDClient ldClient) {
+    return LDObserve.getOpenTelemetry();
+}
+```
+
+The plugin's tracer provider records every span, so `management.tracing.sampling.probability` does not apply; the LaunchDarkly sampling rules decide what is kept.
+
+### Logs
+
+`LDObserve.recordLog` exports a record directly. To export what you already log through SLF4J and Logback, add the OpenTelemetry Logback appender (see [OpenTelemetry versions](#opentelemetry-versions) for the version) and install it on the plugin's OpenTelemetry:
+
+```groovy
+implementation 'io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:2.17.0-alpha'
+```
+
+```xml
+<!-- src/main/resources/logback-spring.xml -->
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/base.xml"/>
+  <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender"/>
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+    <appender-ref ref="OTEL"/>
+  </root>
+</configuration>
+```
+
+```java
+@Bean
+public OpenTelemetry openTelemetry(LDClient ldClient) {
+    OpenTelemetry openTelemetry = LDObserve.getOpenTelemetry();
+    OpenTelemetryAppender.install(openTelemetry);
+    return openTelemetry;
+}
+```
+
+Records logged inside a request carry its trace id. `logsApiLevel` still applies.
+
+With Log4j 2 (`spring-boot-starter-log4j2`) use `io.opentelemetry.instrumentation:opentelemetry-log4j-appender-2.17` instead: add `<OpenTelemetry name="OpenTelemetryAppender"/>` to the appenders in `log4j2-spring.xml` (with `packages="io.opentelemetry.instrumentation.log4j.appender.v2_17"` on `<Configuration>`), reference it from the root logger, and call `io.opentelemetry.instrumentation.log4j.appender.v2_17.OpenTelemetryAppender.install(openTelemetry)` in the bean.
 
 ## Manual Instrumentation
 
