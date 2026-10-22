@@ -128,6 +128,27 @@ class PluginStartupTest {
     }
 
     @Test
+    void startupSaysWhereTelemetryGoesAndWarnsWithoutAServiceName() throws Exception {
+        try (LDClient client = client("sdk-unnamed", new ObservabilityOptions.Builder()
+                .otlpEndpoint("http://127.0.0.1:9").backendUrl("http://127.0.0.1:9").build())) {
+            assertTrue(records.stream().anyMatch(r -> r.getLevel() == Level.INFO
+                    && r.getMessage().contains("exporting to http://127.0.0.1:9 as service 'unknown_service:java'")));
+            assertTrue(records.stream().anyMatch(r -> r.getLevel() == Level.WARNING
+                    && r.getMessage().contains("serviceName")));
+        }
+    }
+
+    @Test
+    void namedServiceStartsWithoutAWarning() throws Exception {
+        try (LDClient client = client("sdk-named", new ObservabilityOptions.Builder()
+                .serviceName("checkout").otlpEndpoint("http://127.0.0.1:9").backendUrl("http://127.0.0.1:9").build())) {
+            assertTrue(records.stream().anyMatch(r -> r.getMessage().contains("as service 'checkout'")));
+            assertFalse(records.stream().anyMatch(r -> r.getLevel() == Level.WARNING
+                    && r.getMessage().contains("serviceName")));
+        }
+    }
+
+    @Test
     void sdkVersionReportsTheClasspathVersion() {
         assertTrue(OtelManager.sdkVersion().matches("\\d+\\.\\d+\\.\\d+.*"), OtelManager.sdkVersion());
     }

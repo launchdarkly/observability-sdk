@@ -314,8 +314,14 @@ public final class OtelManager {
         OtelManager manager = new OtelManager(
                 tracerProvider, loggerProvider, meterProvider, sdk, customSampler);
 
-        if (options.isDebug()) {
-            log.info("OtelManager initialized with endpoint: " + endpoint);
+        // One line at startup, like the LaunchDarkly SDK's own, so a user
+        // can see where telemetry goes and under which service name.
+        String serviceName = resource.getAttribute(AttributeKey.stringKey("service.name"));
+        log.info("LaunchDarkly observability started: exporting to " + endpoint
+                + " as service '" + serviceName + "'");
+        if (serviceName == null || serviceName.startsWith("unknown_service")) {
+            log.warning("LaunchDarkly observability has no service name, so telemetry is grouped under '"
+                    + serviceName + "'. Set ObservabilityOptions.Builder.serviceName(...).");
         }
         return manager;
     }
