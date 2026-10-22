@@ -78,7 +78,7 @@ The plugin registers its SDK as `GlobalOpenTelemetry` when it can. When the glob
 
 The OpenTelemetry providers are process-wide. The first `LDClient` that registers the plugin starts them and its SDK key identifies the project for everything exported. Another `LDClient` with the same SDK key shares them. An `LDClient` with a different SDK key logs a warning and its plugin starts nothing: its flag evaluations are still recorded, under the first client's SDK key.
 
-Closing an `LDClient` does not stop the providers. Call `LDObserve.shutdown()` when your application stops (for example after closing the client) to flush and stop them; the plugin also registers one JVM shutdown hook that does the same.
+Closing an `LDClient` does not stop the providers. Call `LDObserve.shutdown()` when your application stops (for example after closing the client) to flush and stop them; the plugin also registers one JVM shutdown hook that does the same, unless you turn it off with `shutdownHook(false)` (see [Spring Boot](#spring-boot)).
 
 ## Manual Instrumentation
 
@@ -132,6 +132,7 @@ Every `LDObserve` method is safe to call before the plugin is initialized; such 
 | `logsApiLevel` | `INFO` | Minimum severity for exported logs. `NONE` disables log export. |
 | `debug` | `false` | Enable debug logging |
 | `manualStart` | `false` | Delay OTLP provider startup until `LDObserve.start(sdkKey, options)` |
+| `shutdownHook` | `true` | Flush and stop the providers from a JVM shutdown hook. Set `false` under Spring Boot or another framework that owns shutdown, and call `LDObserve.shutdown()` from its close callback, so telemetry from requests drained during graceful shutdown is not dropped |
 
 ### Proxies and custom headers
 

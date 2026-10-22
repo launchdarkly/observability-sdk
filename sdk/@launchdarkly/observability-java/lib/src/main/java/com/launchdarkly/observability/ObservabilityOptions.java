@@ -33,6 +33,7 @@ public final class ObservabilityOptions {
     private final LogLevel logsApiLevel;
     private final boolean debug;
     private final boolean manualStart;
+    private final boolean shutdownHook;
 
     private ObservabilityOptions(Builder builder) {
         this.enabled = builder.enabled;
@@ -47,6 +48,7 @@ public final class ObservabilityOptions {
         this.logsApiLevel = builder.logsApiLevel;
         this.debug = builder.debug;
         this.manualStart = builder.manualStart;
+        this.shutdownHook = builder.shutdownHook;
     }
 
     /** Whether the plugin exports telemetry at all. See {@link Builder#enabled(boolean)}. */
@@ -66,6 +68,8 @@ public final class ObservabilityOptions {
     public LogLevel getLogsApiLevel() { return logsApiLevel; }
     public boolean isDebug() { return debug; }
     public boolean isManualStart() { return manualStart; }
+    /** Whether the plugin flushes and stops on JVM exit by itself. See {@link Builder#shutdownHook(boolean)}. */
+    public boolean isShutdownHook() { return shutdownHook; }
 
     /**
      * Minimum severity for exported log records. Mirrors the OpenTelemetry
@@ -116,6 +120,7 @@ public final class ObservabilityOptions {
         private LogLevel logsApiLevel = LogLevel.INFO;
         private boolean debug = false;
         private boolean manualStart = false;
+        private boolean shutdownHook = true;
 
         public Builder() {}
 
@@ -243,6 +248,23 @@ public final class ObservabilityOptions {
          */
         public Builder manualStart(boolean manualStart) {
             this.manualStart = manualStart;
+            return this;
+        }
+
+        /**
+         * Whether the plugin registers a JVM shutdown hook that flushes and
+         * stops its providers. Defaults to {@code true}, which suits a plain
+         * {@code main} application.
+         *
+         * <p>Set it to {@code false} when a framework owns shutdown, such as
+         * Spring Boot, and call {@link LDObserve#shutdown()} from the
+         * framework's close callback instead. The JVM runs shutdown hooks
+         * concurrently, so the plugin's hook would otherwise stop the
+         * providers while Spring is still draining in-flight requests, and
+         * everything those requests record would be dropped.</p>
+         */
+        public Builder shutdownHook(boolean shutdownHook) {
+            this.shutdownHook = shutdownHook;
             return this;
         }
 

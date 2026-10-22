@@ -147,7 +147,9 @@ public final class OtelManager {
             if (pending != null) {
                 manager.customSampler.setConfig(pending);
             }
-            if (shutdownHook == null) {
+            // One hook for the process, and none when the application owns
+            // shutdown (see ObservabilityOptions.Builder#shutdownHook).
+            if (options.isShutdownHook() && shutdownHook == null) {
                 shutdownHook = new Thread(() -> {
                     OtelManager current = INSTANCE.getAndSet(null);
                     if (current != null) {

@@ -46,6 +46,7 @@ class ObservabilityPluginTest {
         assertEquals("", options.getEnvironment());
         assertFalse(options.isDebug());
         assertFalse(options.isManualStart());
+        assertTrue(options.isShutdownHook());
         assertEquals("https://otel.observability.app.launchdarkly.com:4318", options.getOtlpEndpoint());
         assertEquals("https://pub.observability.app.launchdarkly.com", options.getBackendUrl());
         assertTrue(options.isEnabled());

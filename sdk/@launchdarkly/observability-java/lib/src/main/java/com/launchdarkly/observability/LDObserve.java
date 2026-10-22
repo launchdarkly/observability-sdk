@@ -126,7 +126,12 @@ public final class LDObserve {
     }
 
     /**
-     * Flushes all pending data and shuts down the providers.
+     * Flushes all pending data and shuts down the providers. Call it after
+     * the last telemetry is recorded: under Spring Boot, from a bean's
+     * destroy method (see
+     * {@link ObservabilityOptions.Builder#shutdownHook(boolean)}). Later
+     * calls, and the plugin's JVM shutdown hook if it is registered, then
+     * find nothing to do.
      */
     public static void shutdown() {
         OtelManager.shutdown();

@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -115,6 +116,24 @@ class OtelManagerTest {
 
     private static void assertEqualsZero(int failures) {
         assertTrue(failures == 0, "concurrent initialize failures: " + failures);
+    }
+
+    @Test
+    void shutdownHookIsRegisteredByDefault() {
+        OtelManager.initialize("sdk-test", options());
+        assertNotNull(OtelManager.shutdownHookForTest());
+    }
+
+    @Test
+    void shutdownHookCanBeLeftToTheFramework() {
+        OtelManager.initialize("sdk-test", new ObservabilityOptions.Builder()
+                .otlpEndpoint("https://otel.example.test:4318")
+                .shutdownHook(false)
+                .build());
+
+        assertTrue(OtelManager.isInitialized());
+        assertNull(OtelManager.shutdownHookForTest(),
+                "with shutdownHook(false) the application stops the plugin; a JVM hook would race it");
     }
 
     private static ObservabilityOptions options() {

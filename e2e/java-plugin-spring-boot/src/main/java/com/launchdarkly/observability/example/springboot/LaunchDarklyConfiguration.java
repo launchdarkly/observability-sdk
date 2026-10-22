@@ -42,7 +42,12 @@ public class LaunchDarklyConfiguration {
                 .resourceAttributes(Attributes.of(
                         AttributeKey.stringKey("example.framework"), "spring-boot",
                         AttributeKey.stringKey("example.runtime"), System.getProperty("java.version")))
-                .logsApiLevel(ObservabilityOptions.LogLevel.INFO);
+                .logsApiLevel(ObservabilityOptions.LogLevel.INFO)
+                // Spring closes the context in its own shutdown hook, after
+                // draining in-flight requests. The plugin's JVM hook would
+                // run alongside it and stop the providers mid-drain, so
+                // observabilityShutdown() below stops them instead.
+                .shutdownHook(false);
         if (!otlpEndpoint.isEmpty()) {
             options.otlpEndpoint(otlpEndpoint);
         }
