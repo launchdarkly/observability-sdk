@@ -136,6 +136,43 @@ class OtelManagerTest {
                 "with shutdownHook(false) the application stops the plugin; a JVM hook would race it");
     }
 
+    @Test
+    void shutdownAgainstAHungEndpointIsBounded() throws Exception {
+        // Accepts connections and never answers, like a blackholed collector.
+        try (java.net.ServerSocket hung = new java.net.ServerSocket(0, 50, java.net.InetAddress.getLoopbackAddress())) {
+            List<java.net.Socket> held = new java.util.concurrent.CopyOnWriteArrayList<>();
+            Thread acceptor = new Thread(() -> {
+                try {
+                    while (true) {
+                        held.add(hung.accept());
+                    }
+                } catch (java.io.IOException closed) {
+                    // Test over.
+                }
+            });
+            acceptor.setDaemon(true);
+            acceptor.start();
+
+            OtelManager.initialize("sdk-test", new ObservabilityOptions.Builder()
+                    .otlpEndpoint("http://127.0.0.1:" + hung.getLocalPort())
+                    .shutdownHook(false)
+                    .build());
+            OtelManager.getTracer().spanBuilder("pending").startSpan().end();
+            OtelManager.getLogger().logRecordBuilder().setBody("pending").emit();
+            OtelManager.getCounter("pending").add(1);
+
+            long started = System.nanoTime();
+            OtelManager.shutdown();
+            long seconds = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - started);
+
+            assertTrue(seconds <= OtelManager.SHUTDOWN_TIMEOUT_SECONDS + 2,
+                    "shutdown took " + seconds + " s against a hung endpoint");
+            for (java.net.Socket socket : held) {
+                socket.close();
+            }
+        }
+    }
+
     private static ObservabilityOptions options() {
         return new ObservabilityOptions.Builder()
                 .serviceName("test-service")

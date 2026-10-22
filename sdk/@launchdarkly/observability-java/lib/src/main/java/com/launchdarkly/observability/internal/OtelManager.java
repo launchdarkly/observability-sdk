@@ -29,6 +29,7 @@ import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporterBuilder
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporterBuilder;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.common.export.ProxyOptions;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
@@ -42,8 +43,10 @@ import io.opentelemetry.sdk.trace.samplers.Sampler;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 
 /**
@@ -515,17 +518,52 @@ public final class OtelManager {
         }
     }
 
+    // The three providers flush in parallel under one deadline. Waiting on
+    // each in turn, with a flush before the shutdown, took up to a minute
+    // when the endpoint was unreachable (26 s measured against a blackholed
+    // address), past a Kubernetes pod's default 30 s grace period.
+    static final long FLUSH_TIMEOUT_SECONDS = 10;
+    static final long SHUTDOWN_TIMEOUT_SECONDS = 5;
+
     private void flushProviders() {
-        tracerProvider.forceFlush().join(10, TimeUnit.SECONDS);
-        loggerProvider.forceFlush().join(10, TimeUnit.SECONDS);
-        meterProvider.forceFlush().join(10, TimeUnit.SECONDS);
+        awaitAll(FLUSH_TIMEOUT_SECONDS, "flush",
+                tracerProvider::forceFlush, loggerProvider::forceFlush, meterProvider::forceFlush);
     }
 
+    /** Shutting a provider down exports what it still holds, so no separate flush. */
     private void shutdownProviders() {
-        flushProviders();
-        tracerProvider.shutdown().join(10, TimeUnit.SECONDS);
-        loggerProvider.shutdown().join(10, TimeUnit.SECONDS);
-        meterProvider.shutdown().join(10, TimeUnit.SECONDS);
+        awaitAll(SHUTDOWN_TIMEOUT_SECONDS, "shutdown",
+                tracerProvider::shutdown, loggerProvider::shutdown, meterProvider::shutdown);
+    }
+
+    /**
+     * Runs each operation on its own daemon thread and waits for all of them
+     * up to one deadline. Some of them block before returning their result
+     * (the metric reader's shutdown waits for an in-flight export), so
+     * joining the returned codes alone does not bound the wait.
+     */
+    @SafeVarargs
+    private static void awaitAll(long timeoutSeconds, String what, Supplier<CompletableResultCode>... operations) {
+        CountDownLatch done = new CountDownLatch(operations.length);
+        for (Supplier<CompletableResultCode> operation : operations) {
+            Thread thread = new Thread(() -> {
+                try {
+                    operation.get().join(timeoutSeconds, TimeUnit.SECONDS);
+                } finally {
+                    done.countDown();
+                }
+            }, "ld-observability-" + what);
+            thread.setDaemon(true);
+            thread.start();
+        }
+        try {
+            if (!done.await(timeoutSeconds, TimeUnit.SECONDS)) {
+                log.warning("LaunchDarkly observability " + what + " did not finish within " + timeoutSeconds
+                        + " s; telemetry still queued for an unreachable endpoint is dropped");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static Resource buildResource(String sdkKey, ObservabilityOptions options) {
