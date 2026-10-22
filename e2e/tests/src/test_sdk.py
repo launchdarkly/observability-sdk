@@ -333,7 +333,7 @@ def test_dotnet_traces(dotnet_app, oauth_api):
             for item in filter(
                 lambda eg: eg["node"]["spanName"] == exp, data["traces"]["edges"]
             ):
-                logging.info(f"checking item {item}")
+                logging.info(f"checking span {exp}")
                 assert item["node"]["projectID"] == 1
                 assert item["node"]["secureSessionID"] == "a1b2c30002"
                 assert item["node"]["traceID"] == "aadbc7a427cc836727783c887b329f44"
