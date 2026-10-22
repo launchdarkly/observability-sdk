@@ -74,6 +74,12 @@ The plugin automatically:
 
 The plugin registers its SDK as `GlobalOpenTelemetry` when it can. When the global is already taken (the OpenTelemetry Java agent, your own SDK, a library that called `GlobalOpenTelemetry.get()` first, or `manualStart(true)` after such a call), the plugin keeps its own providers. Evaluation spans and everything sent through `LDObserve` still go to LaunchDarkly. The `feature_flag` event is added to whichever span is current, so it is exported by whoever owns that span.
 
+### Lifecycle and multiple clients
+
+The OpenTelemetry providers are process-wide. The first `LDClient` that registers the plugin starts them and its SDK key identifies the project for everything exported. Another `LDClient` with the same SDK key shares them. An `LDClient` with a different SDK key logs a warning and its plugin starts nothing: its flag evaluations are still recorded, under the first client's SDK key.
+
+Closing an `LDClient` does not stop the providers. Call `LDObserve.shutdown()` when your application stops (for example after closing the client) to flush and stop them; the plugin also registers one JVM shutdown hook that does the same.
+
 ## Manual Instrumentation
 
 Use `LDObserve` for custom telemetry:

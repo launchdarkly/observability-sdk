@@ -82,6 +82,14 @@ public class ObservabilityPlugin extends Plugin {
 
         String sdkKey = metadata.getSdkKey();
 
+        if (!OtelManager.registerClient(sdkKey)) {
+            log.warning("The observability plugin is already registered with an LDClient for another SDK key."
+                    + " Its OpenTelemetry providers are shared by the whole process, so telemetry from this"
+                    + " client, flag evaluations included, is exported under the first SDK key, and this"
+                    + " plugin's options are ignored.");
+            return;
+        }
+
         if (!options.isManualStart()) {
             OtelManager.initialize(sdkKey, options);
         }

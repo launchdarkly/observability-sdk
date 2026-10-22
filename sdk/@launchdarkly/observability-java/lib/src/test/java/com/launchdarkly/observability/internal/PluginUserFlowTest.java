@@ -104,6 +104,34 @@ class PluginUserFlowTest {
     }
 
     @Test
+    void secondClientWithAnotherSdkKeySharesTheFirstClientsProviders() throws Exception {
+        startCollector();
+        LDConfig first = new LDConfig.Builder()
+                .offline(true)
+                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options(false)))))
+                .build();
+        LDConfig second = new LDConfig.Builder()
+                .offline(true)
+                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options(false)))))
+                .build();
+
+        try (LDClient a = new LDClient("sdk-test", first)) {
+            assertTrue(waitForSamplingQuery(), "first client did not fetch sampling config");
+            try (LDClient b = new LDClient("sdk-other", second)) {
+                b.boolVariation("second-client-flag", LDContext.create("user-b"), false);
+                LDObserve.flush();
+                assertTrue(payloadContains(traces, "second-client-flag"),
+                        "the second client's evaluations should still export on the shared providers");
+                assertTrue(payloadContains(traces, "sdk-test"), "exports should carry the first SDK key");
+                assertFalse(payloadContains(traces, "sdk-other"), "the second SDK key must not leak into exports");
+                Thread.sleep(300);
+                assertEquals(1, samplingQueries.size(),
+                        "the second client must not replace the first client's sampling config");
+            }
+        }
+    }
+
+    @Test
     void manualStartKeepsSamplingConfigFetchedBeforeProvidersStart() throws Exception {
         startCollector();
         ObservabilityOptions options = options(true);

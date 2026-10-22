@@ -56,7 +56,12 @@ public final class OtelManager {
     // this no-op meter instead of throwing into the caller.
     private static final Meter NOOP_METER =
             OpenTelemetry.noop().getMeter(Constants.INSTRUMENTATION_SCOPE_NAME);
+    // Guarded by INIT_LOCK. One JVM shutdown hook for the process; it shuts
+    // down whichever manager is current, so a restart does not add another.
     private static Thread shutdownHook;
+    // Guarded by INIT_LOCK. The SDK key of the first LDClient that
+    // registered the plugin; the providers carry it as the project id.
+    private static String registeredSdkKey;
 
     private final SdkTracerProvider tracerProvider;
     private final SdkLoggerProvider loggerProvider;
@@ -118,13 +123,32 @@ public final class OtelManager {
             if (pending != null) {
                 manager.customSampler.setConfig(pending);
             }
-            shutdownHook = new Thread(() -> {
-                OtelManager current = INSTANCE.get();
-                if (current != null) {
-                    current.shutdownProviders();
-                }
-            }, "ld-observability-shutdown");
-            Runtime.getRuntime().addShutdownHook(shutdownHook);
+            if (shutdownHook == null) {
+                shutdownHook = new Thread(() -> {
+                    OtelManager current = INSTANCE.getAndSet(null);
+                    if (current != null) {
+                        current.shutdownProviders();
+                    }
+                }, "ld-observability-shutdown");
+                Runtime.getRuntime().addShutdownHook(shutdownHook);
+            }
+        }
+    }
+
+    /**
+     * Records that an {@code LDClient} with this SDK key is registering the
+     * plugin. The providers are process-wide and carry one project id, so
+     * only the first key is used: a later client with a different key gets
+     * {@code false}, and its plugin neither starts providers nor replaces the
+     * sampling configuration. A client with the same key gets {@code true}.
+     */
+    public static boolean registerClient(String sdkKey) {
+        synchronized (INIT_LOCK) {
+            if (registeredSdkKey == null) {
+                registeredSdkKey = sdkKey;
+                return true;
+            }
+            return registeredSdkKey.equals(sdkKey);
         }
     }
 
@@ -349,9 +373,16 @@ public final class OtelManager {
         OtelManager manager;
         synchronized (INIT_LOCK) {
             manager = INSTANCE.getAndSet(null);
+            registeredSdkKey = null;
         }
         if (manager != null) {
             manager.shutdownProviders();
+        }
+    }
+
+    static Thread shutdownHookForTest() {
+        synchronized (INIT_LOCK) {
+            return shutdownHook;
         }
     }
 
@@ -373,6 +404,7 @@ public final class OtelManager {
         synchronized (INIT_LOCK) {
             manager = INSTANCE.getAndSet(null);
             PENDING_SAMPLING_CONFIG.set(null);
+            registeredSdkKey = null;
             if (shutdownHook != null) {
                 try {
                     Runtime.getRuntime().removeShutdownHook(shutdownHook);

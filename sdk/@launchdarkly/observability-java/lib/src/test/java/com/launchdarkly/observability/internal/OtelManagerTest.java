@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -88,6 +89,28 @@ class OtelManagerTest {
         OtelManager.initialize("sdk-test", options());
         assertNotSame(gaugeBeforeRestart, OtelManager.getGauge("cpu"),
                 "a restarted provider must not reuse instruments from the old one");
+    }
+
+    @Test
+    void restartKeepsOneShutdownHook() {
+        OtelManager.initialize("sdk-test", options());
+        Thread hook = OtelManager.shutdownHookForTest();
+        assertNotNull(hook);
+
+        OtelManager.shutdown();
+        OtelManager.initialize("sdk-test", options());
+
+        assertSame(hook, OtelManager.shutdownHookForTest(), "a restart must not register another JVM shutdown hook");
+    }
+
+    @Test
+    void onlyTheFirstSdkKeyRegistersUntilShutdown() {
+        assertTrue(OtelManager.registerClient("sdk-a"));
+        assertTrue(OtelManager.registerClient("sdk-a"), "another client for the same key shares the providers");
+        assertFalse(OtelManager.registerClient("sdk-b"));
+
+        OtelManager.shutdown();
+        assertTrue(OtelManager.registerClient("sdk-b"), "after shutdown a new key can register");
     }
 
     private static void assertEqualsZero(int failures) {
