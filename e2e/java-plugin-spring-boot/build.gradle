@@ -1,0 +1,79 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.16'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+def useMavenLocal = project.hasProperty('useMavenLocal')
+
+repositories {
+    if (useMavenLocal) {
+        mavenLocal()
+    }
+    mavenCentral()
+}
+
+java {
+    // Spring Boot 3 needs Java 17. The plugin itself targets Java 11.
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+// The plugin version comes from the SDK's gradle.properties, which
+// release-please bumps, so this app never pins a stale version.
+def sdkProperties = new Properties()
+file('../../sdk/@launchdarkly/observability-java/gradle.properties').withInputStream { sdkProperties.load(it) }
+def pluginVersion = sdkProperties.getProperty('version')
+
+configurations {
+    javaagent
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation "com.launchdarkly:launchdarkly-java-server-sdk-observability:${pluginVersion}"
+    implementation 'com.launchdarkly:launchdarkly-java-server-sdk:7.12.0'
+    // No explicit opentelemetry-api: Attributes, Severity and Span arrive
+    // through the plugin's compile-scoped dependency.
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Agent release that ships the OpenTelemetry SDK version the plugin uses.
+    javaagent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.17.0'
+}
+
+// Copies the OpenTelemetry Java agent to build/agent/opentelemetry-javaagent.jar
+// for `make javaagent-smoke`.
+tasks.register('javaagentJar', Copy) {
+    from configurations.javaagent
+    into layout.buildDirectory.dir('agent')
+    rename { 'opentelemetry-javaagent.jar' }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Groups that must never reach an application's runtime classpath through the plugin.
+def forbiddenRuntimeGroups = ['com.squareup.okhttp3', 'com.squareup.okio', 'org.jetbrains.kotlin', 'org.jetbrains.kotlinx']
+
+tasks.register('checkConsumerClasspath') {
+    group = 'verification'
+    description = 'Fails when the plugin leaks OkHttp, Okio or Kotlin into this application.'
+    def runtime = configurations.runtimeClasspath
+    doLast {
+        def leaked = runtime.resolvedConfiguration.resolvedArtifacts
+                .collect { it.moduleVersion.id }
+                .findAll { forbiddenRuntimeGroups.contains(it.group) }
+                .collect { "${it.group}:${it.name}:${it.version}" }
+                .unique()
+        if (!leaked.isEmpty()) {
+            throw new GradleException("Forbidden artifacts on the application runtime classpath: ${leaked.join(', ')}")
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'checkConsumerClasspath'
+}

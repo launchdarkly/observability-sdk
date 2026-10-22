@@ -1,0 +1,206 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+}
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+    withJavadocJar()
+    withSourcesJar()
+}
+
+ext {
+    otelVersion = '1.51.0'
+    // The SDK the plugin compiles and tests against. The plugin needs the
+    // Plugin API, which first shipped in 7.10.1; run the tests against that
+    // floor with -PldServerSdkVersion=7.10.1.
+    ldServerSdkVersion = project.findProperty('ldServerSdkVersion') ?: '7.12.0'
+}
+
+dependencies {
+    // LaunchDarkly SDK - compileOnly so users provide their own version
+    compileOnly "com.launchdarkly:launchdarkly-java-server-sdk:${ldServerSdkVersion}"
+
+    // The public API (LDObserve, ObservabilityOptions) takes OpenTelemetry API
+    // types such as Attributes and Severity, so consumers must compile against
+    // it. 'api' publishes it with compile scope in the POM.
+    api "io.opentelemetry:opentelemetry-api:${otelVersion}"
+    implementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+    implementation "io.opentelemetry:opentelemetry-sdk-logs:${otelVersion}"
+    implementation "io.opentelemetry:opentelemetry-sdk-metrics:${otelVersion}"
+
+    // OTLP over HTTP. The default exporter artifact pulls in the OkHttp sender,
+    // which drags okhttp, okio and the Kotlin stdlib onto a server classpath
+    // unshaded. The JDK sender uses java.net.http.HttpClient (Java 11+) and
+    // has no third-party dependencies, so the OkHttp sender is excluded.
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:${otelVersion}") {
+        exclude group: 'io.opentelemetry', module: 'opentelemetry-exporter-sender-okhttp'
+    }
+    runtimeOnly "io.opentelemetry:opentelemetry-exporter-sender-jdk:${otelVersion}"
+
+    // Testing
+    testImplementation "com.launchdarkly:launchdarkly-java-server-sdk:${ldServerSdkVersion}"
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
+    // Only the tests read the shared scenario fixtures with Gson. The plugin
+    // parses JSON with the LaunchDarkly SDK's LDValue.
+    testImplementation 'com.google.code.gson:gson:2.11.0'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+tasks.withType(Javadoc).configureEach {
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+// Groups that must never reach a consumer's runtime classpath through this
+// library. The LaunchDarkly server SDK shades its own copies of these so that
+// server applications do not inherit version clashes; this plugin must not
+// undo that.
+def forbiddenRuntimeGroups = [
+        'com.squareup.okhttp3',
+        'com.squareup.okio',
+        'org.jetbrains.kotlin',
+        'org.jetbrains.kotlinx',
+]
+
+tasks.register('checkRuntimeClasspath') {
+    group = 'verification'
+    description = 'Fails when OkHttp, Okio or the Kotlin stdlib leak into the runtime classpath.'
+    def runtime = configurations.runtimeClasspath
+    doLast {
+        def leaked = runtime.resolvedConfiguration.resolvedArtifacts
+                .collect { it.moduleVersion.id }
+                .findAll { forbiddenRuntimeGroups.contains(it.group) }
+                .collect { "${it.group}:${it.name}:${it.version}" }
+                .unique()
+        if (!leaked.isEmpty()) {
+            throw new GradleException("Forbidden artifacts on the runtime classpath: ${leaked.join(', ')}")
+        }
+    }
+}
+
+tasks.register('checkPublishedPom') {
+    group = 'verification'
+    description = 'Checks the generated POM exposes opentelemetry-api at compile scope and depends on nothing but OpenTelemetry.'
+    dependsOn 'generatePomFileForReleasePublication'
+    def pomFile = layout.buildDirectory.file('publications/release/pom-default.xml')
+    doLast {
+        def pom = new XmlSlurper(false, false).parse(pomFile.get().asFile)
+        // GPathResult.find returns an empty result, never null, so test size().
+        def deps = pom.dependencies.dependency
+        def otelApi = deps.find { it.artifactId.text() == 'opentelemetry-api' }
+        if (otelApi.size() == 0 || otelApi.scope.text() != 'compile') {
+            throw new GradleException("opentelemetry-api must be a compile-scoped dependency in the POM, found scope '"
+                    + (otelApi.size() == 0 ? 'missing' : otelApi.scope.text()) + "'")
+        }
+        def okhttp = deps.find { it.artifactId.text() == 'opentelemetry-exporter-sender-okhttp' }
+        if (okhttp.size() != 0) {
+            throw new GradleException('The POM must not depend on opentelemetry-exporter-sender-okhttp')
+        }
+        // The application brings its own LaunchDarkly SDK. Any SDK artifact in
+        // the POM (directly, or via launchdarkly-java-server-sdk-otel, which
+        // depends on 7.4.0) could win resolution with a version that has no
+        // Plugin class and fail with NoClassDefFoundError.
+        def ldSdk = deps.findAll { it.groupId.text() == 'com.launchdarkly' }
+        if (ldSdk.size() != 0) {
+            throw new GradleException('The POM must not depend on LaunchDarkly artifacts, found: '
+                    + ldSdk.collect { it.artifactId.text() }.join(', '))
+        }
+        // OpenTelemetry is the only third-party dependency a server
+        // application inherits from the plugin.
+        def foreign = deps.findAll { it.groupId.text() != 'io.opentelemetry' }
+        if (foreign.size() != 0) {
+            throw new GradleException('The POM may only depend on io.opentelemetry artifacts, found: '
+                    + foreign.collect { "${it.groupId.text()}:${it.artifactId.text()}" }.join(', '))
+        }
+        def jdk = deps.find { it.artifactId.text() == 'opentelemetry-exporter-sender-jdk' }
+        if (jdk.size() == 0 || jdk.scope.text() != 'runtime') {
+            throw new GradleException('The POM must carry opentelemetry-exporter-sender-jdk at runtime scope')
+        }
+    }
+}
+
+// The sampling scenario fixtures are copies of the Go SDK's, which the other
+// server SDKs share. Fail when they drift instead of silently testing less.
+tasks.register('checkSamplingFixtures') {
+    group = 'verification'
+    description = 'Fails when the shared sampling scenario fixtures differ from the Go SDK copies.'
+    def pairs = ['span-test-scenarios.json', 'log-test-scenarios.json'].collect { name ->
+        [file("src/test/resources/sampling/${name}"), rootProject.file("../../../go/internal/otel/${name}")]
+    }
+    inputs.files(pairs.flatten())
+    doLast {
+        def drifted = pairs.findAll { local, upstream -> local.bytes != upstream.bytes }
+                .collect { local, upstream -> "${local} differs from ${upstream}" }
+        if (!drifted.isEmpty()) {
+            throw new GradleException("Sampling fixtures drifted; copy them from go/internal/otel:\n${drifted.join('\n')}")
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'checkRuntimeClasspath', 'checkPublishedPom', 'checkSamplingFixtures'
+}
+
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'com.launchdarkly'
+            // Follows the Java server SDK add-on family
+            // (launchdarkly-java-server-sdk-otel, -redis-store, -ai) so the
+            // coordinates say which LaunchDarkly SDK this plugs into. The
+            // Android observability artifact is also a Java library, so a
+            // bare "-java" suffix would be ambiguous.
+            artifactId = 'launchdarkly-java-server-sdk-observability'
+            version = version.toString()
+
+            from components.java
+
+            pom {
+                name = 'LaunchDarkly Observability plugin for the Java Server SDK'
+                description = 'Official LaunchDarkly Observability plugin for the LaunchDarkly Java Server SDK.'
+                url = 'https://github.com/launchdarkly/observability-sdk/'
+                organization {
+                    name = 'LaunchDarkly'
+                    url = 'https://launchdarkly.com/'
+                }
+                developers {
+                    developer {
+                        id = 'sdks'
+                        name = 'LaunchDarkly SDK Team'
+                        email = 'sdks@launchdarkly.com'
+                    }
+                }
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/launchdarkly/observability-sdk.git'
+                    developerConnection = 'scm:git:ssh:github.com/launchdarkly/observability-sdk.git'
+                    url = 'https://github.com/launchdarkly/observability-sdk/'
+                }
+            }
+        }
+    }
+}
+
+signing {
+    // Only a Sonatype publish needs a signature. publishToMavenLocal (used by
+    // the CI consumer check and local e2e runs) must work without signing keys.
+    required = { gradle.taskGraph.allTasks.any { it.name.toLowerCase().contains('sonatype') } }
+    sign publishing.publications.release
+}

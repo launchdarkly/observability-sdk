@@ -26,6 +26,10 @@ on:
                 description: 'The tag name for the python package. Should be set when publishing a python package.'
                 type: string
                 required: false
+            release_launchdarkly_java:
+                description: 'Should release the launchdarkly-java-server-sdk-observability package.'
+                type: boolean
+                required: true
             release_launchdarkly_dotnet:
                 description: 'Should release @launchdarkly/observability-dotnet package.'
                 type: boolean
@@ -139,6 +143,24 @@ jobs:
               uses: ./.github/actions/publish-android-sdk
               with:
                   workspace-path: sdk/@launchdarkly/observability-android
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+                  dry-run: ${{ inputs.dry-run }}
+                  prerelease: ${{ inputs.prerelease }}
+
+    publish-java-sdk:
+        runs-on: ubuntu-latest
+        if: ${{ inputs.release_launchdarkly_java == true }}
+        permissions:
+            id-token: write
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Publish Java SDK
+              id: publish
+              uses: ./.github/actions/publish-java-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-java
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
                   dry-run: ${{ inputs.dry-run }}
                   prerelease: ${{ inputs.prerelease }}

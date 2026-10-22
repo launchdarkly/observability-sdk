@@ -1,0 +1,99 @@
+plugins {
+    id 'application'
+}
+
+def useMavenLocal = project.hasProperty('useMavenLocal')
+
+repositories {
+    if (useMavenLocal) {
+        mavenLocal()
+    }
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+// The plugin version comes from the SDK's gradle.properties, which
+// release-please bumps, so this example never pins a stale version.
+def sdkProperties = new Properties()
+file('../../sdk/@launchdarkly/observability-java/gradle.properties').withInputStream { sdkProperties.load(it) }
+def pluginVersion = sdkProperties.getProperty('version')
+
+configurations {
+    javaagent
+}
+
+dependencies {
+    implementation "com.launchdarkly:launchdarkly-java-server-sdk-observability:${pluginVersion}"
+    implementation 'com.launchdarkly:launchdarkly-java-server-sdk:7.12.0'
+    // No explicit opentelemetry-api: the example uses Attributes and Severity,
+    // which must arrive through the plugin's compile-scoped dependency.
+
+    // Agent release that ships the OpenTelemetry SDK version the plugin uses.
+    javaagent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.17.0'
+}
+
+application {
+    mainClass = 'com.launchdarkly.observability.example.PluginExample'
+}
+
+// The plugin must export flag evaluations whoever owns GlobalOpenTelemetry.
+// `run` is the plain case where the plugin registers its SDK as the global;
+// these cover the global being claimed first and the Java agent owning it.
+tasks.register('runClaimedGlobal', JavaExec) {
+    group = 'verification'
+    description = 'Runs the self-check with GlobalOpenTelemetry claimed before the client starts.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = application.mainClass
+    args 'claimed-global'
+}
+
+tasks.register('runWithJavaAgent', JavaExec) {
+    group = 'verification'
+    description = 'Runs the self-check under the OpenTelemetry Java agent.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = application.mainClass
+    args 'javaagent'
+    def agent = configurations.javaagent
+    inputs.files(agent)
+    doFirst {
+        jvmArgs "-javaagent:${agent.singleFile}",
+                // The agent's own exporters have no collector here.
+                '-Dotel.traces.exporter=none',
+                '-Dotel.metrics.exporter=none',
+                '-Dotel.logs.exporter=none',
+                '-Dotel.javaagent.logging=none'
+    }
+}
+
+// Groups that must never reach a consumer's runtime classpath through the plugin.
+def forbiddenRuntimeGroups = ['com.squareup.okhttp3', 'com.squareup.okio', 'org.jetbrains.kotlin', 'org.jetbrains.kotlinx']
+
+tasks.register('checkConsumerClasspath') {
+    group = 'verification'
+    description = 'Fails when the plugin leaks OkHttp, Okio or Kotlin into this consumer, or fails to provide opentelemetry-api.'
+    def runtime = configurations.runtimeClasspath
+    def compile = configurations.compileClasspath
+    doLast {
+        def leaked = runtime.resolvedConfiguration.resolvedArtifacts
+                .collect { it.moduleVersion.id }
+                .findAll { forbiddenRuntimeGroups.contains(it.group) }
+                .collect { "${it.group}:${it.name}:${it.version}" }
+                .unique()
+        if (!leaked.isEmpty()) {
+            throw new GradleException("Plugin leaked forbidden artifacts into the consumer runtime classpath: ${leaked.join(', ')}")
+        }
+        def otelApi = compile.resolvedConfiguration.resolvedArtifacts
+                .find { it.moduleVersion.id.group == 'io.opentelemetry' && it.moduleVersion.id.name == 'opentelemetry-api' }
+        if (otelApi == null) {
+            throw new GradleException('opentelemetry-api is not on the consumer compile classpath; the plugin must publish it with compile scope')
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'checkConsumerClasspath'
+}
