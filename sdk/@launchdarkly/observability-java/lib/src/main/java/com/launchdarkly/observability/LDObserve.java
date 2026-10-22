@@ -2,6 +2,7 @@ package com.launchdarkly.observability;
 
 import com.launchdarkly.observability.internal.Constants;
 import com.launchdarkly.observability.internal.OtelManager;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.LogRecordBuilder;
 import io.opentelemetry.api.logs.Severity;
@@ -108,6 +109,29 @@ public final class LDObserve {
         return tracer.spanBuilder(name)
                 .setAllAttributes(attributes)
                 .startSpan();
+    }
+
+    /**
+     * Returns the plugin's OpenTelemetry, so other instrumentation can export
+     * to LaunchDarkly through the same providers, resource and sampling
+     * rules. It works whether or not the plugin also owns
+     * {@code GlobalOpenTelemetry}.
+     *
+     * <p>Typical uses: expose it as the {@code OpenTelemetry} bean so Spring
+     * Boot's Micrometer tracing bridge sends HTTP server spans (with the
+     * flag-evaluation spans as children) to LaunchDarkly, or pass it to
+     * {@code OpenTelemetryAppender.install} so Logback or Log4j records are
+     * exported.</p>
+     *
+     * <p>The returned instance looks the providers up on every call: before
+     * the plugin starts, or after {@link #shutdown()}, it hands out no-op
+     * tracers, meters and loggers. Instruments and tracers obtained in that
+     * window stay no-ops, so take them after the {@code LDClient} is built
+     * (or after {@link #start} with manual start). It cannot be closed;
+     * use {@link #shutdown()}.</p>
+     */
+    public static OpenTelemetry getOpenTelemetry() {
+        return OtelManager.getOpenTelemetry();
     }
 
     /**

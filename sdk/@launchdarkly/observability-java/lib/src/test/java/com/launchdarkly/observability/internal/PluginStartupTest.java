@@ -8,8 +8,10 @@ import com.launchdarkly.sdk.server.Components;
 import com.launchdarkly.sdk.server.LDClient;
 import com.launchdarkly.sdk.server.LDConfig;
 import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Severity;
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,7 @@ import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -77,6 +80,31 @@ class PluginStartupTest {
                 "the log must carry the cause so the user can fix it: " + severe.getMessage());
         assertFalse(severe.getMessage().contains("needs 1.38"),
                 "a configuration error is not a version problem: " + severe.getMessage());
+    }
+
+    @Test
+    void openTelemetryViewFollowsThePluginLifecycle() throws Exception {
+        OpenTelemetry otel = LDObserve.getOpenTelemetry();
+        assertFalse(otel.getTracer("before").spanBuilder("s").startSpan().isRecording(),
+                "before the plugin starts the view hands out no-ops");
+
+        // Someone else owns the global, as with the Java agent.
+        GlobalOpenTelemetry.set(OpenTelemetry.noop());
+        LDClient client = client("sdk-view", new ObservabilityOptions.Builder()
+                .otlpEndpoint("http://127.0.0.1:9")
+                .build());
+        try {
+            assertSame(otel, LDObserve.getOpenTelemetry());
+            Span span = otel.getTracer("app").spanBuilder("request").startSpan();
+            assertTrue(span.isRecording(), "the view must reach the plugin's providers, not the global");
+            span.end();
+            assertFalse(otel instanceof AutoCloseable,
+                    "frameworks infer close() as a destroy method; the view must not expose one");
+        } finally {
+            client.close();
+            LDObserve.shutdown();
+        }
+        assertFalse(otel.getTracer("after").spanBuilder("s").startSpan().isRecording());
     }
 
     @Test

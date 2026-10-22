@@ -10,12 +10,15 @@ import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Logger;
+import io.opentelemetry.api.logs.LoggerProvider;
 import io.opentelemetry.api.metrics.DoubleGauge;
 import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongUpDownCounter;
 import io.opentelemetry.api.metrics.Meter;
+import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.TracerProvider;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.context.propagation.TextMapPropagator;
@@ -313,6 +316,48 @@ public final class OtelManager {
         if (manager != null) {
             manager.customSampler.setConfig(config);
         }
+    }
+
+    /**
+     * A view of the plugin's OpenTelemetry that resolves the providers on
+     * every call, so it works even when taken before the providers start.
+     * It has no {@code close()}: frameworks that close beans (Spring infers
+     * a destroy method from the instance) must not stop the plugin's
+     * providers behind its back.
+     */
+    private static final OpenTelemetry VIEW = new OpenTelemetry() {
+        @Override
+        public TracerProvider getTracerProvider() {
+            OtelManager manager = INSTANCE.get();
+            return manager != null ? manager.openTelemetrySdk.getTracerProvider() : TracerProvider.noop();
+        }
+
+        @Override
+        public MeterProvider getMeterProvider() {
+            OtelManager manager = INSTANCE.get();
+            return manager != null ? manager.openTelemetrySdk.getMeterProvider() : MeterProvider.noop();
+        }
+
+        @Override
+        public LoggerProvider getLogsBridge() {
+            OtelManager manager = INSTANCE.get();
+            return manager != null ? manager.openTelemetrySdk.getLogsBridge() : LoggerProvider.noop();
+        }
+
+        @Override
+        public ContextPropagators getPropagators() {
+            OtelManager manager = INSTANCE.get();
+            return manager != null ? manager.openTelemetrySdk.getPropagators() : ContextPropagators.noop();
+        }
+
+        @Override
+        public String toString() {
+            return "LaunchDarklyObservabilityOpenTelemetry{started=" + (INSTANCE.get() != null) + "}";
+        }
+    };
+
+    public static OpenTelemetry getOpenTelemetry() {
+        return VIEW;
     }
 
     public static Tracer getTracer() {
