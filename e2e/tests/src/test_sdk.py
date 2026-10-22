@@ -362,3 +362,118 @@ def test_dotnet_traces(dotnet_app, oauth_api):
         },
         validator=validator_traces,
     )
+
+
+JAVA_SERVICE = "java-plugin-spring-boot-example"
+
+
+def _date_range(start, ts):
+    return {
+        "start_date": f'{start.isoformat(timespec="microseconds")}000-00:00',
+        "end_date": f'{ts.isoformat(timespec="microseconds")}000-00:00',
+    }
+
+
+def test_java_logs(java_app, oauth_api):
+    start = datetime.utcnow() - timedelta(minutes=1)
+    r = requests.get(
+        "http://localhost:8090/rolldice", headers={"X-User-Key": "e2e-java"}, timeout=30
+    )
+    logging.info(f"GET {r.url} {r.status_code} {r.text}")
+    assert r.ok
+
+    def validator(data: dict[str, any]):
+        logs = [
+            e["node"]
+            for e in data["logs"]["edges"]
+            if e["node"]["message"] == "GET /rolldice -> 200"
+        ]
+        assert logs, f"no rolldice log in {data['logs']['edges']}"
+        for log in logs:
+            assert log["level"] == "info"
+            assert log["serviceName"] == JAVA_SERVICE
+            assert log["serviceVersion"] == "e2e"
+
+    query(
+        oauth_api,
+        "GetLogs",
+        GET_LOGS,
+        variables_fn=lambda ts: {
+            "project_id": "1",
+            "direction": "DESC",
+            "params": {
+                "query": "telemetry.sdk.language=java",
+                "date_range": _date_range(start, ts),
+            },
+        },
+        validator=validator,
+    )
+
+
+def test_java_traces(java_app, oauth_api):
+    start = datetime.utcnow() - timedelta(minutes=1)
+    r = requests.get(
+        "http://localhost:8090/rolldice", headers={"X-User-Key": "e2e-java"}, timeout=30
+    )
+    logging.info(f"GET {r.url} {r.status_code} {r.text}")
+    assert r.ok
+
+    def validator(data: dict[str, any]):
+        spans = {e["node"]["spanName"]: e["node"] for e in data["traces"]["edges"]}
+        # The request span from LDObserve.startSpan and the flag evaluation
+        # span from the plugin's hook, which is its child.
+        for name in ("GET /rolldice", "LDClient.intVariation"):
+            assert name in spans, f"{name} not in {list(spans)}"
+            node = spans[name]
+            assert node["projectID"] == 1
+            assert node["serviceName"] == JAVA_SERVICE
+            assert node["serviceVersion"] == "e2e"
+            assert (
+                node["traceAttributes"]["telemetry"]["distro"]["name"]
+                == "com.launchdarkly.observability"
+            )
+        evaluation = spans["LDClient.intVariation"]
+        assert evaluation["traceID"] == spans["GET /rolldice"]["traceID"]
+        assert evaluation["parentSpanID"] == spans["GET /rolldice"]["spanID"]
+
+    query(
+        oauth_api,
+        "GetTraces",
+        GET_TRACES,
+        variables_fn=lambda ts: {
+            "project_id": "1",
+            "direction": "DESC",
+            "params": {
+                "query": "telemetry.sdk.language=java",
+                "date_range": _date_range(start, ts),
+            },
+        },
+        validator=validator,
+    )
+
+
+def test_java_error(java_app, oauth_api):
+    start = datetime.utcnow() - timedelta(minutes=1)
+    r = requests.get(
+        "http://localhost:8090/error", headers={"X-User-Key": "e2e-java"}, timeout=30
+    )
+    logging.info(f"GET {r.url} {r.status_code} {r.text}")
+    assert r.status_code == 500
+
+    def validator(data: dict[str, any]):
+        events = {eg["event"][0] for eg in data["error_groups"]["error_groups"]}
+        assert "random error from the Spring Boot example" in events, events
+
+    query(
+        oauth_api,
+        "GetErrorGroups",
+        GET_ERROR_GROUPS,
+        variables_fn=lambda ts: {
+            "params": {"query": "", "date_range": _date_range(start, ts)},
+            "count": 10,
+            "page": 1,
+            "project_id": "1",
+            "sort_desc": False,
+        },
+        validator=validator,
+    )
