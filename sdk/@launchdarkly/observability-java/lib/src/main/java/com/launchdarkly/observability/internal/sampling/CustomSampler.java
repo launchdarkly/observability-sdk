@@ -2,6 +2,7 @@ package com.launchdarkly.observability.internal.sampling;
 
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.Value;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.trace.data.EventData;
 import io.opentelemetry.sdk.trace.data.SpanData;
@@ -105,8 +106,8 @@ public final class CustomSampler {
             }
         }
         if (config.getMessage() != null) {
-            String body = log.getBody() != null ? log.getBody().asString() : null;
-            if (!matchesValue(config.getMessage(), body)) {
+            Value<?> body = log.getBodyValue();
+            if (!matchesValue(config.getMessage(), body != null ? body.getValue() : null)) {
                 return false;
             }
         }
@@ -139,13 +140,15 @@ public final class CustomSampler {
     }
 
     private boolean matchesAttributes(List<SamplingConfig.AttributeMatchConfig> configs, Attributes attributes) {
+        if (configs.isEmpty()) {
+            return true;
+        }
+        Map<AttributeKey<?>, Object> attrMap = attributes.asMap();
         for (SamplingConfig.AttributeMatchConfig attrConfig : configs) {
             boolean found = false;
-            Map<AttributeKey<?>, Object> attrMap = attributes.asMap();
             for (Map.Entry<AttributeKey<?>, Object> entry : attrMap.entrySet()) {
-                String key = entry.getKey().getKey();
-                String value = entry.getValue() != null ? entry.getValue().toString() : null;
-                if (matchesValue(attrConfig.getKey(), key) && matchesValue(attrConfig.getAttribute(), value)) {
+                if (matchesValue(attrConfig.getKey(), entry.getKey().getKey())
+                        && matchesValue(attrConfig.getAttribute(), entry.getValue())) {
                     found = true;
                     break;
                 }
@@ -157,7 +160,7 @@ public final class CustomSampler {
         return true;
     }
 
-    static boolean matchesValue(SamplingConfig.MatchConfig config, String actual) {
+    static boolean matchesValue(SamplingConfig.MatchConfig config, Object actual) {
         if (config == null) {
             return true;
         }

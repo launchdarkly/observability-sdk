@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig.AttributeMatchConfig;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig.LogSamplingConfig;
@@ -212,14 +213,40 @@ public final class SamplingApiService {
         return el.getAsInt();
     }
 
+    /**
+     * Like Go, an exact value takes precedence over a regex, and an empty
+     * regex counts as unset. A config with neither is no filter.
+     */
     private static MatchConfig parseMatchConfig(JsonObject obj) {
         if (obj == null) return null;
-        if (obj.has("regexValue") && !obj.get("regexValue").isJsonNull()) {
-            return MatchConfig.ofRegex(obj.get("regexValue").getAsString());
+        JsonElement match = obj.get("matchValue");
+        if (match != null && !match.isJsonNull()) {
+            return MatchConfig.ofValue(matchValue(match));
         }
-        if (obj.has("matchValue") && !obj.get("matchValue").isJsonNull()) {
-            return MatchConfig.ofValue(obj.get("matchValue").getAsString());
+        JsonElement regex = obj.get("regexValue");
+        if (regex != null && regex.isJsonPrimitive() && !regex.getAsString().isEmpty()) {
+            return MatchConfig.ofRegex(regex.getAsString());
         }
         return null;
+    }
+
+    /**
+     * Keeps the JSON type of a match value so a number matches a numeric
+     * attribute and a boolean a boolean, as in the Go and .NET SDKs. An array
+     * or object is kept as is and never matches, instead of throwing and
+     * losing the whole sampling payload.
+     */
+    private static Object matchValue(JsonElement el) {
+        if (!el.isJsonPrimitive()) {
+            return el;
+        }
+        JsonPrimitive primitive = el.getAsJsonPrimitive();
+        if (primitive.isBoolean()) {
+            return primitive.getAsBoolean();
+        }
+        if (primitive.isNumber()) {
+            return primitive.getAsDouble();
+        }
+        return primitive.getAsString();
     }
 }

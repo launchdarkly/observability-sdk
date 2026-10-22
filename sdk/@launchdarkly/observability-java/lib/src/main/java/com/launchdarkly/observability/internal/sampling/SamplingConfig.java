@@ -31,21 +31,31 @@ public final class SamplingConfig {
      * A match config is either an exact value or a regular expression.
      * The pattern is compiled once so export-time matching does not recompile
      * it on every span or log.
+     *
+     * <p>Matching follows the Go and .NET SDKs: a numeric value matches a
+     * numeric attribute of equal value whether it is a long or a double, a
+     * boolean matches a boolean, a string matches the value's text, and a
+     * regex only matches string values.</p>
      */
     public static final class MatchConfig {
         private static final Logger log = Logger.getLogger(MatchConfig.class.getName());
+        private static final double EPSILON = 0.0000000000000001;
 
-        private final String value;
+        private final Object value;
         private final String regexPattern;
         private final Pattern compiledRegex;
 
-        private MatchConfig(String value, String regexPattern, Pattern compiledRegex) {
+        private MatchConfig(Object value, String regexPattern, Pattern compiledRegex) {
             this.value = value;
             this.regexPattern = regexPattern;
             this.compiledRegex = compiledRegex;
         }
 
-        public static MatchConfig ofValue(String value) {
+        /**
+         * An exact-value match. The value is a {@link String}, a
+         * {@link Boolean} or a {@link Number}; any other type never matches.
+         */
+        public static MatchConfig ofValue(Object value) {
             return new MatchConfig(value, null, null);
         }
 
@@ -71,17 +81,34 @@ public final class SamplingConfig {
         }
 
         public boolean isRegex() { return regexPattern != null; }
-        public String getValue() { return value; }
+        public Object getValue() { return value; }
         public String getRegexPattern() { return regexPattern; }
 
-        public boolean matches(String actual) {
+        /**
+         * @param actual a span name, log body, attribute key or attribute
+         *               value as recorded: String, Boolean, Long, Double or
+         *               a list of those
+         */
+        public boolean matches(Object actual) {
             if (actual == null) {
                 return false;
             }
             if (regexPattern != null) {
-                return compiledRegex != null && compiledRegex.matcher(actual).find();
+                return compiledRegex != null
+                        && actual instanceof String
+                        && compiledRegex.matcher((String) actual).find();
             }
-            return value != null && value.equals(actual);
+            if (value instanceof String) {
+                return value.equals(actual instanceof String ? actual : String.valueOf(actual));
+            }
+            if (value instanceof Boolean) {
+                return value.equals(actual);
+            }
+            if (value instanceof Number) {
+                return actual instanceof Number
+                        && Math.abs(((Number) value).doubleValue() - ((Number) actual).doubleValue()) < EPSILON;
+            }
+            return false;
         }
     }
 

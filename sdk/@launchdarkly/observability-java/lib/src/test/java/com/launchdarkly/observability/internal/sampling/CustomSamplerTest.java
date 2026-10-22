@@ -302,6 +302,47 @@ class CustomSamplerTest {
         assertEquals(100L, other.getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
     }
 
+    @Test
+    void matchValuesCompareByTypeLikeGoAndDotNet() {
+        SamplingConfig.MatchConfig number = SamplingConfig.MatchConfig.ofValue(2.0);
+        assertTrue(number.matches(2L), "a JSON number matches a long attribute of equal value");
+        assertTrue(number.matches(2.0d));
+        assertFalse(number.matches(3L));
+        assertFalse(number.matches("2"), "a number does not match a string");
+
+        SamplingConfig.MatchConfig bool = SamplingConfig.MatchConfig.ofValue(true);
+        assertTrue(bool.matches(true));
+        assertFalse(bool.matches(false));
+        assertFalse(bool.matches("true"), "a boolean does not match a string");
+
+        SamplingConfig.MatchConfig text = SamplingConfig.MatchConfig.ofValue("503");
+        assertTrue(text.matches("503"));
+        assertTrue(text.matches(503L), "a string matches the value's text");
+
+        SamplingConfig.MatchConfig regex = SamplingConfig.MatchConfig.ofRegex("^5");
+        assertTrue(regex.matches("503"));
+        assertFalse(regex.matches(503L), "a regex only matches string values");
+
+        assertFalse(SamplingConfig.MatchConfig.ofValue(List.of("a")).matches("a"),
+                "an unsupported value type never matches");
+    }
+
+    @Test
+    void numericRuleMatchesDoubleAttributeOfIntegralValue() {
+        CustomSampler sampler = new CustomSampler(ratio -> false);
+        sampler.setConfig(new SamplingConfig(List.of(new SamplingConfig.SpanSamplingConfig(null,
+                List.of(new SamplingConfig.AttributeMatchConfig(
+                        SamplingConfig.MatchConfig.ofValue("load"), SamplingConfig.MatchConfig.ofValue(2.0))),
+                Collections.emptyList(), 0)), Collections.emptyList()));
+
+        assertFalse(sampler.sampleSpan(createTestSpan("s", Attributes.of(AttributeKey.doubleKey("load"), 2.0)))
+                .isSampled());
+        assertFalse(sampler.sampleSpan(createTestSpan("s", Attributes.of(AttributeKey.longKey("load"), 2L)))
+                .isSampled());
+        assertTrue(sampler.sampleSpan(createTestSpan("s", Attributes.of(AttributeKey.doubleKey("load"), 2.5)))
+                .isSampled());
+    }
+
     private static SamplingConfig logConfig(SamplingConfig.LogSamplingConfig rule) {
         return new SamplingConfig(Collections.emptyList(), List.of(rule));
     }
