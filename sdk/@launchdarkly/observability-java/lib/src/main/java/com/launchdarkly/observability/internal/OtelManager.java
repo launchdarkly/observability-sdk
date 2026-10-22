@@ -202,8 +202,14 @@ public final class OtelManager {
 
         CustomSampler customSampler = new CustomSampler();
 
+        // Each exporter below reports its own otlp.exporter.* counters to
+        // GlobalOpenTelemetry's meter provider, which is the plugin's once it
+        // registers, so they would land in the customer's LaunchDarkly
+        // metrics next to their own. They are switched off.
+
         // Trace exporter with sampling
         OtlpHttpSpanExporterBuilder spanExporterBuilder = OtlpHttpSpanExporter.builder()
+                .setMeterProvider(MeterProvider.noop())
                 .setEndpoint(endpoint + Constants.TRACES_PATH)
                 .setCompression("gzip")
                 .setHeaders(() -> headers);
@@ -230,6 +236,7 @@ public final class OtelManager {
 
         // Log exporter with level filter and sampling
         OtlpHttpLogRecordExporterBuilder logExporterBuilder = OtlpHttpLogRecordExporter.builder()
+                .setMeterProvider(MeterProvider.noop())
                 .setEndpoint(endpoint + Constants.LOGS_PATH)
                 .setCompression("gzip")
                 .setHeaders(() -> headers);
@@ -255,6 +262,13 @@ public final class OtelManager {
                 .setEndpoint(endpoint + Constants.METRICS_PATH)
                 .setCompression("gzip")
                 .setHeaders(() -> headers);
+        try {
+            metricExporterBuilder.setMeterProvider(MeterProvider.noop());
+        } catch (NoSuchMethodError e) {
+            // Added in 1.50 together with the metric exporter's own
+            // counters; older metric exporters count nothing. Spring Boot
+            // 3.5 pins 1.49.
+        }
         if (proxy != null) {
             metricExporterBuilder.setProxyOptions(proxy);
         }

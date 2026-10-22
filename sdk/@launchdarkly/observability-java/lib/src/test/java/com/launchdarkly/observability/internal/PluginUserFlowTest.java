@@ -100,6 +100,12 @@ class PluginUserFlowTest {
             LDObserve.startSpan("user-checkout", Attributes.empty()).end();
             LDObserve.flush();
             assertTrue(payloadContains(traces, "user-checkout"), "unmatched spans should still export");
+
+            // The exports above made the OTLP exporters count their own
+            // work; those counters must not reach the customer's metrics.
+            LDObserve.flush();
+            assertFalse(payloadContains(metrics, "otlp.exporter"),
+                    "exporter self-metrics were exported: " + summarize(metrics));
         }
     }
 
