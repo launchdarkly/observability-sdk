@@ -18,6 +18,7 @@ import { LDRecord } from '../sdk/LDRecord'
 import type { RecordOptions } from '../client/types/record'
 import { Plugin } from './common'
 import { internalLog } from '../sdk/util'
+import { sdkLog } from '../client/utils/sdkLogger'
 import {
 	ATTR_TELEMETRY_SDK_NAME,
 	ATTR_TELEMETRY_SDK_VERSION,
@@ -42,20 +43,23 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 				typeof window === 'undefined' ||
 				typeof document === 'undefined'
 			) {
-				console.warn(
+				sdkLog(
+					'warn',
 					'@launchdarkly/session-replay is not initializing because it is not supported in this environment.',
 				)
 				return
 			}
 			if (typeof Worker === 'undefined') {
-				console.warn(
+				sdkLog(
+					'warn',
 					'@launchdarkly/session-replay is not initializing because Worker is not supported.',
 				)
 				return
 			}
 			// Don't initialize if an projectID is not set.
 			if (!ldCredential) {
-				console.warn(
+				sdkLog(
+					'warn',
 					'@launchdarkly/session-replay is not initializing because the SDK credential is undefined.',
 				)
 				return

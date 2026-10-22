@@ -3,6 +3,32 @@ import { ALL_CONSOLE_METHODS, ConsoleMethods } from '../types/client'
 import { ConsoleMessage } from '../types/shared-types'
 import { patch, stringify } from '../utils/utils'
 import { parseError } from '../utils/errors'
+import { isSdkConsoleOutput } from '../utils/sdkLogger'
+import { redactLaunchDarklyContext } from './network-listener/utils/network-sanitizer'
+
+/**
+ * The LaunchDarkly JavaScript SDK's own logger tags every line it writes to
+ * the console with `[LaunchDarkly]`: the 3.x line (`js-sdk-common`) writes
+ * `[LaunchDarkly] <message>`, the 4.x line (`js-core` BasicLogger) writes
+ * `<level>: [LaunchDarkly] <message>`. Those lines are the SDK talking about
+ * itself (`Opening stream connection to .../eval/<id>/<base64 context>`,
+ * `Closing stream connection`, ...), not the application's logs: they are
+ * noisy and the streaming URL carries the full evaluation context, name and
+ * email included. The plugin cannot hook the LD client's logger structurally
+ * (the client does not expose it to plugins), so the tag is the marker.
+ */
+export const LD_SDK_LOG_PREFIX = '[LaunchDarkly]'
+const LD_SDK_LOG_LINE =
+	/^\s*(?:(?:debug|info|warn|error|none):\s*)?\[LaunchDarkly\]/
+
+/**
+ * Whether a console call's arguments are a line written by the LaunchDarkly
+ * SDK's own logger.
+ */
+export const isLaunchDarklySdkLogLine = (data: ReadonlyArray<unknown>) => {
+	const first = data[0]
+	return typeof first === 'string' && LD_SDK_LOG_LINE.test(first)
+}
 
 export type StringifyOptions = {
 	// limit of string length
@@ -27,6 +53,11 @@ export type LogRecordOptions = {
 	 */
 	serializeConsoleAttributes?: boolean
 	logger: Logger | 'console'
+	/**
+	 * Record console output written by the LaunchDarkly SDK's own logger
+	 * (lines prefixed `[LaunchDarkly]`). Off by default.
+	 */
+	recordLaunchDarklySdkLogs?: boolean
 }
 
 export type Logger = {
@@ -124,6 +155,18 @@ export function ConsoleListener(
 			return (...data: Array<any>) => {
 				// @ts-expect-error
 				original.apply(this, data)
+				// The SDK's own diagnostics (exporter failures, init warnings)
+				// are never the application's logs, in any mode.
+				if (isSdkConsoleOutput()) {
+					return
+				}
+				// Nor is the LaunchDarkly SDK's logger output, unless asked for.
+				if (
+					!logOptions.recordLaunchDarklySdkLogs &&
+					isLaunchDarklySdkLogLine(data)
+				) {
+					return
+				}
 				try {
 					callback(createLog(level, logOptions, ...data))
 				} catch (error) {
@@ -140,22 +183,28 @@ export function createLog(
 	...data: Array<any>
 ) {
 	const trace = parseError(new Error())
-	const message = logOptions.serializeConsoleAttributes
-		? data.map((o) =>
-				typeof o === 'object'
-					? stringify(o, logOptions.stringifyOptions)
-					: o,
-			)
-		: data.filter((o) => typeof o !== 'object').map((o) => `${o}`)
+	// A LaunchDarkly SDK URL in a log line carries the base64 evaluation
+	// context; redact that segment before the line can leave the browser.
+	const message = (
+		logOptions.serializeConsoleAttributes
+			? data.map((o) =>
+					typeof o === 'object'
+						? stringify(o, logOptions.stringifyOptions)
+						: o,
+				)
+			: data.filter((o) => typeof o !== 'object').map((o) => `${o}`)
+	).map((o) => (typeof o === 'string' ? redactLaunchDarklyContext(o) : o))
 	return {
 		type: level,
 		trace,
 		value: message,
-		attributes: stringify(
-			data
-				.filter((d) => typeof d === 'object')
-				.reduce((a, b) => ({ ...a, ...b }), {}),
-			logOptions.stringifyOptions,
+		attributes: redactLaunchDarklyContext(
+			stringify(
+				data
+					.filter((d) => typeof d === 'object')
+					.reduce((a, b) => ({ ...a, ...b }), {}),
+				logOptions.stringifyOptions,
+			),
 		),
 		time: Date.now(),
 	}

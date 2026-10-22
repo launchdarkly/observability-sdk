@@ -115,6 +115,8 @@ export class FirstLoadListeners {
 					{
 						...defaultLogOptions,
 						level: this.consoleMethodsToRecord,
+						recordLaunchDarklySdkLogs:
+							this.options.recordLaunchDarklySdkLogs,
 					},
 				),
 			)

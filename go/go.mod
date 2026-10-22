@@ -2,6 +2,8 @@ module github.com/launchdarkly/observability-sdk/go
 
 go 1.25.0
 
+toolchain go1.26.10
+
 require (
 	github.com/Khan/genqlient v0.8.1
 	github.com/samber/lo v1.51.0

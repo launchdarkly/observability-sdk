@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/launchdarkly/observability-sdk/compare/go/v1.3.0...go/v1.3.1) (2026-10-20)
+
+
+### Bug Fixes
+
+* **security:** build with Go 1.26.10 and require certifi 2026.10.19 ([#837](https://github.com/launchdarkly/observability-sdk/issues/837)) ([acfdb8b](https://github.com/launchdarkly/observability-sdk/commit/acfdb8b798ee3b91c3a2b06af8a87ebada027788))
+
 ## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/go/v1.2.2...go/v1.3.0) (2026-08-28)
 
 

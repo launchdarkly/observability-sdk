@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.69.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.69.0...launchdarkly-observability-android-0.69.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **android:** match sampling regexes as substrings and skip invalid patterns ([#836](https://github.com/launchdarkly/observability-sdk/issues/836)) ([76127ee](https://github.com/launchdarkly/observability-sdk/commit/76127eef5545f9415af0a9b98e6605956cb6c0d4))
+
 ## [0.69.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.68.1...launchdarkly-observability-android-0.69.0) (2026-09-30)
 
 

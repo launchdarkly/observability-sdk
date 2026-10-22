@@ -4,6 +4,7 @@ import {
 	shouldNetworkRequestBeTraced,
 } from '../client/listeners/network-listener/utils/utils'
 import { internalLogOnce } from '../sdk/util'
+import { setSdkDebugLogging } from '../client/utils/sdkLogger'
 
 type TestLogLevel = 'debug' | 'info' | 'error' | 'warn'
 
@@ -318,6 +319,8 @@ describe('internalLogOnce', () => {
 	let spyByLevel: Record<TestLogLevel, any>
 
 	beforeEach(() => {
+		// Internal diagnostics only reach the console in debug mode.
+		setSdkDebugLogging(true)
 		consoleDebugSpy = vi
 			.spyOn(console, 'debug')
 			.mockImplementation(() => {})
@@ -335,8 +338,15 @@ describe('internalLogOnce', () => {
 	})
 
 	afterEach(() => {
+		setSdkDebugLogging(false)
 		vi.restoreAllMocks()
 		vi.clearAllMocks()
+	})
+
+	it('is silent when the SDK is not in debug mode', () => {
+		setSdkDebugLogging(false)
+		internalLogOnce('test-context-0', 'quiet', 'warn', 'test message')
+		expect(consoleWarnSpy).not.toHaveBeenCalled()
 	})
 
 	it('logs a message only once for the same context and logOnceId', () => {

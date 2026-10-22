@@ -70,6 +70,7 @@ import version from '../../version'
 
 import { ExportSampler } from './sampling/ExportSampler'
 import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
+import { isSdkDebugLogging, sdkLog } from '../utils/sdkLogger'
 import { ProductAnalyticsEvents } from '../types/observe'
 
 export type Callback = (span?: Span) => any
@@ -124,10 +125,27 @@ export const setupBrowserTracing = (
 	sampler: ExportSampler,
 ) => {
 	if (providers.tracerProvider || providers.meterProvider) {
-		console.warn('OTEL already initialized. Skipping...')
+		sdkLog('warn', 'OTEL already initialized. Skipping...')
 		return
 	}
 	otelConfig = config
+
+	// OpenTelemetry's own diagnostics (export failures reported through the
+	// global error handler, instrumentation warnings) are silent unless a diag
+	// logger is registered. In debug mode route them through the SDK logger so
+	// they are visible on the console but never recorded as customer logs.
+	if (isSdkDebugLogging()) {
+		api.diag.setLogger(
+			{
+				verbose: (...args) => sdkLog('debug', ...args),
+				debug: (...args) => sdkLog('debug', ...args),
+				info: (...args) => sdkLog('info', ...args),
+				warn: (...args) => sdkLog('warn', ...args),
+				error: (...args) => sdkLog('error', ...args),
+			},
+			api.DiagLogLevel.WARN,
+		)
+	}
 
 	const backendUrl =
 		config.backendUrl ||
@@ -639,7 +657,8 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 		if (pending) {
 			const completion = pending
 				.catch((e) => {
-					console.warn(
+					sdkLog(
+						'warn',
 						'[CustomBatchSpanProcessor] Failed to capture response body attributes',
 						e,
 					)
@@ -773,7 +792,8 @@ export const shutdown = async () => {
 				await providers.tracerProvider.shutdown()
 				providers.tracerProvider = undefined
 			} else {
-				console.warn(
+				sdkLog(
+					'warn',
 					'OTEL shutdown called without initialized tracerProvider.',
 				)
 			}
@@ -783,7 +803,8 @@ export const shutdown = async () => {
 				await providers.meterProvider.shutdown()
 				providers.meterProvider = undefined
 			} else {
-				console.warn(
+				sdkLog(
+					'warn',
 					'OTEL shutdown called without initialized meterProvider.',
 				)
 			}

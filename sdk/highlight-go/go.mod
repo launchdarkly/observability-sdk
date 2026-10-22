@@ -2,6 +2,8 @@ module github.com/highlight/highlight/sdk/highlight-go
 
 go 1.25.0
 
+toolchain go1.26.10
+
 require (
 	github.com/99designs/gqlgen v0.17.71
 	github.com/gin-gonic/gin v1.10.1
