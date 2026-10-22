@@ -29,7 +29,13 @@ public final class LDObserve {
      * Records a gauge metric.
      */
     public static void recordMetric(String name, double value, Attributes attributes) {
-        OtelManager.getGauge(name).set(value, orEmpty(attributes));
+        try {
+            OtelManager.getGauge(name).set(value, orEmpty(attributes));
+        } catch (LinkageError e) {
+            // The synchronous gauge API arrived in OpenTelemetry 1.38. On an
+            // older API (Spring Boot 3.2 pins 1.31) the plugin is already off
+            // and has logged why; recording must not fail the caller.
+        }
     }
 
     /**
