@@ -55,6 +55,11 @@ jobs:
             - name: Build, test and verify the published POM
               run: ./gradlew :lib:build --no-daemon --console=plain
 
+            # The plugin needs the Plugin API, first shipped in SDK 7.10.1.
+            - name: Test against the oldest supported LaunchDarkly SDK
+              if: matrix.java == 11
+              run: ./gradlew :lib:test -PldServerSdkVersion=7.10.1 --no-daemon --console=plain
+
             - name: Upload test reports
               if: always()
               uses: actions/upload-artifact@v4
