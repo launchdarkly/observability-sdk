@@ -44,15 +44,15 @@ dependencies {
     }
     runtimeOnly "io.opentelemetry:opentelemetry-exporter-sender-jdk:${otelVersion}"
 
-    // JSON parsing
-    implementation 'com.google.code.gson:gson:2.11.0'
-
     // Testing
     testImplementation "com.launchdarkly:launchdarkly-java-server-sdk:${ldServerSdkVersion}"
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
+    // Only the tests read the shared scenario fixtures with Gson. The plugin
+    // parses JSON with the LaunchDarkly SDK's LDValue.
+    testImplementation 'com.google.code.gson:gson:2.11.0'
 }
 
 tasks.withType(Test).configureEach {
@@ -92,7 +92,7 @@ tasks.register('checkRuntimeClasspath') {
 
 tasks.register('checkPublishedPom') {
     group = 'verification'
-    description = 'Checks the generated POM exposes opentelemetry-api at compile scope and carries no OkHttp or LaunchDarkly SDK.'
+    description = 'Checks the generated POM exposes opentelemetry-api at compile scope and depends on nothing but OpenTelemetry.'
     dependsOn 'generatePomFileForReleasePublication'
     def pomFile = layout.buildDirectory.file('publications/release/pom-default.xml')
     doLast {
@@ -116,6 +116,13 @@ tasks.register('checkPublishedPom') {
         if (ldSdk.size() != 0) {
             throw new GradleException('The POM must not depend on LaunchDarkly artifacts, found: '
                     + ldSdk.collect { it.artifactId.text() }.join(', '))
+        }
+        // OpenTelemetry is the only third-party dependency a server
+        // application inherits from the plugin.
+        def foreign = deps.findAll { it.groupId.text() != 'io.opentelemetry' }
+        if (foreign.size() != 0) {
+            throw new GradleException('The POM may only depend on io.opentelemetry artifacts, found: '
+                    + foreign.collect { "${it.groupId.text()}:${it.artifactId.text()}" }.join(', '))
         }
         def jdk = deps.find { it.artifactId.text() == 'opentelemetry-exporter-sender-jdk' }
         if (jdk.size() == 0 || jdk.scope.text() != 'runtime') {

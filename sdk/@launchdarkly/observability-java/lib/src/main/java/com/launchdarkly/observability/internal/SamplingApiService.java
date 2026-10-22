@@ -1,22 +1,17 @@
 package com.launchdarkly.observability.internal;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig.AttributeMatchConfig;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig.LogSamplingConfig;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig.MatchConfig;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig.SpanEventMatchConfig;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig.SpanSamplingConfig;
+import com.launchdarkly.sdk.LDValue;
+import com.launchdarkly.sdk.LDValueType;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -101,13 +96,11 @@ public final class SamplingApiService {
      */
     public SamplingConfig getSamplingConfig(String sdkKey) {
         try {
-            Map<String, Object> variables = new HashMap<>();
-            variables.put("organization_verbose_id", sdkKey);
-            JsonElement data = client.execute(QUERY, variables);
-            if (data == null || !data.isJsonObject()) {
+            LDValue data = client.execute(QUERY, Collections.singletonMap("organization_verbose_id", sdkKey));
+            if (data == null) {
                 return null;
             }
-            JsonObject sampling = objectOrNull(data.getAsJsonObject(), "sampling");
+            LDValue sampling = objectOrNull(data, "sampling");
             if (sampling == null) {
                 return null;
             }
@@ -119,68 +112,44 @@ public final class SamplingApiService {
     }
 
     /** Parses the {@code sampling} object of the GraphQL response. Visible for the shared scenario tests. */
-    static SamplingConfig parseSamplingConfig(JsonObject sampling) {
+    static SamplingConfig parseSamplingConfig(LDValue sampling) {
         List<SpanSamplingConfig> spans = new ArrayList<>();
+        for (LDValue el : objects(sampling.get("spans"))) {
+            spans.add(parseSpanConfig(el));
+        }
         List<LogSamplingConfig> logs = new ArrayList<>();
-
-        JsonArray spansArray = arrayOrNull(sampling, "spans");
-        if (spansArray != null) {
-            for (JsonElement el : spansArray) {
-                if (el.isJsonObject()) {
-                    spans.add(parseSpanConfig(el.getAsJsonObject()));
-                }
-            }
+        for (LDValue el : objects(sampling.get("logs"))) {
+            logs.add(parseLogConfig(el));
         }
-
-        JsonArray logsArray = arrayOrNull(sampling, "logs");
-        if (logsArray != null) {
-            for (JsonElement el : logsArray) {
-                if (el.isJsonObject()) {
-                    logs.add(parseLogConfig(el.getAsJsonObject()));
-                }
-            }
-        }
-
         return new SamplingConfig(spans, logs);
     }
 
-    private static SpanSamplingConfig parseSpanConfig(JsonObject obj) {
-        MatchConfig name = parseMatchConfig(objectOrNull(obj, "name"));
-        List<AttributeMatchConfig> attributes = parseAttributeConfigs(arrayOrNull(obj, "attributes"));
+    private static SpanSamplingConfig parseSpanConfig(LDValue obj) {
         List<SpanEventMatchConfig> events = new ArrayList<>();
-
-        JsonArray eventsArray = arrayOrNull(obj, "events");
-        if (eventsArray != null) {
-            for (JsonElement el : eventsArray) {
-                if (!el.isJsonObject()) {
-                    continue;
-                }
-                JsonObject eventObj = el.getAsJsonObject();
-                events.add(new SpanEventMatchConfig(
-                        parseMatchConfig(objectOrNull(eventObj, "name")),
-                        parseAttributeConfigs(arrayOrNull(eventObj, "attributes"))
-                ));
-            }
+        for (LDValue event : objects(obj.get("events"))) {
+            events.add(new SpanEventMatchConfig(
+                    parseMatchConfig(objectOrNull(event, "name")),
+                    parseAttributeConfigs(event.get("attributes"))
+            ));
         }
-
-        return new SpanSamplingConfig(name, attributes, events, ratioOrDefault(obj));
+        return new SpanSamplingConfig(
+                parseMatchConfig(objectOrNull(obj, "name")),
+                parseAttributeConfigs(obj.get("attributes")),
+                events,
+                ratioOrDefault(obj));
     }
 
-    private static LogSamplingConfig parseLogConfig(JsonObject obj) {
-        MatchConfig message = parseMatchConfig(objectOrNull(obj, "message"));
-        MatchConfig severityText = parseMatchConfig(objectOrNull(obj, "severityText"));
-        List<AttributeMatchConfig> attributes = parseAttributeConfigs(arrayOrNull(obj, "attributes"));
-        return new LogSamplingConfig(message, severityText, attributes, ratioOrDefault(obj));
+    private static LogSamplingConfig parseLogConfig(LDValue obj) {
+        return new LogSamplingConfig(
+                parseMatchConfig(objectOrNull(obj, "message")),
+                parseMatchConfig(objectOrNull(obj, "severityText")),
+                parseAttributeConfigs(obj.get("attributes")),
+                ratioOrDefault(obj));
     }
 
-    private static List<AttributeMatchConfig> parseAttributeConfigs(JsonArray array) {
-        if (array == null) return Collections.emptyList();
+    private static List<AttributeMatchConfig> parseAttributeConfigs(LDValue array) {
         List<AttributeMatchConfig> result = new ArrayList<>();
-        for (JsonElement el : array) {
-            if (!el.isJsonObject()) {
-                continue;
-            }
-            JsonObject obj = el.getAsJsonObject();
+        for (LDValue obj : objects(array)) {
             result.add(new AttributeMatchConfig(
                     parseMatchConfig(objectOrNull(obj, "key")),
                     parseMatchConfig(objectOrNull(obj, "attribute"))
@@ -190,42 +159,47 @@ public final class SamplingApiService {
     }
 
     /**
-     * GraphQL returns {@code null} for optional fields that are unset, and
-     * Gson's {@code getAsJsonObject} / {@code getAsJsonArray} throw on
-     * {@code JsonNull}. One null field must not abort the whole payload, so
-     * every lookup goes through these and treats null like absent.
+     * GraphQL returns {@code null} for optional fields that are unset. One
+     * null or mistyped field must not abort the whole payload, so lookups go
+     * through these and treat anything unexpected like absent.
      */
-    private static JsonObject objectOrNull(JsonObject parent, String key) {
-        JsonElement el = parent.get(key);
-        return el != null && el.isJsonObject() ? el.getAsJsonObject() : null;
+    private static LDValue objectOrNull(LDValue parent, String key) {
+        LDValue el = parent.get(key);
+        return el.getType() == LDValueType.OBJECT ? el : null;
     }
 
-    private static JsonArray arrayOrNull(JsonObject parent, String key) {
-        JsonElement el = parent.get(key);
-        return el != null && el.isJsonArray() ? el.getAsJsonArray() : null;
-    }
-
-    private static int ratioOrDefault(JsonObject obj) {
-        JsonElement el = obj.get("samplingRatio");
-        if (el == null || !el.isJsonPrimitive() || !el.getAsJsonPrimitive().isNumber()) {
-            return 1;
+    /** The object elements of an array; empty for null or a non-array. */
+    private static List<LDValue> objects(LDValue array) {
+        if (array.getType() != LDValueType.ARRAY) {
+            return Collections.emptyList();
         }
-        return el.getAsInt();
+        List<LDValue> result = new ArrayList<>();
+        for (LDValue el : array.values()) {
+            if (el.getType() == LDValueType.OBJECT) {
+                result.add(el);
+            }
+        }
+        return result;
+    }
+
+    private static int ratioOrDefault(LDValue obj) {
+        LDValue el = obj.get("samplingRatio");
+        return el.isNumber() ? el.intValue() : 1;
     }
 
     /**
      * Like Go, an exact value takes precedence over a regex, and an empty
      * regex counts as unset. A config with neither is no filter.
      */
-    private static MatchConfig parseMatchConfig(JsonObject obj) {
+    private static MatchConfig parseMatchConfig(LDValue obj) {
         if (obj == null) return null;
-        JsonElement match = obj.get("matchValue");
-        if (match != null && !match.isJsonNull()) {
+        LDValue match = obj.get("matchValue");
+        if (!match.isNull()) {
             return MatchConfig.ofValue(matchValue(match));
         }
-        JsonElement regex = obj.get("regexValue");
-        if (regex != null && regex.isJsonPrimitive() && !regex.getAsString().isEmpty()) {
-            return MatchConfig.ofRegex(regex.getAsString());
+        LDValue regex = obj.get("regexValue");
+        if (regex.isString() && !regex.stringValue().isEmpty()) {
+            return MatchConfig.ofRegex(regex.stringValue());
         }
         return null;
     }
@@ -236,17 +210,16 @@ public final class SamplingApiService {
      * or object is kept as is and never matches, instead of throwing and
      * losing the whole sampling payload.
      */
-    private static Object matchValue(JsonElement el) {
-        if (!el.isJsonPrimitive()) {
-            return el;
+    private static Object matchValue(LDValue el) {
+        switch (el.getType()) {
+            case BOOLEAN:
+                return el.booleanValue();
+            case NUMBER:
+                return el.doubleValue();
+            case STRING:
+                return el.stringValue();
+            default:
+                return el;
         }
-        JsonPrimitive primitive = el.getAsJsonPrimitive();
-        if (primitive.isBoolean()) {
-            return primitive.getAsBoolean();
-        }
-        if (primitive.isNumber()) {
-            return primitive.getAsDouble();
-        }
-        return primitive.getAsString();
     }
 }

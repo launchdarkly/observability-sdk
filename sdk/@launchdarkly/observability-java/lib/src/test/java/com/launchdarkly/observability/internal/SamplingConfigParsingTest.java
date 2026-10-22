@@ -1,9 +1,8 @@
 package com.launchdarkly.observability.internal;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig.MatchConfig;
+import com.launchdarkly.sdk.LDValue;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,7 +54,6 @@ class SamplingConfigParsingTest {
     }
 
     private static SamplingConfig parse(String sampling) {
-        JsonObject json = JsonParser.parseString(sampling).getAsJsonObject();
-        return SamplingApiService.parseSamplingConfig(json);
+        return SamplingApiService.parseSamplingConfig(LDValue.parse(sampling));
     }
 }

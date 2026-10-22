@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.internal;
 
-import com.google.gson.JsonElement;
+import com.launchdarkly.sdk.LDValue;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -117,7 +117,7 @@ class GraphQLClientTest {
                 Collections.emptyMap(),
                 new ProxySelectorForTest(proxyAddress));
 
-        JsonElement data = client.execute(SamplingApiService.QUERY, Map.of("organization_verbose_id", "sdk-test"));
+        LDValue data = client.execute(SamplingApiService.QUERY, Map.of("organization_verbose_id", "sdk-test"));
 
         assertNotNull(data, "the proxied request should succeed");
         assertEquals(1, requestLines.size());

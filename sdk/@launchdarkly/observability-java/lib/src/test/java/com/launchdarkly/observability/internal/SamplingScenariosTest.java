@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.launchdarkly.observability.internal.sampling.CustomSampler;
 import com.launchdarkly.observability.internal.sampling.SamplingConfig;
+import com.launchdarkly.sdk.LDValue;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
@@ -53,7 +54,7 @@ class SamplingScenariosTest {
         List<DynamicTest> tests = new ArrayList<>();
         for (JsonElement el : loadScenarios("sampling/span-test-scenarios.json")) {
             JsonObject scenario = el.getAsJsonObject();
-            SamplingConfig config = SamplingApiService.parseSamplingConfig(scenario.getAsJsonObject("samplingConfig"));
+            SamplingConfig config = SamplingApiService.parseSamplingConfig(LDValue.parse(scenario.get("samplingConfig").toString()));
             SpanData span = span(scenario.getAsJsonObject("inputSpan"));
             for (JsonElement c : scenario.getAsJsonArray("samplerFunctionCases")) {
                 JsonObject samplerCase = c.getAsJsonObject();
@@ -75,7 +76,7 @@ class SamplingScenariosTest {
         List<DynamicTest> tests = new ArrayList<>();
         for (JsonElement el : loadScenarios("sampling/log-test-scenarios.json")) {
             JsonObject scenario = el.getAsJsonObject();
-            SamplingConfig config = SamplingApiService.parseSamplingConfig(scenario.getAsJsonObject("samplingConfig"));
+            SamplingConfig config = SamplingApiService.parseSamplingConfig(LDValue.parse(scenario.get("samplingConfig").toString()));
             LogRecordData log = log(scenario.getAsJsonObject("inputLog"));
             for (JsonElement c : scenario.getAsJsonArray("samplerFunctionCases")) {
                 JsonObject samplerCase = c.getAsJsonObject();

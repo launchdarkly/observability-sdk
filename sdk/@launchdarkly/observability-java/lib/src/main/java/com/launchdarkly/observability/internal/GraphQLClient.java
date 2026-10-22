@@ -1,8 +1,8 @@
 package com.launchdarkly.observability.internal;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.launchdarkly.sdk.LDValue;
+import com.launchdarkly.sdk.LDValueType;
+import com.launchdarkly.sdk.ObjectBuilder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,7 +20,11 @@ import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * Minimal GraphQL client on {@link HttpClient} (Java 11) and Gson.
+ * Minimal GraphQL client on {@link HttpClient} (Java 11).
+ *
+ * <p>JSON goes through the LaunchDarkly SDK's {@link LDValue}, which the
+ * application already has, so the plugin adds no JSON library to a server
+ * classpath.</p>
  *
  * <p>Uses the same HTTP stack as the OTLP exporters, so proxy settings and
  * custom headers behave the same for the sampling request as for exports.
@@ -31,7 +35,6 @@ public final class GraphQLClient {
     private static final Logger log = Logger.getLogger(GraphQLClient.class.getName());
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
-    private static final Gson GSON = new Gson();
 
     private final URI endpoint;
     private final Map<String, String> headers;
@@ -67,14 +70,20 @@ public final class GraphQLClient {
      *
      * @param query     the GraphQL query string
      * @param variables query variables
-     * @return the "data" JSON element from the response, or null on error
+     * @return the "data" object from the response, or null on error
      */
-    public JsonElement execute(String query, Map<String, Object> variables) throws IOException {
-        JsonObject body = new JsonObject();
-        body.addProperty("query", query);
-        body.add("variables", GSON.toJsonTree(variables));
+    public LDValue execute(String query, Map<String, String> variables) throws IOException {
+        ObjectBuilder vars = LDValue.buildObject();
+        for (Map.Entry<String, String> variable : variables.entrySet()) {
+            vars.put(variable.getKey(), variable.getValue());
+        }
+        String body = LDValue.buildObject()
+                .put("query", query)
+                .put("variables", vars.build())
+                .build()
+                .toJsonString();
 
-        byte[] payload = gzip(GSON.toJson(body).getBytes(StandardCharsets.UTF_8));
+        byte[] payload = gzip(body.getBytes(StandardCharsets.UTF_8));
 
         HttpRequest.Builder request = HttpRequest.newBuilder(endpoint)
                 .timeout(REQUEST_TIMEOUT)
@@ -99,15 +108,17 @@ public final class GraphQLClient {
             return null;
         }
 
-        JsonObject envelope = GSON.fromJson(response.body(), JsonObject.class);
-        if (envelope == null) {
-            log.warning("GraphQL response had no body");
+        LDValue envelope = LDValue.parse(response.body());
+        if (envelope.getType() != LDValueType.OBJECT) {
+            log.warning("GraphQL response was not a JSON object");
             return null;
         }
-        if (envelope.has("errors") && !envelope.getAsJsonArray("errors").isEmpty()) {
-            log.warning("GraphQL errors: " + envelope.getAsJsonArray("errors"));
+        LDValue errors = envelope.get("errors");
+        if (errors.size() > 0) {
+            log.warning("GraphQL errors: " + errors.toJsonString());
         }
-        return envelope.has("data") ? envelope.get("data") : null;
+        LDValue data = envelope.get("data");
+        return data.getType() == LDValueType.OBJECT ? data : null;
     }
 
     private static byte[] gzip(byte[] data) throws IOException {

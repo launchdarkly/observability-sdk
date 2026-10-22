@@ -36,7 +36,7 @@ dependencies {
 
 - `io.opentelemetry:opentelemetry-api` is a compile-scoped (`api`) dependency, because `LDObserve` and `ObservabilityOptions` take OpenTelemetry API types such as `Attributes` and `Severity`. You do not need to declare it yourself.
 - OTLP is sent over HTTP with OpenTelemetry's JDK sender, which uses `java.net.http.HttpClient`. The plugin does **not** pull OkHttp, Okio or the Kotlin standard library onto your classpath. The build fails if any of those leak in.
-- The OpenTelemetry SDK and Gson are runtime dependencies. The plugin records flag evaluations with its own hook and does not depend on `launchdarkly-java-server-sdk-otel` or on the LaunchDarkly SDK itself; the build fails if the POM ever names a LaunchDarkly artifact.
+- The OpenTelemetry SDK and exporters are runtime dependencies, and they are the only ones: JSON is handled with the LaunchDarkly SDK's own `LDValue`, so no Gson or other JSON library is added. The plugin records flag evaluations with its own hook and does not depend on `launchdarkly-java-server-sdk-otel` or on the LaunchDarkly SDK itself. The build fails if the POM names anything outside `io.opentelemetry`.
 
 ## Usage
 
@@ -163,7 +163,7 @@ Levels are `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` and `NONE`, matchi
 ./gradlew :lib:publishToMavenLocal   # then see ../../e2e/java-plugin for consumer and server examples
 ```
 
-`:lib:build` fails if OkHttp, Okio or Kotlin appear on the runtime classpath, if the generated POM does not expose `opentelemetry-api` at compile scope, or if it names a LaunchDarkly artifact. `./gradlew :lib:test -PldServerSdkVersion=7.10.1` runs the tests against the oldest supported SDK.
+`:lib:build` fails if OkHttp, Okio or Kotlin appear on the runtime classpath, if the generated POM does not expose `opentelemetry-api` at compile scope, or if it names anything outside `io.opentelemetry`. `./gradlew :lib:test -PldServerSdkVersion=7.10.1` runs the tests against the oldest supported SDK.
 
 The unit tests run the sampling scenarios shared with the Go, .NET, Python and Node SDKs (`lib/src/test/resources/sampling`, copied from `go/internal/otel`). `:lib:build` also fails if those copies drift from Go's; copy the files over when the scenarios change.
 
