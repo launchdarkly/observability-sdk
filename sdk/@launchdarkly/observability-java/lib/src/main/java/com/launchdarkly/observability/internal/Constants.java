@@ -20,6 +20,13 @@ public final class Constants {
     public static final String INSTRUMENTATION_VERSION = "0.1.0";
     // x-release-please-end
 
+    /**
+     * The oldest OpenTelemetry Java SDK the plugin runs on. 1.38 made the
+     * synchronous gauge stable and has every exporter builder method the
+     * plugin calls. Spring Boot 3.3 and later manage 1.38 or newer.
+     */
+    public static final String MIN_OTEL_SDK_VERSION = "1.38.0";
+
     public static final String PROJECT_ID_ATTRIBUTE = "highlight.project_id";
     public static final String ERROR_SPAN_NAME = "highlight.error";
     public static final String ATTR_SAMPLING_RATIO = "launchdarkly.sampling.ratio";

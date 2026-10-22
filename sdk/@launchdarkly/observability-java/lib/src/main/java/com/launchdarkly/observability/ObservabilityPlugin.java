@@ -90,8 +90,9 @@ public class ObservabilityPlugin extends Plugin {
             return;
         }
 
-        if (!options.isManualStart()) {
-            OtelManager.initialize(sdkKey, options);
+        if (!options.isManualStart() && !OtelManager.initialize(sdkKey, options)) {
+            // Already logged; nothing would use a sampling config.
+            return;
         }
 
         // Fetch sampling config in background

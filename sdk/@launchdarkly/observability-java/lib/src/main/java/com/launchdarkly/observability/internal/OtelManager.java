@@ -7,6 +7,7 @@ import com.launchdarkly.observability.internal.sampling.SamplingLogProcessor;
 import com.launchdarkly.observability.internal.sampling.SamplingTraceExporter;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.metrics.DoubleGauge;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
 
 /**
  * Manages OpenTelemetry provider setup and lifecycle for LaunchDarkly Observability.
@@ -110,14 +112,36 @@ public final class OtelManager {
      * <p>Safe for concurrent callers. Only the first call builds providers and
      * registers a shutdown hook. Sampling configuration fetched before this
      * returns is applied to the new sampler.</p>
+     *
+     * <p>Never throws. A bad option (an endpoint that is not a URL) or an
+     * OpenTelemetry SDK on the classpath too old for the plugin is logged,
+     * and the plugin stays a no-op, so observability cannot stop the
+     * application or the LaunchDarkly client from starting.</p>
+     *
+     * @return whether providers are running when this returns
      */
-    public static void initialize(String sdkKey, ObservabilityOptions options) {
+    public static boolean initialize(String sdkKey, ObservabilityOptions options) {
         synchronized (INIT_LOCK) {
             if (INSTANCE.get() != null) {
                 log.fine("OtelManager already initialized, skipping");
-                return;
+                return true;
             }
-            OtelManager manager = create(sdkKey, options);
+            OtelManager manager;
+            try {
+                manager = create(sdkKey, options);
+            } catch (RuntimeException | LinkageError e) {
+                // LinkageError: Spring Boot and other BOMs pin their own
+                // OpenTelemetry version, which can be older than this plugin
+                // needs. LDClient only catches Exception from a plugin, so
+                // a NoSuchMethodError here would abort application startup.
+                String hint = e instanceof LinkageError
+                        ? " OpenTelemetry SDK on the classpath: " + sdkVersion() + "; this plugin needs "
+                                + Constants.MIN_OTEL_SDK_VERSION + " or newer."
+                        : "";
+                log.log(Level.SEVERE, "LaunchDarkly observability could not start and exports nothing;"
+                        + " flag evaluations are unaffected." + hint + " Cause: " + e, e);
+                return false;
+            }
             INSTANCE.set(manager);
             SamplingConfig pending = PENDING_SAMPLING_CONFIG.get();
             if (pending != null) {
@@ -132,6 +156,7 @@ public final class OtelManager {
                 }, "ld-observability-shutdown");
                 Runtime.getRuntime().addShutdownHook(shutdownHook);
             }
+            return true;
         }
     }
 
@@ -149,6 +174,16 @@ public final class OtelManager {
                 return true;
             }
             return registeredSdkKey.equals(sdkKey);
+        }
+    }
+
+    /** The OpenTelemetry SDK version on the classpath, as the SDK reports it. */
+    static String sdkVersion() {
+        try {
+            String version = Resource.getDefault().getAttribute(AttributeKey.stringKey("telemetry.sdk.version"));
+            return version == null ? "unknown" : version;
+        } catch (RuntimeException | LinkageError e) {
+            return "unknown";
         }
     }
 
