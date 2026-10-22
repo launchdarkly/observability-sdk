@@ -17,6 +17,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A {@link SpanExporter} that applies sampling logic before delegating to another exporter.
@@ -26,8 +29,11 @@ import java.util.Map;
  */
 public final class SamplingTraceExporter implements SpanExporter {
 
+    private static final Logger log = Logger.getLogger(SamplingTraceExporter.class.getName());
+
     private final SpanExporter delegate;
     private final CustomSampler sampler;
+    private final AtomicBoolean failureLogged = new AtomicBoolean();
 
     public SamplingTraceExporter(SpanExporter delegate, CustomSampler sampler) {
         this.delegate = delegate;
@@ -36,7 +42,16 @@ public final class SamplingTraceExporter implements SpanExporter {
 
     @Override
     public CompletableResultCode export(Collection<SpanData> spans) {
-        List<SpanData> sampled = sampleSpans(spans);
+        List<SpanData> sampled;
+        try {
+            sampled = sampleSpans(spans);
+        } catch (RuntimeException | StackOverflowError e) {
+            // Losing the batch would be worse than exporting it unsampled.
+            if (failureLogged.compareAndSet(false, true)) {
+                log.log(Level.WARNING, "Span sampling failed; exporting the batch unsampled", e);
+            }
+            sampled = new ArrayList<>(spans);
+        }
         if (sampled.isEmpty()) {
             return CompletableResultCode.ofSuccess();
         }
