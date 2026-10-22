@@ -17,7 +17,10 @@ java {
 
 ext {
     otelVersion = '1.51.0'
-    ldServerSdkVersion = '7.12.0'
+    // The SDK the plugin compiles and tests against. The plugin needs the
+    // Plugin API, which first shipped in 7.10.1; run the tests against that
+    // floor with -PldServerSdkVersion=7.10.1.
+    ldServerSdkVersion = project.findProperty('ldServerSdkVersion') ?: '7.12.0'
 }
 
 dependencies {
@@ -89,7 +92,7 @@ tasks.register('checkRuntimeClasspath') {
 
 tasks.register('checkPublishedPom') {
     group = 'verification'
-    description = 'Checks the generated POM exposes opentelemetry-api at compile scope and carries no OkHttp.'
+    description = 'Checks the generated POM exposes opentelemetry-api at compile scope and carries no OkHttp or LaunchDarkly SDK.'
     dependsOn 'generatePomFileForReleasePublication'
     def pomFile = layout.buildDirectory.file('publications/release/pom-default.xml')
     doLast {
@@ -104,6 +107,15 @@ tasks.register('checkPublishedPom') {
         def okhttp = deps.find { it.artifactId.text() == 'opentelemetry-exporter-sender-okhttp' }
         if (okhttp.size() != 0) {
             throw new GradleException('The POM must not depend on opentelemetry-exporter-sender-okhttp')
+        }
+        // The application brings its own LaunchDarkly SDK. Any SDK artifact in
+        // the POM (directly, or via launchdarkly-java-server-sdk-otel, which
+        // depends on 7.4.0) could win resolution with a version that has no
+        // Plugin class and fail with NoClassDefFoundError.
+        def ldSdk = deps.findAll { it.groupId.text() == 'com.launchdarkly' }
+        if (ldSdk.size() != 0) {
+            throw new GradleException('The POM must not depend on LaunchDarkly artifacts, found: '
+                    + ldSdk.collect { it.artifactId.text() }.join(', '))
         }
         def jdk = deps.find { it.artifactId.text() == 'opentelemetry-exporter-sender-jdk' }
         if (jdk.size() == 0 || jdk.scope.text() != 'runtime') {
