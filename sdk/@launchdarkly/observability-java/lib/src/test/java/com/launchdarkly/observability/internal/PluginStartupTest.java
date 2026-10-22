@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -105,6 +106,25 @@ class PluginStartupTest {
             LDObserve.shutdown();
         }
         assertFalse(otel.getTracer("after").spanBuilder("s").startSpan().isRecording());
+    }
+
+    @Test
+    void unreachableSamplingBackendLogsOneLine() {
+        SamplingApiService service = new SamplingApiService(new GraphQLClient("http://127.0.0.1:9"));
+
+        assertNull(service.getSamplingConfig("sdk-offline"));
+
+        // Sampling threads from earlier tests may log here too; every
+        // warning from the service must have the same one-line shape.
+        List<LogRecord> warnings = records.stream()
+                .filter(r -> r.getLevel() == Level.WARNING)
+                .filter(r -> SamplingApiService.class.getName().equals(r.getLoggerName()))
+                .collect(java.util.stream.Collectors.toList());
+        assertFalse(warnings.isEmpty(), "a failed fetch must be reported");
+        for (LogRecord warning : warnings) {
+            assertNull(warning.getThrown(), "the stack trace belongs at FINE, not in every server's startup log");
+            assertTrue(warning.getMessage().contains("unsampled"), warning.getMessage());
+        }
     }
 
     @Test

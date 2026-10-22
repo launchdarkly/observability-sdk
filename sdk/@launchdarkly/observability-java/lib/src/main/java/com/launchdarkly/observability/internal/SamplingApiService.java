@@ -106,7 +106,10 @@ public final class SamplingApiService {
             }
             return parseSamplingConfig(sampling);
         } catch (Exception e) {
-            log.log(Level.WARNING, "Failed to fetch sampling config", e);
+            // A server that cannot reach the backend logs this on every
+            // start, so one line; the stack trace is there at FINE.
+            log.warning("Could not fetch the LaunchDarkly sampling config; exporting everything unsampled: " + e);
+            log.log(Level.FINE, "Sampling config fetch failure", e);
             return null;
         }
     }
