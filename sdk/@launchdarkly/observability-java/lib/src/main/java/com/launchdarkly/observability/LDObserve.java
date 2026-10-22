@@ -3,7 +3,7 @@ package com.launchdarkly.observability;
 import com.launchdarkly.observability.internal.Constants;
 import com.launchdarkly.observability.internal.OtelManager;
 import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.api.logs.Logger;
+import io.opentelemetry.api.logs.LogRecordBuilder;
 import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
@@ -16,7 +16,10 @@ import java.io.StringWriter;
  * Static singleton public API for LaunchDarkly Observability.
  *
  * <p>Before the plugin is initialized, all methods are safe to call and
- * will use no-op implementations from the OpenTelemetry API.</p>
+ * will use no-op implementations from the OpenTelemetry API. Methods are
+ * safe to call from any thread and do not throw on null arguments: a null
+ * metric name records nothing, null attributes are treated as empty, and
+ * {@link #recordError} ignores a null throwable.</p>
  */
 public final class LDObserve {
     private LDObserve() {}
@@ -25,14 +28,14 @@ public final class LDObserve {
      * Records a gauge metric.
      */
     public static void recordMetric(String name, double value, Attributes attributes) {
-        OtelManager.getGauge(name).set(value, attributes);
+        OtelManager.getGauge(name).set(value, orEmpty(attributes));
     }
 
     /**
      * Records a counter metric.
      */
     public static void recordCount(String name, long value, Attributes attributes) {
-        OtelManager.getCounter(name).add(value, attributes);
+        OtelManager.getCounter(name).add(value, orEmpty(attributes));
     }
 
     /**
@@ -46,35 +49,39 @@ public final class LDObserve {
      * Records a histogram metric.
      */
     public static void recordHistogram(String name, double value, Attributes attributes) {
-        OtelManager.getHistogram(name).record(value, attributes);
+        OtelManager.getHistogram(name).record(value, orEmpty(attributes));
     }
 
     /**
      * Records an up/down counter metric.
      */
     public static void recordUpDownCounter(String name, long value, Attributes attributes) {
-        OtelManager.getUpDownCounter(name).add(value, attributes);
+        OtelManager.getUpDownCounter(name).add(value, orEmpty(attributes));
     }
 
     /**
      * Records a log message.
      */
     public static void recordLog(String message, Severity severity, Attributes attributes) {
-        Logger logger = OtelManager.getLogger();
-        // Severity number and text are separate OTLP fields; the backend UI
-        // and severityText sampling rules read the text.
-        logger.logRecordBuilder()
-                .setSeverity(severity)
-                .setSeverityText(severity.name())
-                .setBody(message)
-                .setAllAttributes(attributes)
-                .emit();
+        LogRecordBuilder builder = OtelManager.getLogger().logRecordBuilder();
+        if (severity != null) {
+            // Severity number and text are separate OTLP fields; the backend
+            // UI and severityText sampling rules read the text.
+            builder.setSeverity(severity).setSeverityText(severity.name());
+        }
+        if (message != null) {
+            builder.setBody(message);
+        }
+        builder.setAllAttributes(attributes).emit();
     }
 
     /**
      * Records an error as a span with exception details.
      */
     public static void recordError(Throwable throwable, Attributes attributes) {
+        if (throwable == null) {
+            return;
+        }
         Tracer tracer = OtelManager.getTracer();
         Span span = tracer.spanBuilder(Constants.ERROR_SPAN_NAME)
                 .setAllAttributes(attributes)
@@ -123,5 +130,9 @@ public final class LDObserve {
      */
     public static void shutdown() {
         OtelManager.shutdown();
+    }
+
+    private static Attributes orEmpty(Attributes attributes) {
+        return attributes != null ? attributes : Attributes.empty();
     }
 }

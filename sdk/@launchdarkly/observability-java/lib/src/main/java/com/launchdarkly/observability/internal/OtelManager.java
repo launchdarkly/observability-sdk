@@ -52,6 +52,10 @@ public final class OtelManager {
     private static final AtomicReference<OtelManager> INSTANCE = new AtomicReference<>();
     private static final AtomicReference<SamplingConfig> PENDING_SAMPLING_CONFIG = new AtomicReference<>();
     private static final Object INIT_LOCK = new Object();
+    // Before init, and for a null instrument name, LDObserve records into
+    // this no-op meter instead of throwing into the caller.
+    private static final Meter NOOP_METER =
+            OpenTelemetry.noop().getMeter(Constants.INSTRUMENTATION_SCOPE_NAME);
     private static Thread shutdownHook;
 
     private final SdkTracerProvider tracerProvider;
@@ -286,17 +290,17 @@ public final class OtelManager {
         if (manager != null) {
             return manager.meter;
         }
-        return OpenTelemetry.noop().getMeter(Constants.INSTRUMENTATION_SCOPE_NAME);
+        return NOOP_METER;
     }
 
     /**
      * Returns the gauge with this name, built once per provider. Before
-     * initialization it is a no-op and is not cached.
+     * initialization, or for a null name, it is a no-op and is not cached.
      */
     public static DoubleGauge getGauge(String name) {
         OtelManager manager = INSTANCE.get();
-        if (manager == null) {
-            return getMeter().gaugeBuilder(name).build();
+        if (manager == null || name == null) {
+            return NOOP_METER.gaugeBuilder("").build();
         }
         return manager.gauges.computeIfAbsent(name, n -> manager.meter.gaugeBuilder(n).build());
     }
@@ -304,8 +308,8 @@ public final class OtelManager {
     /** Returns the counter with this name; see {@link #getGauge}. */
     public static LongCounter getCounter(String name) {
         OtelManager manager = INSTANCE.get();
-        if (manager == null) {
-            return getMeter().counterBuilder(name).build();
+        if (manager == null || name == null) {
+            return NOOP_METER.counterBuilder("").build();
         }
         return manager.counters.computeIfAbsent(name, n -> manager.meter.counterBuilder(n).build());
     }
@@ -313,8 +317,8 @@ public final class OtelManager {
     /** Returns the histogram with this name; see {@link #getGauge}. */
     public static DoubleHistogram getHistogram(String name) {
         OtelManager manager = INSTANCE.get();
-        if (manager == null) {
-            return getMeter().histogramBuilder(name).build();
+        if (manager == null || name == null) {
+            return NOOP_METER.histogramBuilder("").build();
         }
         return manager.histograms.computeIfAbsent(name, n -> manager.meter.histogramBuilder(n).build());
     }
@@ -322,8 +326,8 @@ public final class OtelManager {
     /** Returns the up/down counter with this name; see {@link #getGauge}. */
     public static LongUpDownCounter getUpDownCounter(String name) {
         OtelManager manager = INSTANCE.get();
-        if (manager == null) {
-            return getMeter().upDownCounterBuilder(name).build();
+        if (manager == null || name == null) {
+            return NOOP_METER.upDownCounterBuilder("").build();
         }
         return manager.upDownCounters.computeIfAbsent(name, n -> manager.meter.upDownCounterBuilder(n).build());
     }
