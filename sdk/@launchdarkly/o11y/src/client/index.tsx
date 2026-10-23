@@ -1512,28 +1512,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		await record.snapshotCanvas(element)
 	}
 
-	addSessionFeedback({
-		timestamp,
-		verbatim,
-		user_email,
-		user_name,
-	}: {
+	/** @deprecated Session feedback is no longer supported. This is a no-op. */
+	addSessionFeedback(_feedback: {
 		verbatim: string
 		timestamp: string
 		user_name?: string
 		user_email?: string
-	}) {
-		this._worker.postMessage({
-			message: {
-				type: MessageType.Feedback,
-				verbatim,
-				timestamp,
-				userName: user_name || this.sessionData.userIdentifier,
-				userEmail:
-					user_email || (this.sessionData.userObject as any)?.name,
-			},
-		})
-	}
+	}) {}
 
 	// Reset the events array and push to a backend.
 	async _save() {
