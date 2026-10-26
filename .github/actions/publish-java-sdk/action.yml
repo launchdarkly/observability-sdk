@@ -26,6 +26,11 @@ inputs:
         required: false
         default: 'false'
 
+outputs:
+    package-hashes:
+        description: 'Base64 encoded SHA256 hashes of published packages'
+        value: ${{ steps.package-hashes.outputs.package-hashes }}
+
 runs:
     using: 'composite'
     steps:
@@ -74,3 +79,10 @@ runs:
           run: |
               ./gradlew :lib:build --no-daemon --console=plain
               echo "Dry run. Not publishing."
+
+        - name: Hash build files for provenance
+          id: package-hashes
+          shell: bash
+          working-directory: ${{ inputs.workspace-path }}/lib/build/libs
+          run: |
+              echo "package-hashes=$(sha256sum launchdarkly-java-server-sdk-observability-*.jar | base64 -w0)" >> "$GITHUB_OUTPUT"

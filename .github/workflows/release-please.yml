@@ -110,6 +110,8 @@ jobs:
             contents: write
         needs: ['release-package']
         if: ${{ needs.release-package.outputs.java-plugin-released == 'true' }}
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -120,6 +122,19 @@ jobs:
               with:
                   workspace-path: sdk/@launchdarkly/observability-java
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+
+    release-java-provenance:
+        needs: ['release-package', 'release-java-plugin']
+        if: ${{ needs.release-package.outputs.java-plugin-released == 'true' }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.release-java-plugin.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ needs.release-package.outputs.java-plugin-tag-name }}
 
     release-dotnet-plugin:
         runs-on: ubuntu-latest

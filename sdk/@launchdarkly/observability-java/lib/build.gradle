@@ -15,6 +15,12 @@ java {
     withSourcesJar()
 }
 
+// Name the jars after the Maven artifactId, so the provenance subjects
+// match the files on Maven Central.
+base {
+    archivesName = 'launchdarkly-java-server-sdk-observability'
+}
+
 ext {
     otelVersion = '1.51.0'
     // The SDK the plugin compiles and tests against. The plugin needs the
