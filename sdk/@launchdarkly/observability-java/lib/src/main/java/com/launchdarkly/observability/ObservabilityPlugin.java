@@ -1,10 +1,7 @@
 package com.launchdarkly.observability;
 
 import com.launchdarkly.observability.internal.EvaluationTracingHook;
-import com.launchdarkly.observability.internal.GraphQLClient;
 import com.launchdarkly.observability.internal.OtelManager;
-import com.launchdarkly.observability.internal.SamplingApiService;
-import com.launchdarkly.observability.internal.sampling.SamplingConfig;
 import com.launchdarkly.sdk.server.LDClient;
 import com.launchdarkly.sdk.server.integrations.EnvironmentMetadata;
 import com.launchdarkly.sdk.server.integrations.Hook;
@@ -13,7 +10,6 @@ import com.launchdarkly.sdk.server.integrations.PluginMetadata;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -95,25 +91,9 @@ public class ObservabilityPlugin extends Plugin {
             return;
         }
 
-        // Fetch sampling config in background
-        Thread samplingThread = new Thread(() -> {
-            try {
-                GraphQLClient graphQLClient = new GraphQLClient(
-                        options.getBackendUrl(), options.getCustomHeaders(), options.getProxySelector());
-                SamplingApiService samplingService = new SamplingApiService(graphQLClient);
-                SamplingConfig config = samplingService.getSamplingConfig(sdkKey);
-                if (config != null) {
-                    OtelManager.setSamplingConfig(config);
-                    if (options.isDebug()) {
-                        log.info("Loaded sampling config: " + config);
-                    }
-                }
-            } catch (Exception e) {
-                log.log(Level.WARNING, "Failed to fetch sampling config", e);
-            }
-        }, "ld-observability-sampling");
-        samplingThread.setDaemon(true);
-        samplingThread.start();
+        // Fetched in the background; with manual start it is kept and
+        // applied when LDObserve.start runs.
+        OtelManager.fetchSamplingConfig(sdkKey, options);
     }
 
     @Override

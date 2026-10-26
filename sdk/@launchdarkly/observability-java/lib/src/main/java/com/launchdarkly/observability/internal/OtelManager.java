@@ -70,6 +70,9 @@ public final class OtelManager {
     // Guarded by INIT_LOCK. The SDK key of the first LDClient that
     // registered the plugin; the providers carry it as the project id.
     private static String registeredSdkKey;
+    // Guarded by INIT_LOCK. The SDK key whose sampling config has been
+    // requested, so the plugin and LDObserve.start fetch it only once.
+    private static String samplingFetchSdkKey;
 
     private final SdkTracerProvider tracerProvider;
     private final SdkLoggerProvider loggerProvider;
@@ -342,6 +345,41 @@ public final class OtelManager {
     }
 
     /**
+     * Fetches the sampling configuration for this SDK key on a background
+     * daemon thread and applies it with {@link #setSamplingConfig}. Called
+     * by the plugin on registration and by {@code LDObserve.start}, so
+     * standalone use without an {@code LDClient} is sampled too. A key whose
+     * config has already been requested is not fetched again, and a key other
+     * than the registered client's does not replace that client's config.
+     */
+    public static void fetchSamplingConfig(String sdkKey, ObservabilityOptions options) {
+        synchronized (INIT_LOCK) {
+            if (sdkKey == null || sdkKey.equals(samplingFetchSdkKey)
+                    || (registeredSdkKey != null && !registeredSdkKey.equals(sdkKey))) {
+                return;
+            }
+            samplingFetchSdkKey = sdkKey;
+        }
+        Thread samplingThread = new Thread(() -> {
+            try {
+                GraphQLClient graphQLClient = new GraphQLClient(
+                        options.getBackendUrl(), options.getCustomHeaders(), options.getProxySelector());
+                SamplingConfig config = new SamplingApiService(graphQLClient).getSamplingConfig(sdkKey);
+                if (config != null) {
+                    setSamplingConfig(config);
+                    if (options.isDebug()) {
+                        log.info("Loaded sampling config: " + config);
+                    }
+                }
+            } catch (Exception e) {
+                log.log(Level.WARNING, "Failed to fetch sampling config", e);
+            }
+        }, "ld-observability-sampling");
+        samplingThread.setDaemon(true);
+        samplingThread.start();
+    }
+
+    /**
      * A view of the plugin's OpenTelemetry that resolves the providers on
      * every call, so it works even when taken before the providers start.
      * It has no {@code close()}: frameworks that close beans (Spring infers
@@ -479,6 +517,7 @@ public final class OtelManager {
         synchronized (INIT_LOCK) {
             manager = INSTANCE.getAndSet(null);
             registeredSdkKey = null;
+            samplingFetchSdkKey = null;
         }
         if (manager != null) {
             manager.shutdownProviders();
@@ -510,6 +549,7 @@ public final class OtelManager {
             manager = INSTANCE.getAndSet(null);
             PENDING_SAMPLING_CONFIG.set(null);
             registeredSdkKey = null;
+            samplingFetchSdkKey = null;
             if (shutdownHook != null) {
                 try {
                     Runtime.getRuntime().removeShutdownHook(shutdownHook);

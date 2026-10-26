@@ -156,6 +156,18 @@ class PluginUserFlowTest {
             assertTrue(waitForSamplingApplied(), "manual start lost the sampling config");
             assertTrue(waitUntilHealthCheckDropped(), "manual start did not apply the sampling rule");
         }
+        assertEquals(1, samplingQueries.size(), "manual start must not fetch the sampling config again");
+    }
+
+    @Test
+    void standaloneStartFetchesAndAppliesSamplingConfig() throws Exception {
+        startCollector();
+
+        LDObserve.start("sdk-test", options(true));
+
+        assertTrue(waitForSamplingQuery(), "standalone start did not fetch sampling config");
+        assertTrue(waitForSamplingApplied(), "standalone start did not apply the sampling config");
+        assertTrue(waitUntilHealthCheckDropped(), "standalone start did not apply the sampling rule");
     }
 
     @Test

@@ -134,11 +134,15 @@ public final class LDObserve {
     }
 
     /**
-     * Manually starts the OTLP providers. Only needed when
-     * {@link ObservabilityOptions.Builder#manualStart(boolean)} is true.
+     * Manually starts the OTLP providers and fetches the sampling
+     * configuration. Needed when
+     * {@link ObservabilityOptions.Builder#manualStart(boolean)} is true, or
+     * to use {@code LDObserve} without an {@code LDClient}.
      */
     public static void start(String sdkKey, ObservabilityOptions options) {
-        OtelManager.initialize(sdkKey, options);
+        if (OtelManager.initialize(sdkKey, options)) {
+            OtelManager.fetchSamplingConfig(sdkKey, options);
+        }
     }
 
     /**
