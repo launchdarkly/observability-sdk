@@ -1,14 +1,21 @@
+import { sdkLog } from '../client/utils/sdkLogger'
+
 // Object for tracking previously logged messages.
 const loggedIds = Object.create(null)
 
+/**
+ * SDK-internal diagnostic. Reaches the developer console only in debug mode
+ * and is never recorded as one of the customer's log records (it used to be
+ * both printed unconditionally and shipped as a `warn` log into the
+ * customer's project).
+ */
 export const internalLog = (
 	context: string,
 	level: keyof Console,
 	...msg: any
 ) => {
 	const prefix = `[@launchdarkly plugins]: (${context}): `
-	console[level].apply(console, [prefix, ...msg])
-	void reportLog(prefix, ...msg)
+	sdkLog(level as string, prefix, ...msg)
 }
 
 /**
@@ -34,13 +41,4 @@ export const internalLogOnce = (
 	}
 	loggedIds[`${context}-${logOnceId}`] = true
 	internalLog(context, level, ...msg)
-}
-
-const reportLog = async (prefix: string, ...msg: any) => {
-	try {
-		const { LDObserve } = await import('./LDObserve')
-		LDObserve.recordLog(`${prefix}${msg}`, 'warn')
-	} catch (e) {
-		// ignore error  reporting log
-	}
 }

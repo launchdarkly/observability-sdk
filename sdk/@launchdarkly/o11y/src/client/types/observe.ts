@@ -36,6 +36,15 @@ export type ObserveOptions = CommonOptions & {
 	 */
 	consoleMethodsToRecord?: ConsoleMethods[]
 	/**
+	 * Specifies whether console output written by the LaunchDarkly SDK's own
+	 * logger (lines prefixed `[LaunchDarkly]`, e.g. stream connection
+	 * open/close messages) is recorded as logs. Those lines describe the SDK
+	 * rather than your application, and the streaming URL they contain embeds
+	 * the evaluation context, so they are skipped by default.
+	 * @default false
+	 */
+	recordLaunchDarklySdkLogs?: boolean
+	/**
 	 * Specifies whether to record performance metrics (e.g. FPS, device memory).
 	 * @default true
 	 */

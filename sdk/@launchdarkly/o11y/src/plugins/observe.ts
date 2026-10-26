@@ -32,6 +32,7 @@ import {
 } from '@opentelemetry/semantic-conventions'
 import { Attributes } from '@opentelemetry/api'
 import { internalLog } from '../sdk/util'
+import { sdkLog } from '../client/utils/sdkLogger'
 import { LDEvaluationReason } from '@launchdarkly/js-sdk-common/dist/cjs/api/data/LDEvaluationReason'
 
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
@@ -58,14 +59,16 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 				typeof window === 'undefined' ||
 				typeof document === 'undefined'
 			) {
-				console.warn(
+				sdkLog(
+					'warn',
 					'@launchdarkly/observability is not initializing because it is not supported in this environment.',
 				)
 				return
 			}
 			// Don't initialize if an projectID is not set.
 			if (!ldCredential) {
-				console.warn(
+				sdkLog(
+					'warn',
 					'@launchdarkly/observability is not initializing because the SDK credential is undefined.',
 				)
 				return

@@ -119,7 +119,7 @@ class ObservabilityService(
     private var otelMeter: Meter
     private var otelLogger: Logger
     private var otelTracer: Tracer
-    private var customSampler = CustomSampler()
+    private var customSampler = CustomSampler(logger = logger)
     private val graphqlClient = GraphQLClient(
         endpoint = observabilityOptions.backendUrl,
         logger = logger

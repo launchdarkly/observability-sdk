@@ -2,6 +2,8 @@ module otel-dice
 
 go 1.25.0
 
+toolchain go1.26.10
+
 require (
 	go.opentelemetry.io/contrib/bridges/otelslog v0.13.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0
