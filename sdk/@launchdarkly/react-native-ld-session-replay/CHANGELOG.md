@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.24.1...session-replay-react-native-0.24.2) (2026-10-20)
+
+
+### Bug Fixes
+
+* **session-replay-react-native:** bump native SDKs to latest ([#839](https://github.com/launchdarkly/observability-sdk/issues/839)) ([d153b73](https://github.com/launchdarkly/observability-sdk/commit/d153b73c92b14e9a5f4dc83e54e5e02f1d3721b9))
+
 ## [0.24.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.24.0...session-replay-react-native-0.24.1) (2026-10-02)
 
 

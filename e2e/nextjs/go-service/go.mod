@@ -2,6 +2,8 @@ module github.com/deltaespilon/distributed-tracing
 
 go 1.25.0
 
+toolchain go1.26.10
+
 require (
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/highlight/highlight/sdk/highlight-go v0.10.2

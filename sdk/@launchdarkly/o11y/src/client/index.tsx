@@ -129,13 +129,14 @@ import { IntegrationClient } from '../integrations'
 import { LaunchDarklyIntegration, LDClient } from '../integrations/launchdarkly'
 import { createLog, defaultLogOptions } from './listeners/console-listener'
 import { CustomSampler } from './otel/sampling/CustomSampler'
+import { sdkLog, setSdkDebugLogging } from './utils/sdkLogger'
 import randomUuidV4 from './utils/randomUuidV4'
 import { LDContext } from '@launchdarkly/js-client-sdk'
 import { MaskInputOptions } from './types/record'
 import { ProductAnalyticsEvents } from './types/observe'
 
 export const HighlightWarning = (context: string, msg: any) => {
-	console.warn(`Highlight Warning: (${context}): `, { output: msg })
+	sdkLog('warn', `Highlight Warning: (${context}): `, { output: msg })
 }
 
 export type HighlightClassOptions = {
@@ -150,6 +151,7 @@ export type HighlightClassOptions = {
 	disableSessionRecording?: boolean
 	reportConsoleErrors?: boolean
 	consoleMethodsToRecord?: ConsoleMethods[]
+	recordLaunchDarklySdkLogs?: boolean
 	privacySetting?: PrivacySettingOption
 	maskAllInputs?: boolean
 	maskInputOptions?: MaskInputOptions
@@ -274,6 +276,9 @@ export class Highlight {
 			this.debugOptions = this.options?.debug ?? {}
 		}
 		this.logger = new Logger(this.debugOptions.clientInteractions)
+		if (options.debug) {
+			setSdkDebugLogging(true)
+		}
 		if (options.storageMode) {
 			this.logger.log(
 				`initializing in ${options.storageMode} session mode`,
@@ -753,7 +758,8 @@ export class Highlight {
 					!this.sessionData.projectID ||
 					!this.sessionData.sessionSecureID
 				) {
-					console.error(
+					sdkLog(
+						'error',
 						'Failed to initialize Highlight; an error occurred on our end.',
 						this.sessionData,
 					)
@@ -948,7 +954,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.manualStopped = false
 		} catch (e) {
 			if (this._isOnLocalHost) {
-				console.error(e)
+				sdkLog('error', e)
 				HighlightWarning('initializeSession', e)
 			}
 		}
@@ -1306,7 +1312,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			)
 		} catch (e) {
 			if (this._isOnLocalHost) {
-				console.error(e)
+				sdkLog('error', e)
 				HighlightWarning('initializeSession _setupWindowListeners', e)
 			}
 		}
@@ -1573,7 +1579,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			setSessionData(this.sessionData)
 		} catch (e) {
 			if (this._isOnLocalHost) {
-				console.error(e)
+				sdkLog('error', e)
 				HighlightWarning('_save', e)
 			}
 		}

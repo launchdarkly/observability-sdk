@@ -123,6 +123,41 @@ const SENSITIVE_FRAGMENT_PARAMS = [
 ]
 
 /**
+ * LaunchDarkly client-side SDK endpoints carry the full evaluation context,
+ * base64url-encoded, as a path segment:
+ *
+ *   streaming:  /eval/<client-side-id>/<base64 context>
+ *   polling:    /sdk/evalx/<client-side-id>/contexts/<base64 context>
+ *               /sdk/evalx/<client-side-id>/users/<base64 user>   (legacy)
+ *
+ * optionally followed by `?h=<hash>&withReasons=true`. The context routinely
+ * holds a name and email, so that segment must not leave the browser inside a
+ * recorded URL or log line. Only those exact shapes match: the environment id
+ * must be a 24-character hex client-side ID, and the polling form must carry
+ * its `contexts/` or `users/` segment, so an application route such as
+ * `/eval/batch/42` is left alone. The first group keeps everything up to the
+ * segment, the second is the segment itself.
+ */
+const LD_CONTEXT_URL_SEGMENT =
+	/(\/eval\/[0-9a-f]{24}\/|\/sdk\/evalx?\/[0-9a-f]{24}\/(?:contexts|users)\/)([A-Za-z0-9+_=%-]{8,})/g
+
+/**
+ * Replaces the base64 evaluation-context segment of any LaunchDarkly SDK
+ * endpoint found in `text` (a URL, or free text such as a log line) with
+ * `REDACTED`. Everything else is returned unchanged.
+ *
+ * @example
+ * redactLaunchDarklyContext('https://stream.launchdarkly.com/eval/abc/eyJrZXkiOiJ1In0?h=x')
+ * // Returns: 'https://stream.launchdarkly.com/eval/abc/REDACTED?h=x'
+ */
+export const redactLaunchDarklyContext = (text: string): string => {
+	if (typeof text !== 'string' || !text.includes('eval')) {
+		return text
+	}
+	return text.replace(LD_CONTEXT_URL_SEGMENT, '$1REDACTED')
+}
+
+/**
  * Safely parses a URL, handling both absolute and relative URLs.
  * For relative URLs, resolves against globalThis.location.origin (browser/worker)
  * or a placeholder base (non-browser environments).
@@ -202,6 +237,10 @@ export const sanitizeUrl = (url: string): string => {
 			urlObject.username = 'REDACTED'
 			urlObject.password = 'REDACTED'
 		}
+
+		// LaunchDarkly SDK endpoints embed the base64 evaluation context in
+		// the path; it must never be recorded.
+		urlObject.pathname = redactLaunchDarklyContext(urlObject.pathname)
 
 		const searchParams = urlObject.searchParams
 		SENSITIVE_QUERY_PARAMS.forEach((sensitiveParam) => {

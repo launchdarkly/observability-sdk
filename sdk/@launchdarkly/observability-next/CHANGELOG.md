@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.2](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.3.1...observability-next-0.3.2) (2026-10-21)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.2.2
+    * @launchdarkly/session-replay bumped to 1.2.2
+
 ## [0.3.1](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.3.0...observability-next-0.3.1) (2026-10-15)
 
 
