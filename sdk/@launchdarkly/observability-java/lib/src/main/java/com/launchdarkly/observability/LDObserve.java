@@ -10,9 +10,6 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
 /**
  * Static singleton public API for LaunchDarkly Observability.
  *
@@ -96,10 +93,6 @@ public final class LDObserve {
         try {
             span.setStatus(StatusCode.ERROR, throwable.getMessage());
             span.recordException(throwable);
-
-            StringWriter sw = new StringWriter();
-            throwable.printStackTrace(new PrintWriter(sw));
-            span.setAttribute("exception.stacktrace", sw.toString());
         } finally {
             span.end();
         }
