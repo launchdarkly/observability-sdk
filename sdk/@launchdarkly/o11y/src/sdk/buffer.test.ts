@@ -272,6 +272,64 @@ describe('LDObserve with manualStart', () => {
 		expect(calls).toEqual(['start', 'stop', 'start'])
 	})
 
+	it('waits for an idle stop() to finish shutting down before the next start()', async () => {
+		const sdk = fakeObserveSDK()
+		const calls: string[] = []
+		let finishShutdown!: () => void
+		sdk.start.mockImplementation(async () => {
+			calls.push('start')
+		})
+		sdk.stop.mockImplementation(
+			() =>
+				new Promise<void>((resolve) => {
+					calls.push('stop')
+					finishShutdown = () => {
+						calls.push('shutdown')
+						resolve()
+					}
+				}),
+		)
+		const observe = freshObserve()
+		observe.load(sdk as unknown as ObserveSDK, { ready: false })
+		await observe.start()
+
+		// Nothing in flight: stop() then start() right away.
+		const stopped = observe.stop()
+		const restarted = observe.start()
+		await Promise.resolve()
+		await Promise.resolve()
+		expect(calls).toEqual(['start', 'stop'])
+
+		finishShutdown()
+		await Promise.all([stopped, restarted])
+		expect(calls).toEqual(['start', 'stop', 'shutdown', 'start'])
+	})
+
+	it('waits for the plugin-started sdk before running a stop()', async () => {
+		const sdk = fakeObserveSDK()
+		const calls: string[] = []
+		let finishStart!: () => void
+		const started = new Promise<void>((resolve) => {
+			finishStart = () => {
+				calls.push('start')
+				resolve()
+			}
+		})
+		sdk.stop.mockImplementation(() => calls.push('stop'))
+		const observe = freshObserve()
+
+		// Without manualStart the plugin starts the sdk itself and hands that
+		// start to load(); a stop() made meanwhile must run after it.
+		observe.load(sdk as unknown as ObserveSDK, { ready: true, started })
+		const stopped = observe.stop()
+		await Promise.resolve()
+		expect(sdk.stop).not.toHaveBeenCalled()
+
+		finishStart()
+		await stopped
+		expect(calls).toEqual(['start', 'stop'])
+	})
+
 	it('passes a start() made after registration to the sdk', async () => {
 		const sdk = fakeObserveSDK()
 		const observe = freshObserve()
@@ -454,6 +512,7 @@ describe('observe plugin registration', () => {
 		expect(startSpy).toHaveBeenCalled()
 		expect(loadSpy).toHaveBeenCalledWith(expect.any(ObserveSDK), {
 			ready: true,
+			started: expect.any(Promise),
 		})
 	})
 })

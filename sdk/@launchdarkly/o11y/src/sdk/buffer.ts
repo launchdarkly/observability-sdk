@@ -10,6 +10,12 @@ export interface BufferedLoadOptions {
 	 * SDK is started; a `start()` made before `load` runs at `load` time.
 	 */
 	ready?: boolean
+	/**
+	 * With `ready: true`, the attached SDK's own start while it is still
+	 * running. It is queued like a `start()`, so a `stop()` made meanwhile
+	 * waits for it instead of being undone by it.
+	 */
+	started?: Promise<unknown>
 }
 
 interface PendingStart {
@@ -80,7 +86,7 @@ export class BufferedClass<T extends object> {
 	 * mode, or an SDK whose `start` is still running), telemetry keeps
 	 * buffering until `markReady()` is called.
 	 */
-	load(sdk: T, { ready = true }: BufferedLoadOptions = {}) {
+	load(sdk: T, { ready = true, started }: BufferedLoadOptions = {}) {
 		this._sdk = sdk
 		this._isLoaded = true
 
@@ -90,7 +96,17 @@ export class BufferedClass<T extends object> {
 			// The SDK is already started (not `manualStart`), so an early
 			// `start()` must not start it a second time.
 			this.markReady()
-			pending?.resolve()
+			if (started) {
+				// Queue the SDK's own start so later stops and starts run after it.
+				const queued = this._queueOp('start', async () => {
+					await started
+				}).catch((error) => {
+					internalLog(`Error starting the SDK`, 'error', error)
+				})
+				void queued.then(() => pending?.resolve())
+			} else {
+				pending?.resolve()
+			}
 		} else if (pending) {
 			// `start()` was called before any SDK was attached: honor it now.
 			void this._runPendingStart(pending)
@@ -129,19 +145,23 @@ export class BufferedClass<T extends object> {
 	}
 
 	/**
-	 * Stops the attached SDK. Before `load` it cancels a deferred start; while
-	 * a start or stop is running it waits for it, so an earlier start cannot
-	 * undo the stop.
+	 * Stops the attached SDK. Before `load` it cancels a deferred start. Once
+	 * attached, every stop is queued: it waits for an earlier start or stop,
+	 * and a later start waits for the SDK's stop (including any async
+	 * shutdown) to finish. Errors are logged rather than thrown.
 	 */
-	protected _stop<R>(stopSdk: () => R): R | Promise<R> | undefined {
+	protected _stop(stopSdk: () => unknown): Promise<void> {
 		if (!this._isLoaded) {
 			this._cancelPendingStart()
-			return undefined
+			return Promise.resolve()
 		}
-		if (this._lastOp) {
-			return this._queueOp('stop', async () => stopSdk())
-		}
-		return stopSdk()
+		return this._queueOp('stop', async () => {
+			try {
+				await stopSdk()
+			} catch (error) {
+				internalLog(`Error stopping the SDK`, 'error', error)
+			}
+		})
 	}
 
 	/** Runs `op` once the previously queued start or stop has settled. */

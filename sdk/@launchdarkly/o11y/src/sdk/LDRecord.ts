@@ -29,7 +29,8 @@ class _LDRecord extends BufferedClass<Record> implements Record {
 	}
 
 	// Never buffered, and never throws: before an SDK is attached it just
-	// cancels a start that has not run yet.
+	// cancels a start that has not run yet. Once attached, the stop is queued
+	// after any running start or stop, so it may complete asynchronously.
 	stop() {
 		void this._stop(() => this._sdk.stop())
 	}
