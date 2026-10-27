@@ -30,6 +30,9 @@ const clearAllSessionData = () => {
 	for (const key of Object.keys(Cookies.get() ?? {})) {
 		Cookies.remove(key)
 	}
+	;(
+		globalThis as { persistentSessionSecureID?: string }
+	).persistentSessionSecureID = undefined
 }
 
 describe('pruneSessionData', () => {
@@ -136,5 +139,138 @@ describe('pruneSessionData', () => {
 		expect(
 			cookieStorage.getItem(sessionDataKey('started-never-pushed')),
 		).toBe('')
+	})
+})
+
+// Observe-only sessions have no replay push loop to refresh lastPushTime.
+// These tests use real configureSession page loads: telemetry activity
+// (touchSession) over a session started more than 15 minutes ago must
+// resume it, while a true 16-minute idle gap must start a new one.
+//
+// touchSession's throttle lives in module state, so the modules under test
+// are re-imported per test (with their clock reset to the fixed base time)
+// rather than shared with the statically imported ones above.
+describe('touchSession', () => {
+	let getPreviousSessionData: typeof import('../client/utils/sessionStorage/highlightSession').getPreviousSessionData
+	let touchSession: typeof import('../client/utils/sessionStorage/highlightSession').touchSession
+	let Plugin: typeof import('../plugins/common').Plugin
+
+	beforeEach(async () => {
+		vi.useFakeTimers()
+		vi.setSystemTime(new Date(2024, 0, 1, 12, 0, 0))
+		clearAllSessionData()
+		vi.resetModules()
+		;({ getPreviousSessionData, touchSession } =
+			await import('../client/utils/sessionStorage/highlightSession'))
+		;({ Plugin } = await import('../plugins/common'))
+	})
+
+	afterEach(() => {
+		clearAllSessionData()
+		vi.useRealTimers()
+	})
+
+	const advance = (ms: number) => {
+		vi.setSystemTime(new Date(Date.now() + ms))
+	}
+
+	// Each Plugin instance simulates a page load: configureSession re-runs
+	// the same resume-or-create decision the real SDK makes when a page
+	// loads.
+	const startSessionPageLoad = (options?: { sessionKey?: string }) => {
+		const plugin = new Plugin()
+		plugin.configureSession('test-sdk-credential', options)
+		return getPreviousSessionData()
+	}
+
+	it('resumes a session reloaded more than 15 minutes after its start when the user stayed active', () => {
+		const firstLoad = startSessionPageLoad()
+		expect(firstLoad?.sessionSecureID).toBeDefined()
+
+		// The user keeps generating telemetry for 19.5 minutes, then does a
+		// full page load at the 20-minute mark.
+		advance(19.5 * 60 * 1000)
+		touchSession()
+		const stored = getPreviousSessionData()
+		expect(stored?.lastPushTime).toBe(Date.now())
+
+		advance(0.5 * 60 * 1000)
+		const secondLoad = startSessionPageLoad()
+
+		expect(secondLoad?.sessionSecureID).toBe(firstLoad?.sessionSecureID)
+		// The resumed session keeps its original start time.
+		expect(secondLoad?.sessionStartTime).toBe(firstLoad?.sessionStartTime)
+	})
+
+	it('creates a new session after 16 idle minutes', () => {
+		const firstLoad = startSessionPageLoad()
+
+		advance(16 * 60 * 1000)
+		const secondLoad = startSessionPageLoad()
+
+		expect(secondLoad?.sessionSecureID).not.toBe(firstLoad?.sessionSecureID)
+	})
+
+	it('rotates a session that outlived the 4-hour maximum even if it was active seconds before the reload', () => {
+		const firstLoad = startSessionPageLoad()
+
+		// Active until just before the 4-hour maximum.
+		advance(4 * 60 * 60 * 1000 - 10 * 1000)
+		touchSession()
+		expect(getPreviousSessionData()?.lastPushTime).toBe(Date.now())
+
+		// Past the maximum, a touch no longer refreshes: the stored data is
+		// dropped so the next page load has to start a new session.
+		advance(2 * 60 * 1000)
+		touchSession()
+		expect(getPreviousSessionData()).toBeUndefined()
+
+		const nextLoad = startSessionPageLoad()
+		expect(nextLoad?.sessionSecureID).not.toBe(firstLoad?.sessionSecureID)
+	})
+
+	it('keeps a sessionKey session past the 4-hour maximum, like the replay reset', () => {
+		const firstLoad = startSessionPageLoad({ sessionKey: 'sign-up-funnel' })
+
+		advance(4 * 60 * 60 * 1000 + 5 * 60 * 1000)
+		touchSession()
+		const stored = getPreviousSessionData()
+		expect(stored?.sessionSecureID).toBe(firstLoad?.sessionSecureID)
+		expect(stored?.lastPushTime).toBe(Date.now())
+	})
+
+	it('limits storage writes to one per 10 seconds', () => {
+		startSessionPageLoad()
+
+		advance(30 * 1000)
+		touchSession()
+		const firstTouch = getPreviousSessionData()?.lastPushTime
+		expect(firstTouch).toBe(Date.now())
+
+		// Within the throttle window nothing is written.
+		advance(3 * 1000)
+		touchSession()
+		expect(getPreviousSessionData()?.lastPushTime).toBe(firstTouch)
+
+		// Past the window the next activity writes again.
+		advance(8 * 1000)
+		touchSession()
+		expect(getPreviousSessionData()?.lastPushTime).toBe(Date.now())
+	})
+
+	it('is a no-op with no stored session data', () => {
+		// Clear the throttle window so the touch isn't skipped for a reason
+		// unrelated to the missing session data.
+		advance(30 * 1000)
+		expect(() => touchSession()).not.toThrow()
+		expect(getPreviousSessionData()).toBeUndefined()
+	})
+
+	it('does not throw on unparseable stored session data', () => {
+		const firstLoad = startSessionPageLoad()
+		setItem(sessionDataKey(firstLoad!.sessionSecureID), '{not json')
+
+		advance(30 * 1000)
+		expect(() => touchSession()).not.toThrow()
 	})
 })

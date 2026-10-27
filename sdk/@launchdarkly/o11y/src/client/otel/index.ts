@@ -69,7 +69,10 @@ import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
 import version from '../../version'
 
 import { ExportSampler } from './sampling/ExportSampler'
-import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
+import {
+	getPersistentSessionSecureID,
+	touchSession,
+} from '../utils/sessionStorage/highlightSession'
 import { isSdkDebugLogging, sdkLog } from '../utils/sdkLogger'
 import { ProductAnalyticsEvents } from '../types/observe'
 
@@ -648,6 +651,15 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 		if (span.attributes[RECORD_ATTRIBUTE] === false) {
 			return // don't record spans that are marked as not to be recorded
 		}
+
+		// Observe-only sessions have no push loop to refresh their
+		// `lastPushTime` (RecordSDK._save does it for replay), so exported
+		// telemetry counts as session activity here — without it any page
+		// load more than SESSION_PUSH_THRESHOLD after the session _start_
+		// starts a new session regardless of activity. Unrecorded spans
+		// (our own endpoints) must not keep a session alive, so this runs
+		// after the check above.
+		touchSession()
 
 		// If there is a pending async response body read for this span
 		// (started in applyCustomAttributesOnSpan), wait for it to
