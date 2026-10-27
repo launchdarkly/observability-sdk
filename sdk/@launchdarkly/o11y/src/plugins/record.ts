@@ -81,7 +81,9 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 			if (!options?.manualStart) {
 				void this.record.start()
 			}
-			LDRecord.load(this.record)
+			// With `manualStart`, the SDK is attached but not started: calls
+			// keep buffering until `start()` runs.
+			LDRecord.load(this.record, { ready: !options?.manualStart })
 
 			if (
 				!options?.integrations?.mixpanel?.disabled &&

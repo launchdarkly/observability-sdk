@@ -6,17 +6,39 @@ import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { BufferedClass } from './buffer'
 
 class _LDRecord extends BufferedClass<Record> implements Record {
+	private _deferredStartOptions?: StartOptions
+
 	getSession(): SessionDetails | null {
-		return this._isLoaded ? this._bufferCall('getSession', []) : null
+		return this._isLoaded ? this._callSdk('getSession', []) : null
 	}
 
+	protected async _startSdk() {
+		await this._sdk.start(this._deferredStartOptions)
+		this._deferredStartOptions = undefined
+	}
+
+	// Never buffered: with `manualStart`, `start()` may run before the plugin
+	// has attached an SDK. It then stays pending and resolves once `load`
+	// attaches and starts the SDK.
 	async start(options?: StartOptions) {
-		// avoid buffering the start call
-		return this._sdk.start(options)
+		this._deferredStartOptions = options
+		if (!this._isLoaded) {
+			return this._deferStart()
+		}
+		try {
+			await this._startSdk()
+		} finally {
+			this.markReady()
+		}
 	}
 
+	// Never buffered, and never throws: before an SDK is attached it just
+	// cancels a start that has not run yet.
 	stop() {
-		// avoid buffering the stop call
+		if (!this._isLoaded) {
+			this._cancelPendingStart()
+			return
+		}
 		return this._sdk.stop()
 	}
 
@@ -26,13 +48,13 @@ class _LDRecord extends BufferedClass<Record> implements Record {
 
 	getRecordingState() {
 		return this._isLoaded
-			? this._bufferCall('getRecordingState', [])
+			? this._callSdk('getRecordingState', [])
 			: ('NotRecording' as const)
 	}
 
 	snapshot(element: HTMLCanvasElement) {
 		return this._isLoaded
-			? this._bufferCall('snapshot', [element])
+			? this._callSdk('snapshot', [element])
 			: Promise.resolve(undefined)
 	}
 

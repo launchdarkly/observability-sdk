@@ -84,7 +84,10 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 			if (!options?.manualStart) {
 				void this.observe.start()
 			}
-			LDObserve.load(this.observe)
+			// With `manualStart`, the SDK is attached but not started: telemetry
+			// keeps buffering until `start()` runs, so pre-start calls are
+			// delivered instead of being dropped.
+			LDObserve.load(this.observe, { ready: !options?.manualStart })
 		} catch (error) {
 			internalLog(
 				`Error initializing @launchdarkly/observability SDK`,

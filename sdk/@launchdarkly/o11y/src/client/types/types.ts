@@ -132,6 +132,13 @@ export type CommonOptions = {
 	/**
 	 * Specifies if Highlight should not automatically initialize when the class is created.
 	 * This should be used with `.start()` and `.stop()` if you want to control when Highlight records.
+	 *
+	 * While `start()` has not been called, calls that can be deferred (logs,
+	 * errors, metrics, `track`) are kept in memory and delivered once
+	 * `start()` runs. `start()` and `stop()` can safely be called before the
+	 * SDK has initialized: a start made too early resolves once the SDK is
+	 * attached. Calls that cannot be deferred (synchronous span callbacks) run
+	 * their callback on a no-op span while the SDK is not started.
 	 * @default false
 	 */
 	manualStart?: boolean
