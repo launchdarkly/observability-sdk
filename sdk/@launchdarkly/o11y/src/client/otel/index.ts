@@ -46,6 +46,7 @@ import {
 	NetworkRecordingOptions,
 	OtelInstrumentatonOptions,
 } from '../types/client'
+import { AggregationTemporalityPreference } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
 	OTLPMetricExporterBrowser,
 	OTLPTraceExporterBrowserWithXhrRetry,
@@ -215,10 +216,10 @@ export const setupBrowserTracing = (
 	})
 	api.trace.setGlobalTracerProvider(providers.tracerProvider)
 
-	const meterExporter = new OTLPMetricExporterBrowser({
-		...exporterOptions,
-		url: config.otlpEndpoint + '/v1/metrics',
-	})
+	const meterExporter = createMetricExporter(
+		exporterOptions,
+		config.otlpEndpoint + '/v1/metrics',
+	)
 	const reader = new PeriodicExportingMetricReader({
 		exporter: meterExporter,
 		exportIntervalMillis: exporterOptions.timeoutMillis,
@@ -581,6 +582,21 @@ type FlushableSpanProcessor = {
 // Setting skipPendingOnFlush on the span processor prevents forceFlush from
 // awaiting in-flight response-body reads — those won't finish before the page
 // freezes, and spans without body attributes are still worth keeping.
+// Counters and histograms are exported as deltas: each export carries only the
+// increments recorded since the previous one. A page load is a short-lived
+// stream, so cumulative totals would leave the backend nothing but a baseline
+// point for most series. Up-down counters stay cumulative and gauges are
+// unaffected, per the OTel DELTA preference.
+export const createMetricExporter = (
+	exporterOptions: TraceExporterConfig,
+	url: string,
+) =>
+	new OTLPMetricExporterBrowser({
+		...exporterOptions,
+		url,
+		temporalityPreference: AggregationTemporalityPreference.DELTA,
+	})
+
 export const registerFlushOnUnload = (
 	traceExporter: FlushableExporter,
 	metricExporter: FlushableExporter,
