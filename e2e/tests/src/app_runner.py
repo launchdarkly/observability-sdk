@@ -45,10 +45,11 @@ def run_and_poll(
     request: Optional[Callable[[], requests.Response]],
     pre: Optional[Callable[[], None]] = None,
     cwd: Optional[str] = None,
+    env: Optional[dict[str, str]] = None,
 ):
     if pre:
         pre()
-    proc = run(node_bin, args, cwd=cwd)
+    proc = run(node_bin, args, cwd=cwd, env=env)
     try:
         for _ in range(60):
             try:
@@ -179,6 +180,7 @@ def main():
             "dotnet",
             "dotnet4",
             "go",
+            "java-plugin-spring-boot",
             "python",
             "ruby",
         ],

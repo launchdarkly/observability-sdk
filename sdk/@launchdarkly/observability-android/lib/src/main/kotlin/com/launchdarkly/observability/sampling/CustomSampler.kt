@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.sampling
 
+import com.launchdarkly.observability.context.ObserveLogger
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.sdk.logs.data.LogRecordData
 import io.opentelemetry.sdk.trace.data.EventData
@@ -10,14 +11,26 @@ import kotlin.random.Random
 
 /*
  * Thread-safe regex cache. We use ConcurrentMap so multiple threads can update the cache safely without external locks.
+ * Each pattern is compiled at most once; a failed compilation is cached too, so an invalid pattern is reported once
+ * and then never matches.
  */
-typealias RegexCache = ConcurrentMap<String, Regex>
+internal typealias RegexCache = ConcurrentMap<String, CompiledRegex>
+
+/**
+ * Result of compiling a sampling regex. [regex] is null when the pattern is invalid.
+ */
+internal class CompiledRegex(val regex: Regex?)
 
 /**
  * Custom sampler that uses a sampling configuration to determine if a span should be sampled.
+ *
+ * Regex match configs use substring semantics (like the other LaunchDarkly observability SDKs): a pattern matches if it
+ * is found anywhere in the value, so anchors (`^`, `$`) must be used to require a full match. A pattern that fails to
+ * compile is logged once as a warning and the match config never matches; it never throws.
  */
 class CustomSampler(
-    private val sampler: (Int) -> Boolean = ::defaultSampler
+    private val sampler: (Int) -> Boolean = ::defaultSampler,
+    private val logger: ObserveLogger? = null,
 ) : ExportSampler {
 
     @Volatile
@@ -38,6 +51,15 @@ class CustomSampler(
         return config?.logs?.isNotEmpty() == true || config?.spans?.isNotEmpty() == true
     }
 
+    private fun compileRegex(pattern: String): CompiledRegex {
+        return try {
+            CompiledRegex(Regex(pattern))
+        } catch (e: IllegalArgumentException) { // PatternSyntaxException is a subclass
+            logger?.warn("Invalid sampling regex \"$pattern\"; rules using it will never match", e)
+            CompiledRegex(null)
+        }
+    }
+
     /**
      * Check if a value matches a match config.
      */
@@ -55,8 +77,8 @@ class CustomSampler(
                 if (value !is String) {
                     false
                 } else {
-                    val regex = regexCache.computeIfAbsent(matchConfig.pattern) { Regex(it) }
-                    regex.matches(value)
+                    val regex = regexCache.computeIfAbsent(matchConfig.pattern, ::compileRegex).regex
+                    regex?.containsMatchIn(value) ?: false
                 }
             }
         }

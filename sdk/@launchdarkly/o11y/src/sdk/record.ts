@@ -86,6 +86,7 @@ import { MessageType, PropertyType } from '../client/workers/types'
 import { IntegrationClient } from '../integrations'
 import { Record } from '../api/record'
 import { internalLog } from './util'
+import { sdkLog, setSdkDebugLogging } from '../client/utils/sdkLogger'
 import type { HighlightClassOptions } from '../client'
 import { Highlight } from '../client'
 import type { Hook, LDClient } from '../integrations/launchdarkly'
@@ -166,6 +167,9 @@ export class RecordSDK implements Record {
 			this.debugOptions = this.options?.debug ?? {}
 		}
 		this.logger = new Logger(this.debugOptions.clientInteractions)
+		if (this.options?.debug) {
+			setSdkDebugLogging(true)
+		}
 		this._worker =
 			new HighlightClientWorker() as HighlightClientRequestWorker
 		this._worker.onmessage = (e) => {
@@ -533,7 +537,8 @@ export class RecordSDK implements Record {
 					!this.sessionData.projectID ||
 					!this.sessionData.sessionSecureID
 				) {
-					console.error(
+					sdkLog(
+						'error',
 						'Failed to initialize Highlight; an error occurred on our end.',
 						this.sessionData,
 					)

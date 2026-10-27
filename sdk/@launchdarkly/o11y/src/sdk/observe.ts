@@ -83,7 +83,11 @@ import { recordException } from '../client/otel/recordException'
 import { ObserveOptions, ProductAnalyticsEvents } from '../client/types/observe'
 import { isMetricSafeNumber } from '../client/utils/utils'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
-import { sanitizeUrl } from '../client/listeners/network-listener/utils/network-sanitizer'
+import {
+	redactLaunchDarklyContext,
+	sanitizeUrl,
+} from '../client/listeners/network-listener/utils/network-sanitizer'
+import { setSdkDebugLogging } from '../client/utils/sdkLogger'
 
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
@@ -121,6 +125,9 @@ export class ObserveSDK implements Observe {
 	) {
 		this._options = options
 		this.organizationID = options.projectId
+		if (options.debug) {
+			setSdkDebugLogging(true)
+		}
 	}
 
 	private _productAnalyticsEvents(): ProductAnalyticsEvents {
@@ -242,8 +249,11 @@ export class ObserveSDK implements Observe {
 		trace?: StackTrace.StackFrame[],
 	) {
 		this.startSpan(LOG_SPAN_NAME, (span) => {
-			const msg =
-				typeof message === 'string' ? message : stringify(message)
+			// Defence in depth: whatever path the message took here, a
+			// LaunchDarkly SDK URL in it must not carry the evaluation context.
+			const msg = redactLaunchDarklyContext(
+				typeof message === 'string' ? message : stringify(message),
+			)
 			const stackTrace = trace
 				? trace.map((s) => s.toString()).join('\n')
 				: undefined
@@ -614,6 +624,8 @@ export class ObserveSDK implements Observe {
 						...ALL_CONSOLE_METHODS,
 					],
 					logger: 'console',
+					recordLaunchDarklySdkLogs:
+						this._options.recordLaunchDarklySdkLogs,
 					stringifyOptions: {
 						depthOfLimit: 10,
 						numOfKeysLimit: 100,

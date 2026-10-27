@@ -2,6 +2,8 @@ module dice
 
 go 1.25.0
 
+toolchain go1.26.10
+
 replace github.com/launchdarkly/observability-sdk/go => ../../go
 
 require (

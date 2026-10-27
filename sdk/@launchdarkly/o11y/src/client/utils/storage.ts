@@ -170,13 +170,19 @@ export const monkeyPatchLocalStorage = (
 	}) => void,
 ) => {
 	if (mode === 'sessionStorage') {
-		console.warn(
+		internalLogOnce(
+			'segment',
+			'sessionStorage',
+			'warn',
 			`highlight.io cannot use local storage; segment integration will not work`,
 		)
 		return
 	}
 	if (typeof window === 'undefined') {
-		console.warn(
+		internalLogOnce(
+			'segment',
+			'no-window',
+			'warn',
 			`highlight.io cannot use local storage (not a window); segment integration will not work`,
 		)
 		return

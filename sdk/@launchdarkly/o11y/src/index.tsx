@@ -52,6 +52,7 @@ import {
 	setupLaunchDarklyIntegration,
 } from './integrations/launchdarkly'
 import { IntegrationClient } from './integrations'
+import { sdkLog } from './client/utils/sdkLogger'
 
 enum MetricCategory {
 	Device = 'Device',
@@ -61,7 +62,7 @@ enum MetricCategory {
 }
 
 const HighlightWarning = (context: string, msg: any) => {
-	console.warn(`highlight.run warning: (${context}): `, msg)
+	sdkLog('warn', `highlight.run warning: (${context}): `, msg)
 }
 
 interface HighlightWindow extends Window {

@@ -1,3 +1,9 @@
+import { isSdkDebugLogging, withoutConsoleRecording } from './utils/sdkLogger'
+
+/**
+ * Per-component debug logger. Like `sdkLog`, its output is SDK-internal: it
+ * is written only in debug mode and never captured by the console recorder.
+ */
 export class Logger {
 	debug: boolean | undefined
 	name: string | undefined
@@ -7,21 +13,27 @@ export class Logger {
 		this.name = name
 	}
 
-	log(...data: any[]) {
-		if (this.debug) {
-			let prefix = `[${Date.now()}]`
-			if (this.name) {
-				prefix += ` - ${this.name}`
-			}
-			console.log.apply(console, [prefix, ...data])
-		}
-	}
-
-	warn(...data: any[]) {
+	private prefix() {
 		let prefix = `[${Date.now()}]`
 		if (this.name) {
 			prefix += ` - ${this.name}`
 		}
-		console.warn.apply(console, [prefix, ...data])
+		return prefix
+	}
+
+	log(...data: any[]) {
+		if (this.debug) {
+			withoutConsoleRecording(() =>
+				console.log.apply(console, [this.prefix(), ...data]),
+			)
+		}
+	}
+
+	warn(...data: any[]) {
+		if (this.debug || isSdkDebugLogging()) {
+			withoutConsoleRecording(() =>
+				console.warn.apply(console, [this.prefix(), ...data]),
+			)
+		}
 	}
 }

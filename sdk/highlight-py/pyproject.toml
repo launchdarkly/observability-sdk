@@ -73,6 +73,8 @@ opentelemetry-instrumentation-weaviate = "0.33.12"
 opentelemetry-instrumentation-wsgi = "0.49b2"
 urllib3 = "^2.6.3"
 requests = "^2.33.0"
+# >= 2026.10.19 drops the compromised eMudhra intermediates from the CA bundle.
+certifi = ">=2026.10.19"
 
 [tool.poetry.group.dev.dependencies]
 azure-functions = "^1"
