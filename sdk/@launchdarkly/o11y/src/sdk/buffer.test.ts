@@ -195,6 +195,53 @@ describe('LDObserve with manualStart', () => {
 		)
 	})
 
+	it('shares one sdk start between overlapping start() calls after registration', async () => {
+		const sdk = fakeObserveSDK()
+		let finishStart!: () => void
+		sdk.start.mockReturnValue(
+			new Promise<void>((resolve) => {
+				finishStart = resolve
+			}),
+		)
+		const observe = freshObserve()
+
+		// An early start() that load() honors, overlapping a later start().
+		const early = observe.start()
+		observe.load(sdk as unknown as ObserveSDK, { ready: false })
+		const late = observe.start()
+		const later = observe.start()
+
+		finishStart()
+		await Promise.all([early, late, later])
+		expect(sdk.start).toHaveBeenCalledTimes(1)
+	})
+
+	it('stops the sdk after a start that was in flight when stop() ran', async () => {
+		const sdk = fakeObserveSDK()
+		const calls: string[] = []
+		let finishStart!: () => void
+		sdk.start.mockImplementation(
+			() =>
+				new Promise<void>((resolve) => {
+					finishStart = () => {
+						calls.push('start')
+						resolve()
+					}
+				}),
+		)
+		sdk.stop.mockImplementation(() => calls.push('stop'))
+		const observe = freshObserve()
+
+		// stop() in the same turn as registration, while the deferred start runs.
+		const started = observe.start()
+		observe.load(sdk as unknown as ObserveSDK, { ready: false })
+		const stopped = observe.stop()
+
+		finishStart()
+		await Promise.all([started, stopped])
+		expect(calls).toEqual(['start', 'stop'])
+	})
+
 	it('passes a start() made after registration to the sdk', async () => {
 		const sdk = fakeObserveSDK()
 		const observe = freshObserve()
@@ -252,6 +299,33 @@ describe('LDRecord start/stop safety', () => {
 		expect(
 			(record as unknown as { _callBuffer: unknown[] })._callBuffer,
 		).toHaveLength(0)
+	})
+
+	it('stops the sdk after a start that was in flight when stop() ran', async () => {
+		const calls: string[] = []
+		let finishStart!: () => void
+		const start = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					finishStart = () => {
+						calls.push('start')
+						resolve()
+					}
+				}),
+		)
+		const stop = vi.fn(() => calls.push('stop'))
+		const record = freshRecord()
+
+		const started = record.start()
+		record.load({ start, stop } as never, { ready: false })
+		record.start()
+		record.stop()
+
+		finishStart()
+		await started
+		await Promise.resolve()
+		expect(start).toHaveBeenCalledTimes(1)
+		expect(calls).toEqual(['start', 'stop'])
 	})
 
 	it('cancels a pending start on stop() before registration', async () => {

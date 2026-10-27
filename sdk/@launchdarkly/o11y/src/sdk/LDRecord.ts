@@ -22,24 +22,13 @@ class _LDRecord extends BufferedClass<Record> implements Record {
 	// attaches and starts the SDK.
 	async start(options?: StartOptions) {
 		this._deferredStartOptions = options
-		if (!this._isLoaded) {
-			return this._deferStart()
-		}
-		try {
-			await this._startSdk()
-		} finally {
-			this.markReady()
-		}
+		return this._start()
 	}
 
 	// Never buffered, and never throws: before an SDK is attached it just
 	// cancels a start that has not run yet.
 	stop() {
-		if (!this._isLoaded) {
-			this._cancelPendingStart()
-			return
-		}
-		return this._sdk.stop()
+		void this._stop(() => this._sdk.stop())
 	}
 
 	addSessionProperties(properties: { [key: string]: any }) {

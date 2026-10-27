@@ -39,24 +39,13 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 	// has attached an SDK. It then stays pending and resolves once `load`
 	// attaches and starts the SDK.
 	async start() {
-		if (!this._isLoaded) {
-			return this._deferStart()
-		}
-		try {
-			await this._startSdk()
-		} finally {
-			this.markReady()
-		}
+		return this._start()
 	}
 
 	// Never buffered, and never throws: before an SDK is attached it just
 	// cancels a start that has not run yet.
 	async stop() {
-		if (!this._isLoaded) {
-			this._cancelPendingStart()
-			return
-		}
-		await this._sdk.stop()
+		await this._stop(() => this._sdk.stop())
 	}
 
 	recordGauge(metric: Metric) {
