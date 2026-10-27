@@ -285,6 +285,9 @@ export class InstrumentationManager {
 			if (sessionId) {
 				span.setAttribute('highlight.session_id', sessionId)
 			}
+			// The exception event is the single error record (the backend derives
+			// the error log row from it), so no separate error log is emitted.
+			span.setAttribute('log.source', 'react-native-plugin')
 			span.setStatus({ code: SpanStatusCode.ERROR })
 
 			if (attributes) {
@@ -294,18 +297,6 @@ export class InstrumentationManager {
 			if (!activeSpan) {
 				span.end()
 			}
-
-			this.recordLog(error.message, 'error', {
-				...attributes,
-				'exception.type': error.name,
-				'exception.message': error.message,
-				'exception.stacktrace': error.stack,
-				...(sessionId
-					? {
-							['highlight.session_id']: sessionId,
-						}
-					: {}),
-			})
 		} catch (e) {
 			console.error('Failed to record error:', e)
 		}
