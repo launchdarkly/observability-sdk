@@ -242,6 +242,36 @@ describe('LDObserve with manualStart', () => {
 		expect(calls).toEqual(['start', 'stop'])
 	})
 
+	it('starts the sdk again for a start() made after a stop() that is still waiting', async () => {
+		const sdk = fakeObserveSDK()
+		const calls: string[] = []
+		let finishStart!: () => void
+		sdk.start.mockImplementationOnce(
+			() =>
+				new Promise<void>((resolve) => {
+					finishStart = () => {
+						calls.push('start')
+						resolve()
+					}
+				}),
+		)
+		sdk.start.mockImplementation(() => calls.push('start'))
+		sdk.stop.mockImplementation(() => calls.push('stop'))
+		const observe = freshObserve()
+
+		// start -> stop -> start while the first start is still running: the
+		// last call wins, so the sdk must end up started.
+		observe.load(sdk as unknown as ObserveSDK, { ready: false })
+		const first = observe.start()
+		const stopped = observe.stop()
+		const second = observe.start()
+		const third = observe.start()
+
+		finishStart()
+		await Promise.all([first, stopped, second, third])
+		expect(calls).toEqual(['start', 'stop', 'start'])
+	})
+
 	it('passes a start() made after registration to the sdk', async () => {
 		const sdk = fakeObserveSDK()
 		const observe = freshObserve()
@@ -326,6 +356,39 @@ describe('LDRecord start/stop safety', () => {
 		await Promise.resolve()
 		expect(start).toHaveBeenCalledTimes(1)
 		expect(calls).toEqual(['start', 'stop'])
+	})
+
+	it('applies a start() made after a waiting stop(), with its options', async () => {
+		const calls: unknown[] = []
+		let finishStart!: () => void
+		const start = vi.fn()
+		start.mockImplementationOnce(
+			(options?: unknown) =>
+				new Promise<void>((resolve) => {
+					finishStart = () => {
+						calls.push(['start', options])
+						resolve()
+					}
+				}),
+		)
+		start.mockImplementation((options?: unknown) =>
+			calls.push(['start', options]),
+		)
+		const stop = vi.fn(() => calls.push('stop'))
+		const record = freshRecord()
+
+		record.load({ start, stop } as never, { ready: false })
+		const first = record.start()
+		record.stop()
+		const second = record.start({ forceNew: true })
+
+		finishStart()
+		await Promise.all([first, second])
+		expect(calls).toEqual([
+			['start', undefined],
+			'stop',
+			['start', { forceNew: true }],
+		])
 	})
 
 	it('cancels a pending start on stop() before registration', async () => {

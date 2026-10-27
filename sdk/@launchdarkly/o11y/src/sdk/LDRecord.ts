@@ -13,8 +13,11 @@ class _LDRecord extends BufferedClass<Record> implements Record {
 	}
 
 	protected async _startSdk() {
-		await this._sdk.start(this._deferredStartOptions)
+		// Take the options before awaiting so a start queued meanwhile keeps
+		// its own options.
+		const options = this._deferredStartOptions
 		this._deferredStartOptions = undefined
+		await this._sdk.start(options)
 	}
 
 	// Never buffered: with `manualStart`, `start()` may run before the plugin

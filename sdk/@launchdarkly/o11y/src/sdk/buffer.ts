@@ -29,8 +29,11 @@ export class BufferedClass<T extends object> {
 	protected _exceededCapacity: boolean = false
 	protected _logger = new Logger()
 	private _pendingStart?: PendingStart
-	/** The attached SDK's start while it runs, shared by overlapping callers. */
-	private _inFlightStart?: Promise<void>
+	/**
+	 * The last start or stop queued on the attached SDK while it runs. Starts
+	 * and stops run in call order, so the final state follows the last call.
+	 */
+	private _lastOp?: { kind: 'start' | 'stop'; promise: Promise<unknown> }
 
 	protected _bufferCall(method: string, args: any[]) {
 		if (this._isReady) {
@@ -105,39 +108,57 @@ export class BufferedClass<T extends object> {
 
 	/**
 	 * Starts the attached SDK and drains the buffer. Before `load` the start
-	 * is deferred; while a start is already running, callers share it rather
-	 * than starting the SDK a second time.
+	 * is deferred. Starts and stops run in call order: a start made while a
+	 * stop is queued runs after that stop, while overlapping starts with no
+	 * stop between them share one SDK start.
 	 */
 	protected _start(): Promise<void> {
 		if (!this._isLoaded) {
 			return this._deferStart()
 		}
-		if (!this._inFlightStart) {
-			this._inFlightStart = (async () => {
-				try {
-					await this._startSdk()
-				} finally {
-					this._inFlightStart = undefined
-					this.markReady()
-				}
-			})()
+		if (this._lastOp?.kind === 'start') {
+			return this._lastOp.promise as Promise<void>
 		}
-		return this._inFlightStart
+		return this._queueOp('start', async () => {
+			try {
+				await this._startSdk()
+			} finally {
+				this.markReady()
+			}
+		})
 	}
 
 	/**
 	 * Stops the attached SDK. Before `load` it cancels a deferred start; while
-	 * a start is running it waits for it, so the start cannot undo the stop.
+	 * a start or stop is running it waits for it, so an earlier start cannot
+	 * undo the stop.
 	 */
 	protected _stop<R>(stopSdk: () => R): R | Promise<R> | undefined {
 		if (!this._isLoaded) {
 			this._cancelPendingStart()
 			return undefined
 		}
-		if (this._inFlightStart) {
-			return this._inFlightStart.then(stopSdk, stopSdk)
+		if (this._lastOp) {
+			return this._queueOp('stop', async () => stopSdk())
 		}
 		return stopSdk()
+	}
+
+	/** Runs `op` once the previously queued start or stop has settled. */
+	private _queueOp<R>(
+		kind: 'start' | 'stop',
+		op: () => Promise<R>,
+	): Promise<R> {
+		const previous = this._lastOp?.promise
+		const promise = (previous ? previous.then(op, op) : op()).finally(
+			() => {
+				if (this._lastOp?.promise === promise) {
+					this._lastOp = undefined
+				}
+			},
+		)
+		this._lastOp = { kind, promise }
+		return promise
 	}
 
 	/**
