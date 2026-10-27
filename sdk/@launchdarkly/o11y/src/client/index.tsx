@@ -107,6 +107,7 @@ import {
 	getItem,
 	LocalStorageKeys,
 	removeItem,
+	setCookieDomain,
 	setCookieWriteEnabled,
 	setItem,
 	setStorageMode,
@@ -181,6 +182,7 @@ export type HighlightClassOptions = {
 	sessionSecureID: string // Introduced in firstLoad 3.0.1
 	storageMode?: 'sessionStorage' | 'localStorage'
 	sessionCookie?: boolean
+	sessionCookieDomain?: string
 	sendMode?: 'webworker' | 'local'
 	otlpEndpoint?: HighlightOptions['otlpEndpoint']
 	otel?: HighlightOptions['otel']
@@ -286,6 +288,7 @@ export class Highlight {
 			setStorageMode(options.storageMode)
 		}
 		setCookieWriteEnabled(!!options?.sessionCookie)
+		setCookieDomain(options?.sessionCookieDomain)
 
 		this._worker =
 			new HighlightClientWorker() as HighlightClientRequestWorker
