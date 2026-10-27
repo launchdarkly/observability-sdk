@@ -13,10 +13,9 @@ repositories {
     mavenCentral()
 }
 
-java {
-    // Spring Boot 3 needs Java 17. The plugin itself targets Java 11.
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+// Spring Boot 3 needs Java 17. The plugin itself targets Java 11.
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
 }
 
 // The plugin version comes from the SDK's gradle.properties, which

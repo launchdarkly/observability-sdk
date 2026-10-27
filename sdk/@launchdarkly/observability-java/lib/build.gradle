@@ -9,10 +9,14 @@ repositories {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
     withJavadocJar()
     withSourcesJar()
+}
+
+// --release compiles against the Java 11 API, not just Java 11 bytecode, so
+// a build on JDK 17 or 21 cannot call an API that Java 11 lacks.
+tasks.withType(JavaCompile).configureEach {
+    options.release = 11
 }
 
 // Name the jars after the Maven artifactId, so the provenance subjects
