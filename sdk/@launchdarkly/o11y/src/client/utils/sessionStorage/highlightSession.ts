@@ -64,6 +64,13 @@ const getSessionData = (sessionID: string): SessionData | undefined => {
 	return storedSessionData as SessionData
 }
 
+// Deterministic sessionKey sessions are exempt, matching the replay reset in
+// RecordSDK._save.
+const exceedsMaxSessionLength = (sessionData: SessionData, now: number) =>
+	!sessionData.sessionKey &&
+	!!sessionData.sessionStartTime &&
+	now - sessionData.sessionStartTime > MAX_SESSION_LENGTH
+
 export const getPreviousSessionData = (
 	sessionID?: string,
 ): SessionData | undefined => {
@@ -74,7 +81,9 @@ export const getPreviousSessionData = (
 	if (
 		storedSessionData &&
 		storedSessionData.lastPushTime &&
-		Date.now() - storedSessionData.lastPushTime < SESSION_PUSH_THRESHOLD
+		Date.now() - storedSessionData.lastPushTime < SESSION_PUSH_THRESHOLD &&
+		// A recent push does not extend a session past its maximum length.
+		!exceedsMaxSessionLength(storedSessionData, Date.now())
 	) {
 		return storedSessionData as SessionData
 	} else {
@@ -114,11 +123,7 @@ export const touchSession = (): void => {
 		if (!sessionData?.sessionSecureID) {
 			return
 		}
-		if (
-			!sessionData.sessionKey &&
-			sessionData.sessionStartTime &&
-			now - sessionData.sessionStartTime > MAX_SESSION_LENGTH
-		) {
+		if (exceedsMaxSessionLength(sessionData, now)) {
 			removeItem(getSessionDataKey(sessionData.sessionSecureID))
 			return
 		}

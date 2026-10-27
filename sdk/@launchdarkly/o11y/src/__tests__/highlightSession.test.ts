@@ -229,6 +229,20 @@ describe('touchSession', () => {
 		expect(nextLoad?.sessionSecureID).not.toBe(firstLoad?.sessionSecureID)
 	})
 
+	it('rotates a session reloaded just past the 4-hour maximum before a touch dropped it', () => {
+		const firstLoad = startSessionPageLoad()
+
+		// The last touch lands just before the maximum; the reload comes just
+		// after it, before any telemetry on the old page could drop the data.
+		advance(4 * 60 * 60 * 1000 - 5 * 1000)
+		touchSession()
+		advance(10 * 1000)
+
+		const nextLoad = startSessionPageLoad()
+		expect(nextLoad?.sessionSecureID).toBeDefined()
+		expect(nextLoad?.sessionSecureID).not.toBe(firstLoad?.sessionSecureID)
+	})
+
 	it('keeps a sessionKey session past the 4-hour maximum, like the replay reset', () => {
 		const firstLoad = startSessionPageLoad({ sessionKey: 'sign-up-funnel' })
 
