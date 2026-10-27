@@ -16,6 +16,7 @@ import {
 	setCookieDomain,
 	setCookieWriteEnabled,
 } from './storage'
+import { Plugin } from '../../plugins/common'
 
 describe('cookieStorage sessionCookieDomain', () => {
 	beforeEach(() => {
@@ -80,5 +81,29 @@ describe('cookieStorage sessionCookieDomain', () => {
 		setCookieDomain('example.com')
 		cookieStorage.setItem('key', 'value')
 		expect(setMock).not.toHaveBeenCalled()
+	})
+})
+
+describe('plugin sessionCookieDomain', () => {
+	beforeEach(() => {
+		setMock.mockClear()
+		setCookieDomain(undefined)
+	})
+
+	afterEach(() => {
+		setCookieDomain(undefined)
+	})
+
+	it('keeps a configured domain when a later plugin does not set one', () => {
+		new Plugin({ sessionCookie: true, sessionCookieDomain: 'example.com' })
+		new Plugin({ sessionCookie: true })
+
+		setMock.mockClear()
+		cookieStorage.setItem('key', 'value')
+		expect(setMock).toHaveBeenCalledWith(
+			'key',
+			'value',
+			expect.objectContaining({ domain: 'example.com' }),
+		)
 	})
 })

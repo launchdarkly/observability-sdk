@@ -288,7 +288,11 @@ export class Highlight {
 			setStorageMode(options.storageMode)
 		}
 		setCookieWriteEnabled(!!options?.sessionCookie)
-		setCookieDomain(options?.sessionCookieDomain)
+		// Only override when set, so options without a domain (e.g. a second
+		// plugin) keep a domain configured earlier.
+		if (options?.sessionCookieDomain !== undefined) {
+			setCookieDomain(options.sessionCookieDomain)
+		}
 
 		this._worker =
 			new HighlightClientWorker() as HighlightClientRequestWorker
