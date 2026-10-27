@@ -17,6 +17,7 @@ import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongUpDownCounter;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.metrics.MeterProvider;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.TracerProvider;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
@@ -36,6 +37,7 @@ import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
 import io.opentelemetry.sdk.resources.Resource;
+import io.opentelemetry.sdk.trace.ReadableSpan;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
@@ -78,6 +80,7 @@ public final class OtelManager {
     private final SdkLoggerProvider loggerProvider;
     private final SdkMeterProvider meterProvider;
     private final OpenTelemetrySdk openTelemetrySdk;
+    private final Resource resource;
     private final Tracer tracer;
     private final Logger logger;
     private final Meter meter;
@@ -95,12 +98,14 @@ public final class OtelManager {
             SdkLoggerProvider loggerProvider,
             SdkMeterProvider meterProvider,
             OpenTelemetrySdk openTelemetrySdk,
+            Resource resource,
             CustomSampler customSampler
     ) {
         this.tracerProvider = tracerProvider;
         this.loggerProvider = loggerProvider;
         this.meterProvider = meterProvider;
         this.openTelemetrySdk = openTelemetrySdk;
+        this.resource = resource;
         this.customSampler = customSampler;
 
         this.tracer = openTelemetrySdk.getTracer(
@@ -315,7 +320,7 @@ public final class OtelManager {
         }
 
         OtelManager manager = new OtelManager(
-                tracerProvider, loggerProvider, meterProvider, sdk, customSampler);
+                tracerProvider, loggerProvider, meterProvider, sdk, resource, customSampler);
 
         // One line at startup, like the LaunchDarkly SDK's own, so a user
         // can see where telemetry goes and under which service name.
@@ -442,6 +447,20 @@ public final class OtelManager {
             return manager.openTelemetrySdk.getTracer(instrumentationScopeName);
         }
         return OpenTelemetry.noop().getTracer(instrumentationScopeName);
+    }
+
+    /**
+     * Whether the span was started by the plugin's own tracer provider, so
+     * it is exported to LaunchDarkly. A span from the Java agent or the
+     * application's own SDK is not: anything recorded on it goes to that
+     * provider's exporter instead.
+     */
+    public static boolean ownsSpan(Span span) {
+        OtelManager manager = INSTANCE.get();
+        // Spans share their provider's Resource instance.
+        return manager != null
+                && span instanceof ReadableSpan
+                && ((ReadableSpan) span).toSpanData().getResource() == manager.resource;
     }
 
     public static Logger getLogger() {

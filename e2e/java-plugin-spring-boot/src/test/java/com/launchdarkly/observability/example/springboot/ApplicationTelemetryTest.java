@@ -108,7 +108,8 @@ class ApplicationTelemetryTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody()).isEqualTo("error: random error from the Spring Boot example\n");
 
-        awaitExported(TRACES, "highlight.error", "java.lang.IllegalStateException",
+        // Recorded as an exception event on the filter's request span.
+        awaitExported(TRACES, "GET /error", "java.lang.IllegalStateException",
                 "random error from the Spring Boot example", "exception.stacktrace");
         awaitExported(LOGS, "GET /error -> 500", "ERROR");
     }

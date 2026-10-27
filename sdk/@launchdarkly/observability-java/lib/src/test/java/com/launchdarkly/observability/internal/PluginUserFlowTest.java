@@ -220,6 +220,63 @@ class PluginUserFlowTest {
     }
 
     @Test
+    void recordErrorInsidePluginSpanAddsExceptionToThatSpan() throws Exception {
+        startCollector();
+        LDObserve.start("sdk-test", options(true));
+
+        Span request = LDObserve.startSpan("GET /checkout", Attributes.empty());
+        try (Scope ignored = request.makeCurrent()) {
+            LDObserve.recordError(new IllegalStateException("payment declined"),
+                    Attributes.of(AttributeKey.stringKey("order.id"), "order-42"));
+        } finally {
+            request.end();
+        }
+        LDObserve.flush();
+
+        assertTrue(payloadContains(traces, "GET /checkout"), "request span was not exported: " + summarize(traces));
+        assertTrue(payloadContains(traces, "payment declined"), "exception was not recorded: " + summarize(traces));
+        assertTrue(payloadContains(traces, "order-42"), "attributes were not recorded on the exception event");
+        assertFalse(payloadContains(traces, Constants.ERROR_SPAN_NAME),
+                "recordError started a separate error span instead of using the current span");
+    }
+
+    @Test
+    void recordErrorInsideForeignSpanExportsErrorSpanInSameTrace() throws Exception {
+        // The application (or the OpenTelemetry Java agent) owns the current
+        // span; an exception recorded on it would never reach LaunchDarkly.
+        InMemorySpanExporter appExporter = InMemorySpanExporter.create();
+        SdkTracerProvider appTracerProvider = SdkTracerProvider.builder()
+                .addSpanProcessor(SimpleSpanProcessor.create(appExporter))
+                .build();
+        OpenTelemetrySdk appSdk = OpenTelemetrySdk.builder()
+                .setTracerProvider(appTracerProvider)
+                .buildAndRegisterGlobal();
+
+        startCollector();
+        LDObserve.start("sdk-test", options(true));
+
+        try {
+            Span request = appSdk.getTracer("app").spanBuilder("GET /checkout").startSpan();
+            try (Scope ignored = request.makeCurrent()) {
+                LDObserve.recordError(new IllegalStateException("payment declined"), Attributes.empty());
+            } finally {
+                request.end();
+            }
+            LDObserve.flush();
+
+            assertTrue(payloadContains(traces, Constants.ERROR_SPAN_NAME),
+                    "error span was not exported to LaunchDarkly: " + summarize(traces));
+            assertTrue(payloadContains(traces, "payment declined"));
+            assertTrue(rawPayloadContains(rawTraces, request.getSpanContext().getTraceIdBytes()),
+                    "error span is not in the application's trace");
+            assertTrue(appExporter.getFinishedSpanItems().get(0).getEvents().isEmpty(),
+                    "the exception went to the application's span instead of LaunchDarkly");
+        } finally {
+            appTracerProvider.shutdown();
+        }
+    }
+
+    @Test
     void flagEvaluationExportsUnderApplicationOwnedGlobal() throws Exception {
         // The application (or the OpenTelemetry Java agent) owns the global.
         InMemorySpanExporter appExporter = InMemorySpanExporter.create();

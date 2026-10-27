@@ -80,10 +80,19 @@ public final class LDObserve {
     }
 
     /**
-     * Records an error as a span with exception details.
+     * Records an error with exception details. Like the other LaunchDarkly
+     * server SDKs, an error inside a span the plugin exports is added to that
+     * span as an exception event, with {@code attributes} on the event.
+     * Otherwise it is recorded on a new error span, a child of the current
+     * span if there is one.
      */
     public static void recordError(Throwable throwable, Attributes attributes) {
         if (throwable == null) {
+            return;
+        }
+        Span current = Span.current();
+        if (current.isRecording() && OtelManager.ownsSpan(current)) {
+            current.recordException(throwable, orEmpty(attributes));
             return;
         }
         Tracer tracer = OtelManager.getTracer();

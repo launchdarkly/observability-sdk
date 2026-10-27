@@ -240,7 +240,8 @@ LDObserve.recordMetric("queue.depth", 12.0, Attributes.empty());
 // Record logs
 LDObserve.recordLog("User logged in", Severity.INFO, Attributes.empty());
 
-// Record errors
+// Record errors: added to the current span if the plugin started it,
+// otherwise recorded on a new error span
 LDObserve.recordError(exception, Attributes.empty());
 
 // Create spans
