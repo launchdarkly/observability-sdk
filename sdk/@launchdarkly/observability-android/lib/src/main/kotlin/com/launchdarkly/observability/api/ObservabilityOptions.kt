@@ -5,8 +5,6 @@ import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.context.LDObserveLogging
 import com.launchdarkly.observability.context.ObserveLogAdapter
 import io.opentelemetry.api.common.Attributes
-import io.opentelemetry.sdk.logs.LogRecordProcessor
-import io.opentelemetry.sdk.trace.SpanProcessor
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -39,12 +37,6 @@ const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
  * @property telemetryInspector Optional [TelemetryInspector] for intercepting exported telemetry during testing.
  *   When provided together with [debug] = true, the inspector's exporters are wired into composite
  *   exporters so that test code can assert on the data that flows through the SDK.
- * @property spanProcessors Additional [SpanProcessor]s, invoked in order after global attributes are
- *   applied and before the SDK's own sampling and export. Attributes they set on a span are
- *   exported. Exceptions they throw are logged and swallowed. Defaults to none.
- * @property logProcessors Additional [LogRecordProcessor]s, invoked in order after global
- *   attributes are applied and before the SDK's own sampling and export. Attributes they set on a
- *   log record are exported. Exceptions they throw are logged and swallowed. Defaults to none.
  */
 data class ObservabilityOptions(
     val enabled: Boolean = true,
@@ -65,8 +57,6 @@ data class ObservabilityOptions(
     val logAdapter: ObserveLogAdapter = LDObserveLogging.adapter(),
     val loggerName: String = "LaunchDarklyObservabilityPlugin",
     val telemetryInspector: TelemetryInspector? = null,
-    val spanProcessors: List<SpanProcessor> = emptyList(),
-    val logProcessors: List<LogRecordProcessor> = emptyList(),
 ){
     /**
      * Options for configuring traces.
@@ -323,8 +313,6 @@ data class ObservabilityOptions(
         fun logAdapter(logAdapter: ObserveLogAdapter) = apply { options = options.copy(logAdapter = logAdapter) }
         fun loggerName(loggerName: String) = apply { options = options.copy(loggerName = loggerName) }
         fun telemetryInspector(telemetryInspector: TelemetryInspector?) = apply { options = options.copy(telemetryInspector = telemetryInspector) }
-        fun spanProcessors(spanProcessors: List<SpanProcessor>) = apply { options = options.copy(spanProcessors = spanProcessors) }
-        fun logProcessors(logProcessors: List<LogRecordProcessor>) = apply { options = options.copy(logProcessors = logProcessors) }
 
         fun build() = options
     }

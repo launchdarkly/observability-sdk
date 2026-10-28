@@ -433,52 +433,6 @@ LDObserve.removeAttributes(listOf("app.flavor"))
 - **Reserved keys:** SDK-managed session keys (`session.id`, `highlight.session_id`) are
   ignored and a warning is logged.
 
-### Custom Span and Log Processors
-
-Pass your own OpenTelemetry `SpanProcessor`s and `LogRecordProcessor`s at initialization to
-inspect, enrich, or redact telemetry before it is exported:
-
-```kotlin
-import com.launchdarkly.observability.api.ObservabilityOptions
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.context.Context
-import io.opentelemetry.sdk.logs.LogRecordProcessor
-import io.opentelemetry.sdk.logs.ReadWriteLogRecord
-import io.opentelemetry.sdk.trace.ReadWriteSpan
-import io.opentelemetry.sdk.trace.ReadableSpan
-import io.opentelemetry.sdk.trace.SpanProcessor
-
-class BuildFlavorSpanProcessor : SpanProcessor {
-    override fun onStart(parentContext: Context, span: ReadWriteSpan) {
-        span.setAttribute(AttributeKey.stringKey("build.flavor"), BuildConfig.FLAVOR)
-    }
-    override fun isStartRequired() = true
-    override fun onEnd(span: ReadableSpan) {}
-    override fun isEndRequired() = false
-}
-
-class RedactEmailLogProcessor : LogRecordProcessor {
-    override fun onEmit(context: Context, logRecord: ReadWriteLogRecord) {
-        if (logRecord.getAttribute(AttributeKey.stringKey("user.email")) != null) {
-            logRecord.setAttribute(AttributeKey.stringKey("user.email"), "[redacted]")
-        }
-    }
-}
-
-val options = ObservabilityOptions(
-    spanProcessors = listOf(BuildFlavorSpanProcessor()),
-    logProcessors = listOf(RedactEmailLogProcessor()),
-)
-```
-
-Java callers can use `ObservabilityOptions.builder().spanProcessors(...).logProcessors(...)`.
-
-Processors run in this order: global attributes, then your processors in the order given,
-then the SDK's own sampling and export processors. Your processors therefore see global
-attributes, and attributes they set are exported. An exception thrown by one of your
-processors (including from `forceFlush` / `shutdown`, which are forwarded) is logged and
-swallowed, so it cannot crash the app or stop export.
-
 ### Deobfuscating Release Stack Traces
 
 R8 shrinks and obfuscates release builds, so a crash or a recorded error arrives naming
