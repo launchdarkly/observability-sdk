@@ -83,7 +83,23 @@ jobs:
         with:
             base64-subjects: '${{ needs.release-python-plugin.outputs.package-hashes }}'
             upload-assets: true
+            draft-release: true
             upload-tag-name: ${{ needs.release-package.outputs.python-plugin-tag-name }}
+
+    # The release is created as a draft so provenance can be attached before
+    # it is published; once published, an immutable release takes no assets.
+    release-python-publish-release:
+        needs: ['release-package', 'release-python-provenance']
+        if: ${{ needs.release-package.outputs.python-plugin-released == 'true' }}
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Publish the GitHub release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG_NAME: ${{ needs.release-package.outputs.python-plugin-tag-name }}
+              run: gh release edit "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
 
     release-android-plugin:
         runs-on: ubuntu-latest
@@ -134,7 +150,21 @@ jobs:
         with:
             base64-subjects: '${{ needs.release-java-plugin.outputs.package-hashes }}'
             upload-assets: true
+            draft-release: true
             upload-tag-name: ${{ needs.release-package.outputs.java-plugin-tag-name }}
+
+    release-java-publish-release:
+        needs: ['release-package', 'release-java-provenance']
+        if: ${{ needs.release-package.outputs.java-plugin-released == 'true' }}
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Publish the GitHub release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG_NAME: ${{ needs.release-package.outputs.java-plugin-tag-name }}
+              run: gh release edit "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
 
     release-dotnet-plugin:
         runs-on: ubuntu-latest
@@ -175,7 +205,21 @@ jobs:
         with:
             base64-subjects: '${{ needs.release-dotnet-plugin.outputs.package-hashes }}'
             upload-assets: true
+            draft-release: true
             upload-tag-name: ${{ needs.release-package.outputs.dotnet-plugin-tag-name }}
+
+    release-dotnet-publish-release:
+        needs: ['release-package', 'release-dotnet-sdk-provenance']
+        if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Publish the GitHub release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG_NAME: ${{ needs.release-package.outputs.dotnet-plugin-tag-name }}
+              run: gh release edit "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
 
     release-ruby-plugin:
         runs-on: ubuntu-latest
@@ -208,7 +252,21 @@ jobs:
         with:
             base64-subjects: '${{ needs.release-ruby-plugin.outputs.package-hashes }}'
             upload-assets: true
+            draft-release: true
             upload-tag-name: ${{ needs.release-package.outputs.ruby-plugin-tag-name }}
+
+    release-ruby-publish-release:
+        needs: ['release-package', 'release-ruby-provenance']
+        if: ${{ needs.release-package.outputs.ruby-plugin-released == 'true' }}
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Publish the GitHub release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG_NAME: ${{ needs.release-package.outputs.ruby-plugin-tag-name }}
+              run: gh release edit "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
 
     # NOTE: Flutter publishing is handled by .github/workflows/flutter-observability-publish.yml,
     # which is triggered by the git tag that release-please creates. This mirrors the
