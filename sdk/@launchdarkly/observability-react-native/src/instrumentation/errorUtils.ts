@@ -1,5 +1,6 @@
 import { Attributes } from '@opentelemetry/api'
-import { AppState, Platform } from 'react-native'
+import { AppState } from 'react-native'
+import { getPlatformErrorAttributes } from '../utils/platformAttributes'
 import {
 	ErrorContext,
 	ErrorType,
@@ -32,26 +33,9 @@ export function formatError(
 		'error.source': source,
 		'error.fatal': isFatal,
 		'app.state': context.appState,
-		'platform.os': Platform.OS,
-		'platform.version': Platform.Version,
-	}
-
-	// Add React Native specific attributes
-	if (Platform.OS === 'ios') {
-		attributes['platform.ios.model'] = (Platform as any).constants?.Model
-		attributes['platform.ios.system_name'] = (
-			Platform as any
-		).constants?.systemName
-	} else if (Platform.OS === 'android') {
-		attributes['platform.android.brand'] = (
-			Platform as any
-		).constants?.Brand
-		attributes['platform.android.model'] = (
-			Platform as any
-		).constants?.Model
-		attributes['platform.android.release'] = (
-			Platform as any
-		).constants?.Release
+		// Legacy `platform.*` names, kept on error rows for back-compat. The same
+		// values also live on the Resource as `os.*` / `device.*` attributes.
+		...getPlatformErrorAttributes(),
 	}
 
 	// Add component stack if available
