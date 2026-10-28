@@ -91,6 +91,42 @@ export const getPreviousSessionData = (
 	}
 }
 
+/**
+ * Reads the stored record for a session (defaulting to the stored session
+ * ID) whether or not it is expired, without pruning it. Used when a page
+ * load cannot resume the stored session: getPreviousSessionData removes an
+ * expired record when it is read, and the expired record's ID is what links
+ * the replacement session to the one it replaced.
+ */
+export const getStoredSessionData = (
+	sessionID?: string,
+): SessionData | undefined => {
+	const secureID = sessionID ?? getSessionSecureID()
+	if (!secureID) {
+		return undefined
+	}
+	try {
+		return getSessionData(secureID)
+	} catch {
+		return undefined
+	}
+}
+
+/**
+ * The session the current page load's session replaced, when a new session
+ * was created in place of a stored one. Set while configuring the session;
+ * the span processor reads it to stamp `session.previous_id` on the new
+ * session's telemetry so related sessions can be chained in analysis.
+ */
+let previousSessionSecureID: string | undefined
+
+export const getPreviousSessionSecureID = (): string | undefined =>
+	previousSessionSecureID
+
+export const setPreviousSessionSecureID = (secureID?: string): void => {
+	previousSessionSecureID = secureID
+}
+
 // Only session replay has a push loop that refreshes `lastPushTime`
 // (RecordSDK._save). Everything an observe-only session does while the user
 // is active goes out through telemetry, so telemetry must refresh it too —
