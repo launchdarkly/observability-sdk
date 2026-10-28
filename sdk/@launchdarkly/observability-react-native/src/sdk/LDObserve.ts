@@ -1,5 +1,6 @@
 import {
 	Attributes,
+	AttributeValue,
 	context,
 	Context,
 	Span as OtelSpan,
@@ -98,6 +99,16 @@ class LDObserveClass
 
 	recordLog(message: any, level: string, attributes?: Attributes): void {
 		return this._bufferCall('recordLog', [message, level, attributes])
+	}
+
+	setAttributes(
+		attributes: Record<string, AttributeValue | null | undefined>,
+	): void {
+		return this._bufferCall('setAttributes', [attributes])
+	}
+
+	removeAttributes(keys: string[]): void {
+		return this._bufferCall('removeAttributes', [keys])
 	}
 
 	track(
