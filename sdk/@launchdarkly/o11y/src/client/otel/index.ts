@@ -15,11 +15,13 @@ import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xm
 import { Resource } from '@opentelemetry/resources'
 import {
 	BatchSpanProcessor,
+	type BufferConfig,
 	ConsoleSpanExporter,
 	PropagateTraceHeaderCorsUrls,
 	ReadableSpan,
 	SimpleSpanProcessor,
 	Span as SDKSpan,
+	type SpanExporter,
 	StackContextManager,
 	WebTracerProvider,
 } from '@opentelemetry/sdk-trace-web'
@@ -94,6 +96,7 @@ export type BrowserTracingConfig = {
 	getIntegrations?: () => IntegrationClient[]
 	productAnalyticsEvents?: ProductAnalyticsEvents
 	getLDContextKeyAttributes?: () => Attributes | undefined
+	getGlobalAttributes?: () => Attributes
 }
 
 let providers: {
@@ -188,12 +191,19 @@ export const setupBrowserTracing = (
 	)
 
 	// https://opentelemetry.io/docs/specs/otel/logs/sdk/
-	const spanProcessor = new CustomBatchSpanProcessor(exporter, {
-		maxExportBatchSize: 1024, // Default value from SDK is 512
-		maxQueueSize: 2048, // Default value from SDK is 2048
-		exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value from SDK is 30_000
-		scheduledDelayMillis: 5_000, // OTEL default; shorter window reduces data lost to page unload
-	})
+	const spanProcessor = new CustomBatchSpanProcessor(
+		exporter,
+		{
+			maxExportBatchSize: 1024, // Default value from SDK is 512
+			maxQueueSize: 2048, // Default value from SDK is 2048
+			exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value from SDK is 30_000
+			scheduledDelayMillis: 5_000, // OTEL default; shorter window reduces data lost to page unload
+		},
+		() => [
+			config.getLDContextKeyAttributes?.(),
+			config.getGlobalAttributes?.(),
+		],
+	)
 
 	const resource = new Resource({
 		[SemanticAttributes.ATTR_SERVICE_NAME]:
@@ -259,17 +269,12 @@ export const setupBrowserTracing = (
 		instrumentations.push(
 			new UserInteractionInstrumentation({
 				productAnalyticsEvents: config.productAnalyticsEvents,
-				getLDContextKeyAttributes: config.getLDContextKeyAttributes,
 			}),
 		)
 	}
 
 	if (config.productAnalyticsEvents?.pageViews !== false) {
-		instrumentations.push(
-			new LocationChangeInstrumentation({
-				getLDContextKeyAttributes: config.getLDContextKeyAttributes,
-			}),
-		)
+		instrumentations.push(new LocationChangeInstrumentation())
 	}
 
 	if (config.networkRecordingOptions?.enabled) {
@@ -647,7 +652,7 @@ export const registerFlushOnUnload = (
 	}
 }
 
-class CustomBatchSpanProcessor extends BatchSpanProcessor {
+export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private _pendingSpans = new Set<Promise<void>>()
 	// When set, forceFlush/shutdown return immediately without waiting for
 	// in-flight response-body reads. Used on page unload where waiting risks
@@ -658,8 +663,32 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 		this._skipPendingOnFlush = skip
 	}
 
+	constructor(
+		exporter: SpanExporter,
+		config?: BufferConfig,
+		// Attribute sets stamped on every span as it starts (LD context keys,
+		// attributes from `setAttributes`), highest precedence first.
+		private readonly _getDefaultAttributes?: () => (
+			| Attributes
+			| undefined
+		)[],
+	) {
+		super(exporter, config)
+	}
+
 	onStart(span: SDKSpan, parentContext: Context): void {
 		span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
+		// Applied at start so they reach every span, including the
+		// auto-instrumented ones (document load, fetch/XHR, clicks, page
+		// views). Only keys not yet set are written, so attributes the span
+		// was started with win, and an earlier set wins over a later one.
+		for (const attributes of this._getDefaultAttributes?.() ?? []) {
+			for (const key in attributes) {
+				if (span.attributes[key] === undefined) {
+					span.setAttribute(key, attributes[key])
+				}
+			}
+		}
 		super.onStart(span, parentContext)
 	}
 

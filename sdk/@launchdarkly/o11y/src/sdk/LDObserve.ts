@@ -2,9 +2,15 @@ import type { Observe } from '../api/observe'
 import type { LDClient } from '../integrations/launchdarkly'
 import type { ErrorMessageType } from '../client/types/shared-types'
 import type { OTelMetric as Metric } from '../client/types/types'
-import type { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
+import type {
+	Attributes,
+	AttributeValue,
+	Context,
+	Span,
+	SpanOptions,
+} from '@opentelemetry/api'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
-import { BufferedClass } from './buffer'
+import { BufferedClass, type BufferedLoadOptions } from './buffer'
 import { getNoopSpan } from '../client/otel/utils'
 import { ConsoleMethods } from '../client/types/client'
 import { internalLogOnce } from './util'
@@ -30,7 +36,28 @@ function resolveSpanCallback(
 	return undefined
 }
 
+// Calls that only update SDK state used to tag telemetry. Buffered ones are
+// applied as soon as an SDK is attached, before it starts, so they reach
+// telemetry recorded during start-up (e.g. the document load span).
+const ATTRIBUTE_METHODS = new Set(['setAttributes', 'removeAttributes'])
+
 class _LDObserve extends BufferedClass<Observe> implements Observe {
+	load(sdk: Observe, options?: BufferedLoadOptions) {
+		const attributeCalls = this._callBuffer.filter(({ method }) =>
+			ATTRIBUTE_METHODS.has(method),
+		)
+		if (attributeCalls.length) {
+			this._callBuffer = this._callBuffer.filter(
+				({ method }) => !ATTRIBUTE_METHODS.has(method),
+			)
+			this._sdk = sdk
+			for (const { method, args } of attributeCalls) {
+				this._callSdk(method, args)
+			}
+		}
+		super.load(sdk, options)
+	}
+
 	protected async _startSdk() {
 		await this._sdk.start()
 	}
@@ -134,6 +161,24 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 
 	setLDContextKeyAttributes(contextKeys: Attributes) {
 		return this._bufferCall('setLDContextKeyAttributes', [contextKeys])
+	}
+
+	// Applied directly once an SDK is attached, even before it starts (see
+	// ATTRIBUTE_METHODS).
+	setAttributes(
+		attributes: Record<string, AttributeValue | null | undefined>,
+	) {
+		if (this._isLoaded) {
+			return this._callSdk('setAttributes', [attributes])
+		}
+		return this._bufferCall('setAttributes', [attributes])
+	}
+
+	removeAttributes(keys: string[]) {
+		if (this._isLoaded) {
+			return this._callSdk('removeAttributes', [keys])
+		}
+		return this._bufferCall('removeAttributes', [keys])
 	}
 
 	getLDContextKeyAttributes(): Attributes | undefined {

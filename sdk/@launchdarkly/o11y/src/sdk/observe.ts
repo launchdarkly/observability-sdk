@@ -1,5 +1,6 @@
 import {
 	Attributes,
+	AttributeValue,
 	Context,
 	Counter,
 	Gauge,
@@ -89,6 +90,36 @@ import {
 } from '../client/listeners/network-listener/utils/network-sanitizer'
 import { setSdkDebugLogging } from '../client/utils/sdkLogger'
 
+// Attribute namespaces the SDK sets itself; `setAttributes` ignores them.
+const RESERVED_ATTRIBUTE_PREFIXES = [
+	'highlight.',
+	`${CONTEXT_SCOPE_CONTEXT_KEYS_ATTR}.`,
+	'launchdarkly.',
+	'session.',
+]
+
+function isReservedAttributeKey(key: string): boolean {
+	return RESERVED_ATTRIBUTE_PREFIXES.some((prefix) => key.startsWith(prefix))
+}
+
+function isPrimitiveAttributeValue(value: unknown): boolean {
+	return (
+		typeof value === 'string' ||
+		typeof value === 'number' ||
+		typeof value === 'boolean'
+	)
+}
+
+function isAttributeValue(value: unknown): value is AttributeValue {
+	if (Array.isArray(value)) {
+		return value.every(
+			(v) =>
+				v === null || v === undefined || isPrimitiveAttributeValue(v),
+		)
+	}
+	return isPrimitiveAttributeValue(value)
+}
+
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
@@ -113,6 +144,11 @@ export class ObserveSDK implements Observe {
 	private readonly sampler: ExportSampler = new CustomSampler()
 	private _started = false
 	private _ldContextKeys: Attributes | undefined
+	// Set with `setAttributes`. Held in memory only, for this page load.
+	private readonly _globalAttributes = new Map<string, AttributeValue>()
+	// Frozen snapshot of `_globalAttributes`, rebuilt on change so the
+	// per-span hot path does not allocate.
+	private _globalAttributesSnapshot: Attributes = Object.freeze({})
 	// ECMAScript-private (#) so the internal GraphQL SDK type — which
 	// references graphql-request / graphql — does not leak into the published
 	// declaration file and break consumer type-checking.
@@ -167,6 +203,69 @@ export class ObserveSDK implements Observe {
 
 	getLDContextKeyAttributes(): Attributes | undefined {
 		return this._ldContextKeys
+	}
+
+	setAttributes(
+		attributes: Record<string, AttributeValue | null | undefined>,
+	): void {
+		if (!attributes) {
+			return
+		}
+		for (const [key, value] of Object.entries(attributes)) {
+			if (isReservedAttributeKey(key)) {
+				internalLog(
+					'setAttributes',
+					'warn',
+					`Ignoring reserved attribute key "${key}".`,
+				)
+				continue
+			}
+			if (value === null || value === undefined) {
+				this._globalAttributes.delete(key)
+			} else if (isAttributeValue(value)) {
+				this._globalAttributes.set(key, value)
+			} else {
+				internalLog(
+					'setAttributes',
+					'warn',
+					`Ignoring attribute "${key}": values must be a string, number, boolean or an array of those.`,
+				)
+			}
+		}
+		this._updateGlobalAttributesSnapshot()
+	}
+
+	removeAttributes(keys: string[]): void {
+		if (!keys) {
+			return
+		}
+		for (const key of keys) {
+			this._globalAttributes.delete(key)
+		}
+		this._updateGlobalAttributesSnapshot()
+	}
+
+	/** Attributes set with `setAttributes`, as a frozen snapshot. */
+	getGlobalAttributes(): Attributes {
+		return this._globalAttributesSnapshot
+	}
+
+	private _updateGlobalAttributesSnapshot() {
+		this._globalAttributesSnapshot = Object.freeze(
+			Object.fromEntries(this._globalAttributes),
+		)
+	}
+
+	/**
+	 * Attributes added to every metric: those set with `setAttributes`, then
+	 * the LD context keys. Per-call attributes are spread after these so
+	 * they win.
+	 */
+	private _defaultAttributes(): Attributes {
+		return {
+			...this._globalAttributesSnapshot,
+			...(this._ldContextKeys ?? {}),
+		}
 	}
 
 	public async start() {
@@ -258,6 +357,7 @@ export class ObserveSDK implements Observe {
 				? trace.map((s) => s.toString()).join('\n')
 				: undefined
 			span?.addEvent('log', {
+				...this._globalAttributesSnapshot,
 				[ATTR_LOG_SEVERITY]: level,
 				[ATTR_LOG_MESSAGE]: msg,
 				'code.stacktrace': stackTrace,
@@ -380,7 +480,7 @@ export class ObserveSDK implements Observe {
 			this._counters.set(metric.name, counter)
 		}
 		counter.add(metric.value, {
-			...(this._ldContextKeys ?? {}),
+			...this._defaultAttributes(),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})
@@ -397,7 +497,7 @@ export class ObserveSDK implements Observe {
 			this._gauges.set(metric.name, gauge)
 		}
 		const attributes: Attributes = {
-			...(this._ldContextKeys ?? {}),
+			...this._defaultAttributes(),
 			...metric.attributes,
 		}
 		gauge.record(metric.value, {
@@ -438,7 +538,7 @@ export class ObserveSDK implements Observe {
 			this._histograms.set(metric.name, histogram)
 		}
 		histogram.record(metric.value, {
-			...(this._ldContextKeys ?? {}),
+			...this._defaultAttributes(),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})
@@ -455,7 +555,7 @@ export class ObserveSDK implements Observe {
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
 		up_down_counter.add(metric.value, {
-			...(this._ldContextKeys ?? {}),
+			...this._defaultAttributes(),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})

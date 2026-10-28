@@ -1,4 +1,10 @@
-import type { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
+import type {
+	Attributes,
+	AttributeValue,
+	Context,
+	Span,
+	SpanOptions,
+} from '@opentelemetry/api'
 import type { OTelMetric as Metric } from '../client/types/types'
 import type { ErrorMessageType } from '../client/types/shared-types'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
@@ -167,6 +173,43 @@ export interface Observe {
 		level: ConsoleMethods,
 		metadata?: Attributes,
 	) => void
+
+	/**
+	 * Adds attributes to all telemetry recorded from now on: every span
+	 * (including automatically instrumented ones such as document load,
+	 * fetch/XHR, clicks and page views), log, error and metric.
+	 *
+	 * Calling it again merges with the attributes already set; a `null` or
+	 * `undefined` value removes that key. Attributes passed to an individual
+	 * call (for example `recordLog` metadata or metric attributes) take
+	 * precedence over these. Keys in namespaces the SDK sets itself
+	 * (`highlight.*`, `launchdarkly.*`, `session.*`, `context.contextKeys.*`)
+	 * are ignored.
+	 *
+	 * Attributes are held in memory for the current page load only: they are
+	 * never persisted, and a full page load starts without them.
+	 *
+	 * Each attribute is also added to every metric, so a value with many
+	 * distinct values (such as a user ID) creates as many metric series.
+	 *
+	 * @example
+	 * ```typescript
+	 * LDObserve.setAttributes({ utm_campaign: 'spring_promo', utm_source: 'email' })
+	 * ```
+	 */
+	setAttributes(
+		attributes: Record<string, AttributeValue | null | undefined>,
+	): void
+	/**
+	 * Removes attributes previously added with `setAttributes`. Telemetry
+	 * recorded afterwards no longer carries them.
+	 *
+	 * @example
+	 * ```typescript
+	 * LDObserve.removeAttributes(['utm_campaign'])
+	 * ```
+	 */
+	removeAttributes(keys: string[]): void
 
 	register(
 		client: LDClient,
