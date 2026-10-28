@@ -5,10 +5,10 @@ import typing
 from dataclasses import dataclass
 import opentelemetry.trace as trace
 from opentelemetry import metrics as otel_metrics
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, LogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.util.types import Attributes
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -17,6 +17,7 @@ from opentelemetry.sdk._logs.export import InMemoryLogExporter, SimpleLogRecordP
 
 
 from ldobserve._otel.configuration import _OTELConfiguration
+from ldobserve._otel.processors import add_log_processors, add_span_processors
 from ldobserve.observe import _ObserveInstance
 
 
@@ -86,7 +87,11 @@ class OTELTestConfiguration(_OTELConfiguration):
     """Test implementation of OTELConfiguration that uses in-memory exporters"""
 
     def __init__(
-        self, project_id: str = "test-project", service_name: str = "test-service"
+        self,
+        project_id: str = "test-project",
+        service_name: str = "test-service",
+        span_processors: typing.Sequence[SpanProcessor] = (),
+        log_processors: typing.Sequence[LogRecordProcessor] = (),
     ):
         # Create test resource
         resource = Resource.create(
@@ -100,8 +105,10 @@ class OTELTestConfiguration(_OTELConfiguration):
         # Set up in-memory trace provider
         self._tracer_provider = TracerProvider(resource=resource)
         self._span_exporter = InMemorySpanExporter()
-        self._tracer_provider.add_span_processor(
-            SimpleSpanProcessor(self._span_exporter)
+        add_span_processors(
+            self._tracer_provider,
+            span_processors,
+            [SimpleSpanProcessor(self._span_exporter)],
         )
 
         # Don't set global tracer provider to avoid conflicts
@@ -118,8 +125,10 @@ class OTELTestConfiguration(_OTELConfiguration):
         # Set up in-memory logs provider
         self._logger_provider = LoggerProvider(resource=resource)
         self._log_exporter = InMemoryLogExporter()
-        self._logger_provider.add_log_record_processor(
-            SimpleLogRecordProcessor(self._log_exporter)
+        add_log_processors(
+            self._logger_provider,
+            log_processors,
+            [SimpleLogRecordProcessor(self._log_exporter)],
         )
         self._log_handler = LoggingHandler(
             logger_provider=self._logger_provider, level=logging.NOTSET

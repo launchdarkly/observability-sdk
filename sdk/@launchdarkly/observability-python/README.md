@@ -37,6 +37,71 @@ ldclient.set_config(Config("your-sdk-key", plugins=[
         ))]))
 ```
 
+## Global attributes
+
+Use `observe.set_attributes` to add attributes to every span, log record, and metric data point
+recorded after the call, including spans and logs from automatic instrumentation and the standard
+`logging` module. Calls merge by key; use `observe.remove_attributes` to remove keys.
+
+```python
+from ldobserve import observe
+
+# Safe to call before the plugin is initialized.
+observe.set_attributes({"tenant.id": "acme", "deployment.region": "us-east-1"})
+
+# Attributes passed explicitly take precedence over global attributes.
+observe.record_count("orders.placed", 1, {"tenant.id": "override"})
+
+observe.remove_attributes(["deployment.region"])
+```
+
+- Precedence: attributes set on the span, log, or metric > global attributes > resource attributes.
+  Global attributes only fill in keys that are not already present.
+- A span gets the global attributes that are set when it starts.
+- Global attributes are stored in memory, shared by all threads in the process, and are not persisted.
+
+## Custom span and log processors
+
+Pass OpenTelemetry processors with the `span_processors` and `log_processors` options. They run in
+the order given, after global attributes are applied and before data is exported, so changes they
+make are exported. An exception raised by a processor is logged and does not stop export.
+
+```python
+import typing
+
+from opentelemetry.context import Context
+from opentelemetry.sdk._logs import LogData, LogRecordProcessor
+from opentelemetry.sdk.trace import Span, SpanProcessor
+
+from ldobserve import ObservabilityConfig, ObservabilityPlugin
+
+
+class TeamSpanProcessor(SpanProcessor):
+    def on_start(self, span: Span, parent_context: typing.Optional[Context] = None) -> None:
+        span.set_attribute("team", "checkout")
+
+
+class RedactingLogProcessor(LogRecordProcessor):
+    def emit(self, log_data: LogData) -> None:
+        if "user.email" in log_data.log_record.attributes:
+            log_data.log_record.attributes["user.email"] = "[redacted]"
+
+    def shutdown(self) -> None:
+        pass
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return True
+
+
+ObservabilityPlugin(
+    ObservabilityConfig(
+        service_name="your-service-name",
+        span_processors=[TeamSpanProcessor()],
+        log_processors=[RedactingLogProcessor()],
+    )
+)
+```
+
 LaunchDarkly overview
 -------------------------
 [LaunchDarkly](https://www.launchdarkly.com) is a feature management platform that serves trillions of feature flags daily to help teams build better software, faster. [Get started](https://docs.launchdarkly.com/home/getting-started) using LaunchDarkly today!
