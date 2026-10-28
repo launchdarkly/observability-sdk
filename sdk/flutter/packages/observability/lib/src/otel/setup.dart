@@ -3,6 +3,7 @@ import 'package:launchdarkly_flutter_observability/src/api/attribute.dart'
     show StringAttribute;
 import 'package:launchdarkly_flutter_observability/src/otel/conversions.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_factory.dart';
+import 'package:launchdarkly_flutter_observability/src/otel/processors.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/service_convention.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/symbols_id.dart';
 import 'package:launchdarkly_flutter_observability/src/plugin/observability_config.dart';
@@ -22,6 +23,12 @@ class Otel {
   /// The platform-appropriate log recorder, set during [setup]. `null` before
   /// the pipeline is initialized.
   static LogRecorder? get logRecorder => _logRecorder;
+
+  static LogPipeline _logPipeline = LogPipeline(const []);
+
+  /// Applies global attributes and the app's log processors to each log before
+  /// it reaches [logRecorder].
+  static LogPipeline get logPipeline => _logPipeline;
 
   static TrackRecorder? _trackRecorder;
 
@@ -100,6 +107,7 @@ class Otel {
 
     if (config.enabled) {
       _setupTracing(sdkKey, config, exporters);
+      _logPipeline = LogPipeline(config.logProcessors);
       _logRecorder = exporters.createLogRecorder(config);
     }
 
@@ -123,7 +131,10 @@ class Otel {
     ObservabilityExporters exporters,
   ) {
     final tracerProvider = TracerProviderBase(
-      processors: exporters.createSpanProcessors(config),
+      processors: buildSpanProcessors(
+        config.spanProcessors,
+        exporters.createSpanProcessors(config),
+      ),
       resource: Resource(
         resourceAttributes(sdkKey, config, symbolsId: readSymbolsId()),
       ),
@@ -175,6 +186,7 @@ class Otel {
     }
     _tracerProviders.clear();
     _logRecorder = null;
+    _logPipeline = LogPipeline(const []);
     _trackRecorder = null;
     _identifyRecorder = null;
     _clickRecorder = null;

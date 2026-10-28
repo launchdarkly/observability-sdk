@@ -236,6 +236,34 @@ final class LDObserve {
     attributes: attributesFromProperties(properties),
   );
 
+  /// Merge [attributes] into the global attributes attached to every span,
+  /// log and event recorded from now on, including automatic ones (flag
+  /// evaluations, errors, lifecycle, screen views, clicks, track events).
+  ///
+  /// Keys merge with those already set; a later call replaces a key's value.
+  /// Attributes passed to an individual call, or set on a span, win over a
+  /// global attribute with the same key. A span takes the global attributes
+  /// current when it starts.
+  ///
+  /// Values follow the same rules as `properties`: strings, numbers, booleans,
+  /// or homogeneous lists of those; anything else (including `null`) is
+  /// ignored. The SDK-managed session keys `session.id` and
+  /// `highlight.session_id` are ignored.
+  ///
+  /// Safe to call before [init]: the attributes apply once observability is
+  /// running. They are kept in memory for the life of the process, survive
+  /// session changes, and are never persisted.
+  ///
+  /// On iOS and Android, telemetry the native SDK records on its own (crashes,
+  /// launch times, native lifecycle, metrics) does not carry them.
+  static void setAttributes(Map<String, Object?> attributes) =>
+      ObserveOtel.setAttributes(attributes);
+
+  /// Remove [keys] from the global attributes set with [setAttributes].
+  /// Keys that are not set are ignored.
+  static void removeAttributes(List<String> keys) =>
+      ObserveOtel.removeAttributes(keys);
+
   /// Get a zone specification which intercepts print statements.
   static ZoneSpecification zoneSpecification() =>
       ObserveOtel.zoneSpecification();

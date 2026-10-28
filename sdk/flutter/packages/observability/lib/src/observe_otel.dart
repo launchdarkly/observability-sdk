@@ -11,6 +11,7 @@ import 'api/span.dart';
 import 'api/span_kind.dart';
 import 'api/span_status_code.dart';
 import 'otel/conversions.dart';
+import 'otel/global_attributes.dart';
 import 'otel/setup.dart';
 import 'platform/ld_observe_platform.dart';
 import 'plugin/ld_observe_plugin.dart';
@@ -260,13 +261,32 @@ final class ObserveOtel {
     // Delegate to the platform-appropriate recorder: native log records on
     // mobile (stamped with `session.id`), span events on web. `null` before
     // the pipeline is initialized, in which case the log is dropped.
-    Otel.logRecorder?.recordLog(
+    final recorder = Otel.logRecorder;
+    if (recorder == null) {
+      return;
+    }
+    final log = Otel.logPipeline.process(
       message,
       severity: severity,
       stackTrace: stackTrace,
       attributes: attributes,
     );
+    recorder.recordLog(
+      log.message,
+      severity: log.severity,
+      stackTrace: log.stackTrace,
+      attributes: log.attributes,
+    );
   }
+
+  /// Merges [properties] into the global attributes applied to every span,
+  /// log and event recorded afterwards.
+  static void setAttributes(Map<String, Object?> properties) =>
+      GlobalAttributes.set(properties);
+
+  /// Removes [keys] from the global attributes.
+  static void removeAttributes(List<String> keys) =>
+      GlobalAttributes.remove(keys);
 
   /// Whether [shutdown] has run. Terminal: a later boot does nothing.
   static bool get isShutdown => _shutdown;

@@ -1,6 +1,9 @@
 // Ported from
 // sdk/@launchdarkly/mobile-dotnet/observability/observe/plugin/ObservabilityOptions.cs.
 
+import 'package:opentelemetry/sdk.dart' show SpanProcessor;
+
+import '../api/log_record.dart';
 import '../instrumentation/click/ld_click.dart';
 import '../plugin/observability_config.dart';
 
@@ -324,6 +327,26 @@ class ObservabilityOptions {
   /// crash reporting and `debugPrint` capture.
   final InstrumentationOptions instrumentation;
 
+  /// OpenTelemetry span processors run on every span recorded from Dart,
+  /// in order, before the SDK exports it.
+  ///
+  /// They run after the global attributes from `LDObserve.setAttributes` are
+  /// applied, so they see them, and changes made in `onStart` are exported. A
+  /// processor that throws is skipped and the span is still exported.
+  ///
+  /// On iOS and Android, spans the native SDK records itself (including the
+  /// `track`, `screen_view` and `click` spans) do not pass through them.
+  final List<SpanProcessor> spanProcessors;
+
+  /// Processors run on every log recorded from Dart (`LDObserve.recordLog`,
+  /// captured `debugPrint` and `print`), in order, before the SDK exports it.
+  ///
+  /// They run after the global attributes from `LDObserve.setAttributes` are
+  /// applied, so they see them, and their changes are exported. A processor
+  /// that throws is skipped and the log is still exported. Logs the native SDK
+  /// records itself do not pass through them.
+  final List<LDLogRecordProcessor> logProcessors;
+
   /// Creates observability options. Every argument is optional; the defaults
   /// enable all telemetry and export to LaunchDarkly.
   const ObservabilityOptions({
@@ -341,6 +364,8 @@ class ObservabilityOptions {
     this.metricsEnabled = true,
     this.analytics = const AnalyticsOptions(),
     this.instrumentation = const InstrumentationOptions(),
+    this.spanProcessors = const [],
+    this.logProcessors = const [],
   }) : otlpEndpoint = otlpEndpoint ?? defaultOtlpEndpoint,
        backendUrl = backendUrl ?? defaultBackendUrl;
 }
@@ -365,5 +390,7 @@ extension ObservabilityOptionsCopy on ObservabilityOptions {
         metricsEnabled: metricsEnabled,
         analytics: analytics,
         instrumentation: instrumentation,
+        spanProcessors: spanProcessors,
+        logProcessors: logProcessors,
       );
 }
