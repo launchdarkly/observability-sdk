@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:opentelemetry/api.dart' as otel;
+import 'package:opentelemetry/sdk.dart'
+    show ReadOnlySpan, ReadWriteSpan, SpanProcessor;
 
 import '../api/attribute.dart';
 import 'conversions.dart';
@@ -93,6 +95,37 @@ final class GlobalAttributes {
   /// Clears every global attribute.
   @visibleForTesting
   static void resetForTesting() => _snapshot = _Snapshot.empty;
+}
+
+/// Fills each starting span with the global attributes it does not already
+/// carry. The tracer sets the attributes passed to `startSpan` before any
+/// processor runs, so those always win. Registered ahead of the export
+/// processors.
+///
+/// Not for export.
+final class GlobalAttributesSpanProcessor implements SpanProcessor {
+  @override
+  void onStart(ReadWriteSpan span, otel.Context parentContext) {
+    final globals = GlobalAttributes.otelAttributes;
+    if (globals.isEmpty) {
+      return;
+    }
+    final existing = span.attributes;
+    for (final attribute in globals) {
+      if (existing.get(attribute.key) == null) {
+        span.setAttribute(attribute);
+      }
+    }
+  }
+
+  @override
+  void onEnd(ReadOnlySpan span) {}
+
+  @override
+  void shutdown() {}
+
+  @override
+  void forceFlush() {}
 }
 
 final class _Snapshot {

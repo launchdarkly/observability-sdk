@@ -4,7 +4,6 @@ import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_f
 import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_factory_web.dart'
     as web;
 import 'package:launchdarkly_flutter_observability/src/otel/global_attributes.dart';
-import 'package:launchdarkly_flutter_observability/src/otel/processors.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/setup.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/symbols_id.dart';
 import 'package:launchdarkly_flutter_observability/src/options/observability_options.dart';
@@ -39,7 +38,7 @@ void main() {
   setUpAll(() {
     api.registerGlobalTracerProvider(
       sdk.TracerProviderBase(
-        processors: buildSpanProcessors(const [], [processor]),
+        processors: [GlobalAttributesSpanProcessor(), processor],
       ),
     );
   });

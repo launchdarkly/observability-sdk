@@ -511,55 +511,6 @@ LDObserve.removeAttributes(['tenant.id']);
 
 On iOS and Android, telemetry the native SDK records on its own (crash reports, launch times, native lifecycle spans, and metrics) does not carry global attributes. The Flutter SDK has no Dart metrics API, so there are no Dart metrics for them to apply to.
 
-### Custom span and log processors
-
-Pass `spanProcessors` and `logProcessors` to `ObservabilityOptions` to inspect or modify telemetry before it is exported — for example to add attributes computed at record time or to redact values. They run in order, after global attributes are applied (so they see them) and before the SDK exports the data, so their changes are what gets sent. A processor that throws is skipped for that span or log, and the data is still exported.
-
-`spanProcessors` takes OpenTelemetry `SpanProcessor`s from the [`opentelemetry`](https://pub.dev/packages/opentelemetry) package; add it to your `pubspec.yaml` (`opentelemetry: ^0.18.11`) to implement one. Attributes set in `onStart` are exported. `logProcessors` takes `LDLogRecordProcessor`s: the `opentelemetry` package has no logs SDK, so the Flutter SDK defines its own log record, `LDLogRecord`, whose `message`, `severity`, `stackTrace`, and `attributes` can all be changed.
-
-```dart
-import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
-import 'package:opentelemetry/api.dart' as otel;
-import 'package:opentelemetry/sdk.dart' as otel_sdk;
-
-class ScreenSpanProcessor implements otel_sdk.SpanProcessor {
-  @override
-  void onStart(otel_sdk.ReadWriteSpan span, otel.Context parentContext) {
-    span.setAttribute(otel.Attribute.fromString('app.screen', currentScreen));
-  }
-
-  @override
-  void onEnd(otel_sdk.ReadOnlySpan span) {}
-
-  @override
-  void shutdown() {}
-
-  @override
-  void forceFlush() {}
-}
-
-class RedactEmailProcessor extends LDLogRecordProcessor {
-  @override
-  void onEmit(LDLogRecord record) {
-    record.message = record.message.replaceAll(
-      RegExp(r'[\w.+-]+@[\w-]+\.[\w.]+'),
-      '<email>',
-    );
-    record.attributes.remove('user.email');
-  }
-}
-
-LDObserve.initStandalone(
-  mobileKey,
-  observability: ObservabilityOptions(
-    spanProcessors: [ScreenSpanProcessor()],
-    logProcessors: [RedactEmailProcessor()],
-  ),
-);
-```
-
-Processors see spans and logs recorded from Dart: `LDObserve` calls, flag evaluations, errors, Dart lifecycle spans, and captured `debugPrint`/`print` output, on every platform. On iOS and Android the `track`, `screen_view`, and `click` spans are created by the native SDK and do not pass through `spanProcessors` (they still carry global attributes), and neither do the native SDK's own spans and logs.
-
 ## Session replay
 
 Session Replay captures screen recordings to help you understand how users interact with your application. Enable it by passing `SessionReplayOptions` to `LDObserve.init` / `LDObserve.initStandalone`, and wrap the part of your app you want recorded in a `SessionReplayCapture` widget:

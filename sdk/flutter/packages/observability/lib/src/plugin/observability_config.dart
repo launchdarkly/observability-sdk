@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
-import 'package:opentelemetry/sdk.dart' show SpanProcessor;
 
-import '../api/log_record.dart';
 import '../options/observability_options.dart';
 
 const _defaultOtlpEndpoint =
@@ -145,12 +143,6 @@ final class ObservabilityConfig {
   /// while on mobile the native SDK applies its own gating. Defaults to `true`.
   final bool tapsEnabled;
 
-  /// The app's span processors, from `ObservabilityOptions.spanProcessors`.
-  final List<SpanProcessor> spanProcessors;
-
-  /// The app's log processors, from `ObservabilityOptions.logProcessors`.
-  final List<LDLogRecordProcessor> logProcessors;
-
   /// Creates a configuration; prefer [configFromOptions] or
   /// [configWithDefaults], which fill in the default endpoints.
   ObservabilityConfig({
@@ -165,8 +157,6 @@ final class ObservabilityConfig {
     this.trackEventsEnabled = true,
     this.screenViewsEnabled = true,
     this.tapsEnabled = true,
-    this.spanProcessors = const [],
-    this.logProcessors = const [],
   });
 }
 
@@ -208,7 +198,5 @@ ObservabilityConfig configFromOptions(ObservabilityOptions options) {
     trackEventsEnabled: options.analytics.trackEvents,
     screenViewsEnabled: options.analytics.views,
     tapsEnabled: options.analytics.taps,
-    spanProcessors: List.unmodifiable(options.spanProcessors),
-    logProcessors: List.unmodifiable(options.logProcessors),
   );
 }

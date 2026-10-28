@@ -261,21 +261,11 @@ final class ObserveOtel {
     // Delegate to the platform-appropriate recorder: native log records on
     // mobile (stamped with `session.id`), span events on web. `null` before
     // the pipeline is initialized, in which case the log is dropped.
-    final recorder = Otel.logRecorder;
-    if (recorder == null) {
-      return;
-    }
-    final log = Otel.logPipeline.process(
+    Otel.logRecorder?.recordLog(
       message,
       severity: severity,
       stackTrace: stackTrace,
-      attributes: attributes,
-    );
-    recorder.recordLog(
-      log.message,
-      severity: log.severity,
-      stackTrace: log.stackTrace,
-      attributes: log.attributes,
+      attributes: GlobalAttributes.fillAttributes(attributes),
     );
   }
 

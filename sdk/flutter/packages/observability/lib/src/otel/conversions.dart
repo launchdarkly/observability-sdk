@@ -103,23 +103,6 @@ Map<String, Attribute> attributesFromProperties(
   return attributes;
 }
 
-/// The inverse of [attributesFromProperties]: plain Dart values for each
-/// representable attribute in [attributes].
-///
-/// Not for export.
-Map<String, Object?> propertiesFromAttributes(
-  Map<String, Attribute>? attributes,
-) {
-  final properties = <String, Object?>{};
-  attributes?.forEach((name, attribute) {
-    final otelAttribute = convertAttribute(name, attribute);
-    if (otelAttribute != null) {
-      properties[name] = otelAttribute.value;
-    }
-  });
-  return properties;
-}
-
 /// Not for export.
 otel.SpanKind convertKind(SpanKind kind) {
   switch (kind) {

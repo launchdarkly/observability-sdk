@@ -99,16 +99,6 @@ void main() {
       ], everyElement(isNotNull));
     });
 
-    test('LDLogRecordProcessor and LDLogRecord are usable from the barrel', () {
-      final record = LDLogRecord(message: 'm', attributes: {'k': 1});
-      final void Function(LDLogRecord) onEmit =
-          const _NoopLogProcessor().onEmit;
-      onEmit(record);
-      expect(record.severity, LogSeverity.info);
-      expect(record.stackTrace, isNull);
-      expect(record.attributes, {'k': 1});
-    });
-
     test('Span methods match the 1.0 API', () {
       void checkSpan(Span span) {
         final void Function() end = span.end;
@@ -202,8 +192,6 @@ void main() {
       expect(options.traces.includeErrors, isTrue);
       expect(options.traces.includeSpans, isTrue);
       expect(options.metricsEnabled, isTrue);
-      expect(options.spanProcessors, isEmpty);
-      expect(options.logProcessors, isEmpty);
     });
 
     test('InstrumentationOptions', () {
@@ -282,11 +270,4 @@ void main() {
       expect(typed(child)?.tag, 'PrimaryButton');
     });
   });
-}
-
-final class _NoopLogProcessor extends LDLogRecordProcessor {
-  const _NoopLogProcessor();
-
-  @override
-  void onEmit(LDLogRecord record) {}
 }

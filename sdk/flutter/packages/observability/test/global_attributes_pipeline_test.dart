@@ -10,42 +10,26 @@ import 'package:opentelemetry/sdk.dart' as sdk;
 
 import 'support/native_api_mock.dart';
 
-/// Global attributes and custom processors through the real pipeline, down to
+/// Global attributes through the real pipeline, down to
 /// the native bridge. In its own file because `Otel.setup` registers the global
 /// tracer provider, which is allowed once per isolate.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final native = NativeApiMock();
-  final spanProcessor = _MutatingSpanProcessor();
 
   setUpAll(() {
     native.install();
     GlobalAttributes.resetForTesting();
     // Before setup: globals set ahead of init must still apply.
     LDObserve.setAttributes({'tenant': 'acme'});
-    Otel.setup(
-      'mobile-key',
-      configFromOptions(
-        ObservabilityOptions(
-          spanProcessors: [_ThrowingSpanProcessor(), spanProcessor],
-          logProcessors: [
-            _CallbackLogProcessor((_) => throw StateError('boom')),
-            _CallbackLogProcessor((record) {
-              record.attributes['log.processor.saw_tenant'] =
-                  record.attributes['tenant'] ?? 'missing';
-            }),
-          ],
-        ),
-      ),
-    );
+    Otel.setup('mobile-key', configWithDefaults());
     // Buffered by the batch processor until a test flushes it.
     LDObserve.startSpan('early').end();
   });
 
   setUp(() {
     native.calls.clear();
-    spanProcessor.seenTenant.clear();
     GlobalAttributes.resetForTesting();
     LDObserve.setAttributes({'tenant': 'acme'});
   });
@@ -118,16 +102,6 @@ void main() {
       );
       expect(span.attributes?['tenant'], 'acme');
     });
-
-    test('reach user processors after globals, and their changes are exported '
-        'even when an earlier processor throws', () async {
-      LDObserve.startSpan('processed').end();
-
-      expect(spanProcessor.seenTenant, ['acme']);
-      final attributes = (await exportedSpan('processed')).attributes!;
-      expect(attributes['processor.mutated'], true);
-      expect(attributes['tenant'], 'acme');
-    });
   });
 
   group('logs', () {
@@ -143,15 +117,6 @@ void main() {
       final attributes = (await recordedLog()).attributes!;
       expect(attributes['tenant'], 'acme');
       expect(attributes['tier'], 'call');
-    });
-
-    test('reach user processors after globals, and their changes are exported '
-        'even when an earlier processor throws', () async {
-      LDObserve.recordLog('processed');
-
-      final log = await recordedLog();
-      expect(log.message, 'processed');
-      expect(log.attributes?['log.processor.saw_tenant'], 'acme');
     });
   });
 
@@ -184,51 +149,4 @@ void main() {
       expect(data, {'tenant': 'acme', 'plan': 'call'});
     });
   });
-}
-
-/// Records the `tenant` it sees at start and marks the span.
-final class _MutatingSpanProcessor implements sdk.SpanProcessor {
-  final List<Object?> seenTenant = [];
-
-  @override
-  void onStart(sdk.ReadWriteSpan span, otel.Context parentContext) {
-    if (span.name != 'processed') {
-      return;
-    }
-    seenTenant.add(span.attributes.get('tenant'));
-    span.setAttribute(otel.Attribute.fromBoolean('processor.mutated', true));
-  }
-
-  @override
-  void onEnd(sdk.ReadOnlySpan span) {}
-
-  @override
-  void shutdown() {}
-
-  @override
-  void forceFlush() {}
-}
-
-final class _ThrowingSpanProcessor implements sdk.SpanProcessor {
-  @override
-  void onStart(sdk.ReadWriteSpan span, otel.Context parentContext) =>
-      throw StateError('onStart');
-
-  @override
-  void onEnd(sdk.ReadOnlySpan span) => throw StateError('onEnd');
-
-  @override
-  void shutdown() => throw StateError('shutdown');
-
-  @override
-  void forceFlush() => throw StateError('forceFlush');
-}
-
-final class _CallbackLogProcessor extends LDLogRecordProcessor {
-  const _CallbackLogProcessor(this._onEmit);
-
-  final void Function(LDLogRecord record) _onEmit;
-
-  @override
-  void onEmit(LDLogRecord record) => _onEmit(record);
 }
