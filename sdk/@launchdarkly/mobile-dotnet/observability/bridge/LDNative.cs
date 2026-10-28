@@ -53,10 +53,16 @@ internal class LDNative
         var bridgeObservabilityOptions = observability.ToNative();
         var bridgeReplayOptions = replay.ToNative();
         bridge.Start(app, mobileKey, bridgeObservabilityOptions, bridgeReplayOptions, observabilityVersion);
+
+        // Replay LDObserve.SetAttributes/RemoveAttributes calls buffered before the native stack
+        // started; later calls go straight to the native process-wide store.
+        LDObserve.OnNativeStarted(new NativeGlobalAttributesSink(bridge));
 #elif IOS
         var bridge = new ObservabilityBridgeClient();
         ldNative.NativeVersion = bridge.Version();
         bridge.Start(mobileKey, observability, replay, observabilityVersion);
+
+        LDObserve.OnNativeStarted(new NativeGlobalAttributesSink());
 #endif
 
         CurrentNativeVersion = ldNative.NativeVersion;
