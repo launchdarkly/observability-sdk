@@ -91,6 +91,20 @@ RCT_EXPORT_METHOD(stopSessionReplay:(RCTPromiseResolveBlock)resolve
     }
 }
 
+RCT_EXPORT_METHOD(trackScreenView:(NSString *)name
+                  options:(NSDictionary *)options
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+    @try {
+      [[SessionReplayClientAdapter shared] trackScreenViewWithName:name options:options];
+      resolve(nil);
+    } @catch(NSException *exception) {
+      NSLog(@"⚠️ trackScreenView crash: %@", exception);
+      reject(@"track_screen_view_failed", exception.reason, nil);
+    }
+}
+
 RCT_EXPORT_METHOD(afterIdentify:(NSDictionary *)contextKeys
                   canonicalKey:(NSString *)canonicalKey
                   completed:(BOOL)completed

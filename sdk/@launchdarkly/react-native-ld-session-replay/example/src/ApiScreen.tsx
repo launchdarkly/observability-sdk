@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Platform,
   ScrollView,
@@ -9,7 +9,10 @@ import {
 } from 'react-native';
 import { LDObserve } from '@launchdarkly/observability-react-native';
 import type { SpanScope } from '@launchdarkly/observability-react-native';
-import { LDClick } from '@launchdarkly/session-replay-react-native';
+import {
+  LDClick,
+  trackScreenView,
+} from '@launchdarkly/session-replay-react-native';
 import { useLDClient } from '@launchdarkly/react-native-client-sdk';
 import { context, SpanStatusCode, type Span } from '@opentelemetry/api';
 import { SERVICE_VERSION } from './serviceVersion';
@@ -59,6 +62,8 @@ function decodeVersionField(version: string): never {
 export default function ApiScreen() {
   const ldClient = useLDClient();
   const [lines, setLines] = useState<string[]>([]);
+  const screenViewCounter = useRef(0);
+  const lastManualScreen = useRef<string | null>(null);
 
   const log = (msg: string) =>
     setLines((prev) =>
@@ -331,6 +336,43 @@ export default function ApiScreen() {
     log('[track] ldClient.track(checkout-started) nested payload');
   };
 
+  // -- Screen views (manual API) -------------------------------------------
+  // Mirrors the iOS TestApp `trackScreenView` demo. `event.previous_screen` is resolved natively
+  // from the same stack the tab and smoothie navigation report into, so the first manual view
+  // after opening this tab should name "API" as its previous screen.
+  const trackFullScreenView = () => {
+    screenViewCounter.current += 1;
+    const index = screenViewCounter.current;
+    const name = `Manual Demo Screen ${index}`;
+    trackScreenView(name, {
+      screenClass: 'ApiScreen',
+      screenId: `api-demo-${index}`,
+      category: 'Demo',
+      properties: { source: 'manual-demo', index },
+    });
+    lastManualScreen.current = name;
+    log(`[screen] trackScreenView(${name}) with class, id, category, properties`);
+  };
+
+  const trackNameOnlyScreenView = () => {
+    const name = 'Manual Name Only';
+    trackScreenView(name);
+    lastManualScreen.current = name;
+    log(`[screen] trackScreenView(${name}) name only`);
+  };
+
+  // Reports the screen that is already current again, to check how a repeat with no navigation
+  // in between shows up natively.
+  const repeatLastScreenView = () => {
+    const name = lastManualScreen.current;
+    if (!name) {
+      log('[screen] no manual screen view yet — track one first');
+      return;
+    }
+    trackScreenView(name);
+    log(`[screen] trackScreenView(${name}) repeated`);
+  };
+
   // -- Network -------------------------------------------------------------
   const performNetworkRequest = async () => {
     try {
@@ -461,6 +503,25 @@ export default function ApiScreen() {
             nativeID="api.track-nested"
             label="Track nested"
             onPress={run('track-nested', trackNested)}
+          />
+        </View>
+
+        <SectionHeader title="Screen views (manual API)" topSpacing />
+        <View style={styles.col}>
+          <Btn
+            nativeID="api.screen-view"
+            label="Track screen view"
+            onPress={run('screen-view', trackFullScreenView)}
+          />
+          <Btn
+            nativeID="api.screen-view-name-only"
+            label="Track screen view (name only)"
+            onPress={run('screen-view-name-only', trackNameOnlyScreenView)}
+          />
+          <Btn
+            nativeID="api.screen-view-repeat"
+            label="Repeat last screen view"
+            onPress={run('screen-view-repeat', repeatLastScreenView)}
           />
         </View>
 
