@@ -45,6 +45,33 @@ const client = init3(
 
 Refer to the [SDK documentation](https://docs.launchdarkly.com/sdk/client-side/javascript#getting-started) for instructions on getting started with using the SDK.
 
+## Session continuity
+
+A session continues across full page loads on the same origin until it has been idle for 15 minutes; a full page load on a different origin starts a new session.
+
+Session storage options:
+
+-   `sessionCookie: true` — also store the session in a cookie (expiring 15 minutes after it is last written). This can help with cookie-consent compliance.
+-   `sessionCookieDomain: 'example.com'` — set the session cookie's `Domain` attribute so the session can be continued across your subdomains (e.g. `app.example.com` and `checkout.example.com`). Requires `sessionCookie: true`. By default, the cookie is scoped to the exact host that created it.
+-   `storageMode: 'sessionStorage'` — keep the session in `sessionStorage` instead of `localStorage`, so each tab has its own session and closing the tab ends it.
+
+### Continuing a session across domains
+
+Storage is per-origin, so a flow that moves a user from one of your domains to another (for example from a landing site, through a hosted identity provider, to your app on a different domain) starts a new session on the second domain. To link the two, generate a `sessionKey` on the first domain, pass it to the SDK there, carry it through the redirect (for example in the OAuth `state` parameter), and pass the same value to the SDK on the second domain. When no unexpired session exists yet, the SDK derives the session ID from the `sessionKey`, so both domains report the same session.
+
+```ts
+// First domain, before redirecting:
+const sessionKey = crypto.randomUUID()
+new Observability({ sessionKey })
+
+// Second domain, after reading the key back from the OAuth `state`:
+new Observability({ sessionKey: keyFromState })
+```
+
+Only pass keys you generate and control: anyone who knows a `sessionKey` can continue that session.
+
+The `@launchdarkly/session-replay` SDK accepts the same options.
+
 ## Verifying SDK build provenance with the SLSA framework
 
 LaunchDarkly uses the [SLSA framework](https://slsa.dev/spec/v1.0/about) (Supply-chain Levels for Software Artifacts) to help developers make their supply chain more secure by ensuring the authenticity and build integrity of our published SDK packages. To learn more, see the [provenance guide](PROVENANCE.md).

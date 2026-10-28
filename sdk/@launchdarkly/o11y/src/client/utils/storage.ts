@@ -10,6 +10,7 @@ type Mode = 'localStorage' | 'sessionStorage'
 
 let mode: Mode = 'localStorage'
 let cookieWriteEnabled: boolean = true
+let cookieDomain: string | undefined = undefined
 
 class Storage {
 	private storage: { [key: string]: string } = {}
@@ -45,14 +46,19 @@ export class CookieStorage {
 		}
 		const expires = new Date()
 		expires.setTime(expires.getTime() + SESSION_PUSH_THRESHOLD)
-		Cookies.set(key, value, { expires })
+		Cookies.set(key, value, {
+			expires,
+			...(cookieDomain ? { domain: cookieDomain } : {}),
+		})
 	}
 
 	public removeItem(key: string) {
 		if (!cookieWriteEnabled) {
 			return
 		}
-		Cookies.remove(key)
+		// Passing the same domain as the write is required to delete a cookie
+		// that was written with a custom `Domain` attribute.
+		Cookies.remove(key, cookieDomain ? { domain: cookieDomain } : undefined)
 	}
 
 	public keys(): string[] {
@@ -111,6 +117,10 @@ export const setStorageMode = (m: Mode) => {
 
 export const setCookieWriteEnabled = (enabled: boolean) => {
 	cookieWriteEnabled = enabled
+}
+
+export const setCookieDomain = (domain?: string) => {
+	cookieDomain = domain
 }
 
 export const getItem = (key: string) => {

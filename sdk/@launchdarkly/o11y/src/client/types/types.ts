@@ -124,11 +124,19 @@ export type CommonOptions = {
 	 */
 	storageMode?: 'sessionStorage' | 'localStorage'
 	/**
-	 * By default, session data is stored in the `sessionStorage` of the browser.
+	 * By default, session data is stored in the `localStorage` of the browser.
 	 * Set to `true` to store session data in a cookie instead.
 	 * This can help with compliance for cookie-consent regulation.
 	 */
 	sessionCookie?: boolean
+	/**
+	 * Set the `Domain` attribute of the session cookie so the same session can
+	 * be continued on different subdomains (e.g. `app.example.com` and
+	 * `checkout.example.com` both see a cookie set for `example.com`).
+	 * Only applies when `sessionCookie` is set to `true`.
+	 * By default, the cookie is scoped to the exact host that created it.
+	 */
+	sessionCookieDomain?: string
 	/**
 	 * Specifies if Highlight should not automatically initialize when the class is created.
 	 * This should be used with `.start()` and `.stop()` if you want to control when Highlight records.
