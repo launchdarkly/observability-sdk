@@ -132,12 +132,17 @@ describe('global attributes and custom processors', () => {
 		_LDObserve._resetForTesting()
 		globalAttributes._resetForTesting()
 
-		// Called before the client exists: must be buffered and still apply.
+		// Called before the client exists: must apply immediately, not only
+		// once buffered calls are replayed after async init.
 		_LDObserve.setAttributes({
 			'app.tier': 'gold',
 			shared: 'global',
 			'highlight.session_id': 'spoofed',
 			'session.id': 'spoofed',
+		})
+		expect(globalAttributes.getAttributes()).toEqual({
+			'app.tier': 'gold',
+			shared: 'global',
 		})
 		_LDObserve.recordLog('before-init', 'info')
 

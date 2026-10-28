@@ -14,6 +14,7 @@ import { Observe } from '../api/Observe'
 import { SpanScope, WithSpanOptions } from '../api/SpanScope'
 import { TrackProperties } from '../api/TrackProperties'
 import { BufferedClass } from './BufferedClass'
+import { globalAttributes } from '../otel/GlobalAttributes'
 import { noOpSpan } from '../utils/NoOpSpan'
 import { NOOP_SPAN_OPS, runInSpan, SpanOps } from './withSpan'
 
@@ -60,12 +61,20 @@ class LDObserveClass
 		super._resetForTesting()
 	}
 
+	// Before load these write straight to the store rather than the call buffer,
+	// so spans started during async init (e.g. fetch) already carry them.
 	setAttributes(attributes: Attributes): void {
-		return this._bufferCall('setAttributes', [attributes])
+		if (this._isLoaded) {
+			return this._bufferCall('setAttributes', [attributes])
+		}
+		globalAttributes.setAttributes(attributes)
 	}
 
 	removeAttributes(keys: string[]): void {
-		return this._bufferCall('removeAttributes', [keys])
+		if (this._isLoaded) {
+			return this._bufferCall('removeAttributes', [keys])
+		}
+		globalAttributes.removeAttributes(keys)
 	}
 
 	recordError(
