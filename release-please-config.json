@@ -7,6 +7,8 @@
 	],
 	"packages": {
 		"sdk/@launchdarkly/observability-python": {
+			"draft": true,
+			"force-tag-creation": true,
 			"package-name": "launchdarkly-observability-python",
 			"release-type": "python",
 			"versioning": "default",
@@ -23,6 +25,8 @@
 			"extra-files": ["gradle.properties"]
 		},
 		"sdk/@launchdarkly/observability-java": {
+			"draft": true,
+			"force-tag-creation": true,
 			"package-name": "launchdarkly-java-server-sdk-observability",
 			"release-type": "simple",
 			"versioning": "default",
@@ -52,6 +56,8 @@
 			"extra-files": ["internal/metadata/metadata.go"]
 		},
 		"sdk/@launchdarkly/observability-dotnet": {
+			"draft": true,
+			"force-tag-creation": true,
 			"bump-minor-pre-major": true,
 			"package-name": "launchdarkly-observability-dotnet",
 			"release-type": "simple",
@@ -118,6 +124,8 @@
 			"include-component-in-tag": true
 		},
 		"sdk/@launchdarkly/observability-ruby": {
+			"draft": true,
+			"force-tag-creation": true,
 			"package-name": "launchdarkly-observability-ruby",
 			"release-type": "ruby",
 			"versioning": "default",

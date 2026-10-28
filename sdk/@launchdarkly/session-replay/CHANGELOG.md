@@ -1,5 +1,14 @@
 # @launchdarkly/session-replay
 
+## [1.2.3](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.2.2...session-replay-1.2.3) (2026-10-28)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/o11y bumped to 1.4.0
+
 ## [1.2.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.2.1...session-replay-1.2.2) (2026-10-21)
 
 
