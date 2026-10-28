@@ -124,14 +124,29 @@ export type CommonOptions = {
 	 */
 	storageMode?: 'sessionStorage' | 'localStorage'
 	/**
-	 * By default, session data is stored in the `sessionStorage` of the browser.
+	 * By default, session data is stored in the `localStorage` of the browser.
 	 * Set to `true` to store session data in a cookie instead.
 	 * This can help with compliance for cookie-consent regulation.
 	 */
 	sessionCookie?: boolean
 	/**
+	 * Set the `Domain` attribute of the session cookie so the same session can
+	 * be continued on different subdomains (e.g. `app.example.com` and
+	 * `checkout.example.com` both see a cookie set for `example.com`).
+	 * Only applies when `sessionCookie` is set to `true`.
+	 * By default, the cookie is scoped to the exact host that created it.
+	 */
+	sessionCookieDomain?: string
+	/**
 	 * Specifies if Highlight should not automatically initialize when the class is created.
 	 * This should be used with `.start()` and `.stop()` if you want to control when Highlight records.
+	 *
+	 * While `start()` has not been called, calls that can be deferred (logs,
+	 * errors, metrics, `track`) are kept in memory and delivered once
+	 * `start()` runs. `start()` and `stop()` can safely be called before the
+	 * SDK has initialized: a start made too early resolves once the SDK is
+	 * attached. Calls that cannot be deferred (synchronous span callbacks) run
+	 * their callback on a no-op span while the SDK is not started.
 	 * @default false
 	 */
 	manualStart?: boolean

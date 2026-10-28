@@ -1,4 +1,7 @@
-import { SESSION_PUSH_THRESHOLD } from '../../constants/sessions'
+import {
+	MAX_SESSION_LENGTH,
+	SESSION_PUSH_THRESHOLD,
+} from '../../constants/sessions'
 import {
 	cookieStorage,
 	getItem,
@@ -61,6 +64,13 @@ const getSessionData = (sessionID: string): SessionData | undefined => {
 	return storedSessionData as SessionData
 }
 
+// Deterministic sessionKey sessions are exempt, matching the replay reset in
+// RecordSDK._save.
+const exceedsMaxSessionLength = (sessionData: SessionData, now: number) =>
+	!sessionData.sessionKey &&
+	!!sessionData.sessionStartTime &&
+	now - sessionData.sessionStartTime > MAX_SESSION_LENGTH
+
 export const getPreviousSessionData = (
 	sessionID?: string,
 ): SessionData | undefined => {
@@ -71,11 +81,61 @@ export const getPreviousSessionData = (
 	if (
 		storedSessionData &&
 		storedSessionData.lastPushTime &&
-		Date.now() - storedSessionData.lastPushTime < SESSION_PUSH_THRESHOLD
+		Date.now() - storedSessionData.lastPushTime < SESSION_PUSH_THRESHOLD &&
+		// A recent push does not extend a session past its maximum length.
+		!exceedsMaxSessionLength(storedSessionData, Date.now())
 	) {
 		return storedSessionData as SessionData
 	} else {
 		removeItem(getSessionDataKey(sessionID))
+	}
+}
+
+// Only session replay has a push loop that refreshes `lastPushTime`
+// (RecordSDK._save). Everything an observe-only session does while the user
+// is active goes out through telemetry, so telemetry must refresh it too —
+// otherwise a page load more than SESSION_PUSH_THRESHOLD after the session
+// _start_ would rotate the session even though the user never went idle.
+const SESSION_TOUCH_THROTTLE_MS = 10 * 1000
+
+let lastSessionTouchTime = 0
+
+/**
+ * Refresh the session's last-activity timestamp, keeping the current
+ * session across full page loads while the user is active.
+ * Throttled so frequent telemetry does not hammer storage; a session never
+ * outlives MAX_SESSION_LENGTH — once that is reached the stored data is
+ * removed so the next page load starts a new session (mirroring the replay
+ * reset in RecordSDK._save; deterministic sessionKey sessions keep the
+ * same exemption).
+ */
+export const touchSession = (): void => {
+	const now = Date.now()
+	if (now - lastSessionTouchTime < SESSION_TOUCH_THROTTLE_MS) {
+		return
+	}
+	lastSessionTouchTime = now
+
+	// Called from the span export path, so it must never throw (e.g. on
+	// unparseable stored session data).
+	try {
+		const sessionData = getSessionData(getPersistentSessionSecureID())
+		if (!sessionData?.sessionSecureID) {
+			return
+		}
+		if (exceedsMaxSessionLength(sessionData, now)) {
+			removeItem(getSessionDataKey(sessionData.sessionSecureID))
+			return
+		}
+		setSessionData({ ...sessionData, lastPushTime: now })
+	} catch (e) {
+		internalLogOnce(
+			'highlightSession',
+			'touchSession',
+			'debug',
+			'failed to refresh session activity',
+			e,
+		)
 	}
 }
 

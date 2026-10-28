@@ -1,0 +1,90 @@
+name: Java Observability Plugin E2E
+
+on:
+    push:
+        branches: ['main']
+        paths:
+            - 'e2e/java-plugin/**'
+            - 'e2e/java-plugin-spring-boot/**'
+            - 'sdk/@launchdarkly/observability-java/**'
+            - '.github/workflows/java-plugin-e2e.yml'
+    pull_request:
+        types: [opened, synchronize]
+        paths:
+            - 'e2e/java-plugin/**'
+            - 'e2e/java-plugin-spring-boot/**'
+            - 'sdk/@launchdarkly/observability-java/**'
+            - '.github/workflows/java-plugin-e2e.yml'
+
+permissions:
+    contents: read
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+jobs:
+    run:
+        name: Run example
+        runs-on: ubuntu-22.04-8core-32gb
+        defaults:
+            run:
+                working-directory: ./e2e/java-plugin
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Set up JDK 21
+              uses: actions/setup-java@v4
+              with:
+                  distribution: 'temurin'
+                  java-version: 21
+                  cache: 'gradle'
+
+            # Runs once per owner of GlobalOpenTelemetry: the plugin, a no-op
+            # claimed before the client starts, and the Java agent.
+            - name: Run the self-checking example
+              run: make run
+
+            # Builds the Spring Boot web backend, starts it offline (no SDK
+            # key) and drives every route. It must come up, answer, record the
+            # /error exception as a 500, and stop cleanly on SIGTERM with the
+            # plugin flushing on the way out.
+            - name: Build and test the Spring Boot backend
+              working-directory: ./e2e/java-plugin-spring-boot
+              run: make test build
+
+            - name: Smoke-test the Spring Boot backend
+              working-directory: ./e2e/java-plugin-spring-boot
+              # The app under test runs on this runner, so it is reached on the
+              # loopback address. DevSkim DS162092 flags that as debug code.
+              env:
+                  APP: http://localhost:8080 # DevSkim: ignore DS162092
+              run: |
+                  java -jar build/libs/*.jar > app.log 2>&1 &
+                  APP_PID=$!
+                  for i in $(seq 1 120); do
+                      if curl -sf -o /dev/null "$APP/"; then break; fi
+                      if ! kill -0 "$APP_PID" 2>/dev/null; then echo "app exited early"; cat app.log; exit 1; fi
+                      sleep 1
+                  done
+                  curl -sf "$APP/" || { cat app.log; exit 1; }
+                  curl -sf -H 'X-User-Key: ci' "$APP/rolldice" || { cat app.log; exit 1; }
+                  curl -sf "$APP/flags/example-greeting" || { cat app.log; exit 1; }
+                  curl -sf "$APP/actuator/health" || { cat app.log; exit 1; }
+                  code=$(curl -s -o /dev/null -w '%{http_code}' "$APP/error")
+                  [ "$code" = "500" ] || { echo "expected 500 from /error, got $code"; cat app.log; exit 1; }
+                  kill -TERM "$APP_PID"
+                  wait "$APP_PID" || true
+                  grep -q "Closing LaunchDarkly Client" app.log || { echo "client did not close on shutdown"; cat app.log; exit 1; }
+                  echo "Spring Boot backend OK"
+
+            # The OpenTelemetry Java agent owns GlobalOpenTelemetry here, as
+            # it does in many production services. Flag evaluations and
+            # request spans must still reach the plugin's exporter, checked
+            # against a local collector.
+            - name: Smoke-test the Spring Boot backend under the Java agent
+              working-directory: ./e2e/java-plugin-spring-boot
+              run: make javaagent-smoke
+
+            - name: Build the dockerized Spring Boot backend
+              working-directory: .
+              run: docker build -f e2e/java-plugin-spring-boot/Dockerfile -t e2e-java .
