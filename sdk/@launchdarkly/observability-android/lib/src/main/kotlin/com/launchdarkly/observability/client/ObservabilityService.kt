@@ -18,6 +18,7 @@ import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.logs.EventLogRecordProcessor
+import com.launchdarkly.observability.logs.GlobalAttributesLogRecordProcessor
 import com.launchdarkly.observability.logs.OtlpLogExporter
 import com.launchdarkly.observability.metrics.EventMetricExporter
 import com.launchdarkly.observability.metrics.OtlpMetricExporter
@@ -33,6 +34,7 @@ import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
+import com.launchdarkly.observability.traces.GlobalAttributesSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
 import com.launchdarkly.observability.util.requireMainThread
 import io.opentelemetry.android.LDRumSessionManagerAccessor
@@ -510,11 +512,9 @@ class ObservabilityService(
             delegate = LogRecordProcessor.composite(delegates),
             sampler = customSampler,
         )
-        ProcessorPipeline.logProcessors(
-            userProcessors = observabilityOptions.logProcessors,
-            sdkProcessors = listOf(otlpProcessor),
-            logger = logger,
-        ).forEach { sdkLoggerProviderBuilder.addLogRecordProcessor(it) }
+        // Globals must be applied before sampling and export so exported records carry them.
+        sdkLoggerProviderBuilder.addLogRecordProcessor(GlobalAttributesLogRecordProcessor())
+        sdkLoggerProviderBuilder.addLogRecordProcessor(otlpProcessor)
 
         return sdkLoggerProviderBuilder
     }
@@ -543,11 +543,9 @@ class ObservabilityService(
             delegateExporter = delegateExporter,
             batchWorker = batchWorker,
         )
-        ProcessorPipeline.spanProcessors(
-            userProcessors = observabilityOptions.spanProcessors,
-            sdkProcessors = listOf(otlpProcessor),
-            logger = logger,
-        ).forEach { sdkTracerProviderBuilder.addSpanProcessor(it) }
+        // Globals must be applied before sampling and export so exported spans carry them.
+        sdkTracerProviderBuilder.addSpanProcessor(GlobalAttributesSpanProcessor())
+        sdkTracerProviderBuilder.addSpanProcessor(otlpProcessor)
 
         return sdkTracerProviderBuilder
     }
