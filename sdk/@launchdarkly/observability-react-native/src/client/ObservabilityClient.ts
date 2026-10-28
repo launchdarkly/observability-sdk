@@ -161,6 +161,8 @@ export class ObservabilityClient {
 			maxBufferSize: options.maxBufferSize ?? DEFAULT_MAX_BUFFER_SIZE,
 			uploadIntervalMillis:
 				options.uploadIntervalMillis ?? DEFAULT_UPLOAD_INTERVAL_MILLIS,
+			spanProcessors: options.spanProcessors ?? [],
+			logProcessors: options.logProcessors ?? [],
 		}
 	}
 
@@ -256,6 +258,14 @@ export class ObservabilityClient {
 			// would never resolve. Callers that want to retry can start a new client.
 			this.settleInit()
 		}
+	}
+
+	public setAttributes(attributes: Attributes): void {
+		this.instrumentationManager.setAttributes(attributes)
+	}
+
+	public removeAttributes(keys: string[]): void {
+		this.instrumentationManager.removeAttributes(keys)
 	}
 
 	public consumeCustomError(

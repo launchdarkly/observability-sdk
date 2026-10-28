@@ -38,6 +38,8 @@ const localOptions = {
 	flagExposureDedupeMaxSize: 2000,
 	maxBufferSize: 1000,
 	uploadIntervalMillis: 10 * 60 * 1000,
+	spanProcessors: [],
+	logProcessors: [],
 }
 
 // Capture what the exporters receive instead of letting them hit the network.

@@ -1,4 +1,6 @@
 import { Attributes } from '@opentelemetry/api'
+import type { LogRecordProcessor } from '@opentelemetry/sdk-logs'
+import type { SpanProcessor } from '@opentelemetry/sdk-trace-web'
 import type { LDContext } from '@launchdarkly/js-sdk-common'
 
 export type NetworkRecordingOptions = {
@@ -214,4 +216,22 @@ export interface ReactNativeOptions {
 	 * @default 5000
 	 */
 	uploadIntervalMillis?: number
+
+	/**
+	 * Additional OpenTelemetry span processors, invoked in the given order after
+	 * global attributes (see `LDObserve.setAttributes`) are applied and before
+	 * the SDK's exporting processor, so mutations made in `onStart` are
+	 * exported. Errors thrown by a processor are caught and never prevent
+	 * export.
+	 */
+	spanProcessors?: SpanProcessor[]
+
+	/**
+	 * Additional OpenTelemetry log record processors, invoked in the given order
+	 * after global attributes (see `LDObserve.setAttributes`) are applied and
+	 * before the SDK's exporting processor, so mutations made in `onEmit` are
+	 * exported. Errors thrown by a processor are caught and never prevent
+	 * export.
+	 */
+	logProcessors?: LogRecordProcessor[]
 }

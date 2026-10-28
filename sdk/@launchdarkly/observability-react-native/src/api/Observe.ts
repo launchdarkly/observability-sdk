@@ -13,6 +13,31 @@ import { TrackProperties } from './TrackProperties'
 
 export interface Observe {
 	/**
+	 * Set global attributes, merged by key into a process-wide map that is
+	 * applied to every span (manual and auto-instrumented), log record and
+	 * metric data point recorded after this call. A span gets the values current
+	 * when it starts.
+	 *
+	 * Attributes passed to an individual call (e.g. `startSpan`, `recordLog`,
+	 * `recordMetric`) take precedence over global attributes, which take
+	 * precedence over resource attributes. SDK-managed session keys
+	 * (`highlight.session_id`, `session.id`) are ignored.
+	 *
+	 * Global attributes are kept in memory only (not persisted), survive
+	 * session changes, and remain until removed with {@link removeAttributes}.
+	 * Safe to call before the SDK has finished initializing.
+	 *
+	 * @param attributes The attributes to set
+	 */
+	setAttributes(attributes: Attributes): void
+
+	/**
+	 * Remove global attributes previously set with {@link setAttributes}.
+	 * @param keys The attribute keys to remove
+	 */
+	removeAttributes(keys: string[]): void
+
+	/**
 	 * Record an error with optional context.
 	 * @param error The error to record
 	 * @param attributes Optional additionalattributes

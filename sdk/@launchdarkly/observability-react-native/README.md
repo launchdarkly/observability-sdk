@@ -100,6 +100,68 @@ await tracer.withSpan('LoadProducts', async (scope) => {
 > `LDObserve.withSpan`) for nested async work. See the
 > [Tracing Guide](guides/tracing.md) for details.
 
+### Global attributes
+
+`LDObserve.setAttributes` attaches attributes to every span (including
+automatic network and error spans), log record and metric recorded after the
+call. Calls merge by key; `LDObserve.removeAttributes` removes keys. Global
+attributes are kept in memory only, survive session changes, and can be set
+before the SDK has finished initializing.
+
+```typescript
+import { LDObserve } from '@launchdarkly/observability-react-native';
+
+LDObserve.setAttributes({ 'app.tier': 'premium', 'user.cohort': 'beta' });
+
+// Attributes passed to an individual call win over global attributes.
+LDObserve.recordLog('checkout', 'info', { 'app.tier': 'trial' });
+
+LDObserve.removeAttributes(['user.cohort']);
+```
+
+A span gets the global attributes current when it starts. Precedence is
+per-call attributes, then global attributes, then resource attributes. The
+SDK-managed session keys (`highlight.session_id`, `session.id`) cannot be set
+this way and are ignored.
+
+### Custom span and log processors
+
+Pass OpenTelemetry processors with the `spanProcessors` and `logProcessors`
+options to inspect or modify telemetry before it is exported. They run in the
+given order, after global attributes are applied and before the SDK's exporting
+processor, so their changes are exported. A processor that throws is isolated
+and never prevents the span or log record from being exported.
+
+```typescript
+import {
+  Observability,
+  type LogRecordProcessor,
+  type SpanProcessor,
+} from '@launchdarkly/observability-react-native';
+
+const tagSpans: SpanProcessor = {
+  onStart: (span) => span.setAttribute('app.build', 'release'),
+  onEnd: () => {},
+  forceFlush: () => Promise.resolve(),
+  shutdown: () => Promise.resolve(),
+};
+
+const tagLogs: LogRecordProcessor = {
+  onEmit: (logRecord) => logRecord.setAttribute('app.build', 'release'),
+  forceFlush: () => Promise.resolve(),
+  shutdown: () => Promise.resolve(),
+};
+
+new Observability({
+  spanProcessors: [tagSpans],
+  logProcessors: [tagLogs],
+});
+```
+
+The `SpanProcessor`, `ReadableSpan`, `SdkSpan`, `LogRecordProcessor`,
+`SdkLogRecord` and `ReadableLogRecord` types are re-exported from this package,
+so you don't need to depend on matching OpenTelemetry package versions.
+
 ## Guides
 
 - [Tracing Guide](guides/tracing.md) — a cookbook of common tracing patterns (spans, nested operations, error handling, correlated logs, and end-to-end mobile-to-backend traces).

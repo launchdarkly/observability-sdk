@@ -58,6 +58,13 @@ import {
 import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
 import { CustomTraceExporter } from '../otel/CustomTraceExporter'
 import { CustomLogExporter } from '../otel/CustomLogExporter'
+import { globalAttributes } from '../otel/GlobalAttributes'
+import { GlobalAttributesSpanProcessor } from '../otel/GlobalAttributesSpanProcessor'
+import { GlobalAttributesLogRecordProcessor } from '../otel/GlobalAttributesLogRecordProcessor'
+import {
+	SafeLogRecordProcessor,
+	SafeSpanProcessor,
+} from '../otel/SafeProcessors'
 import {
 	DEFAULT_EXPORT_TIMEOUT_MILLIS,
 	DEFAULT_MAX_EXPORT_BATCH_SIZE,
@@ -157,6 +164,13 @@ export class InstrumentationManager {
 		)
 
 		const processors: SpanProcessor[] = [
+			new GlobalAttributesSpanProcessor(globalAttributes),
+			...(this.options.spanProcessors ?? []).map(
+				(processor) =>
+					new SafeSpanProcessor(processor, (...data) =>
+						this._log(...data),
+					),
+			),
 			new CustomBatchSpanProcessor(exporter, {
 				maxQueueSize: this.options.maxBufferSize,
 				scheduledDelayMillis: this.options.uploadIntervalMillis,
@@ -225,6 +239,13 @@ export class InstrumentationManager {
 		this.loggerProvider = new LoggerProvider({
 			resource: this.resource,
 			processors: [
+				new GlobalAttributesLogRecordProcessor(globalAttributes),
+				...(this.options.logProcessors ?? []).map(
+					(processor) =>
+						new SafeLogRecordProcessor(processor, (...data) =>
+							this._log(...data),
+						),
+				),
 				new BatchLogRecordProcessor(logExporter, {
 					maxQueueSize: this.options.maxBufferSize,
 					scheduledDelayMillis: this.options.uploadIntervalMillis,
@@ -263,6 +284,30 @@ export class InstrumentationManager {
 		metrics.setGlobalMeterProvider(this.meterProvider)
 
 		this._log('Metrics initialized')
+	}
+
+	public setAttributes(attributes: Attributes): void {
+		const ignored = globalAttributes.setAttributes(attributes)
+		if (ignored.length) {
+			this._log(
+				'setAttributes ignored reserved or invalid keys:',
+				ignored,
+			)
+		}
+	}
+
+	public removeAttributes(keys: string[]): void {
+		globalAttributes.removeAttributes(keys)
+	}
+
+	private withGlobalAttributes(
+		attributes?: Attributes,
+	): Attributes | undefined {
+		const globals = globalAttributes.getAttributes()
+		if (Object.keys(globals).length === 0) {
+			return attributes
+		}
+		return { ...globals, ...attributes }
 	}
 
 	public recordError(
@@ -313,7 +358,10 @@ export class InstrumentationManager {
 				)
 				this._gauges.set(metric.name, gauge)
 			}
-			gauge.record(metric.value, metric.attributes)
+			gauge.record(
+				metric.value,
+				this.withGlobalAttributes(metric.attributes),
+			)
 		} catch (e) {
 			console.error('Failed to record metric:', e)
 		}
@@ -330,7 +378,10 @@ export class InstrumentationManager {
 				)
 				this._counters.set(metric.name, counter)
 			}
-			counter.add(metric.value, metric.attributes)
+			counter.add(
+				metric.value,
+				this.withGlobalAttributes(metric.attributes),
+			)
 		} catch (e) {
 			console.error('Failed to record count:', e)
 		}
@@ -352,7 +403,10 @@ export class InstrumentationManager {
 				)
 				this._histograms.set(metric.name, histogram)
 			}
-			histogram.record(metric.value, metric.attributes)
+			histogram.record(
+				metric.value,
+				this.withGlobalAttributes(metric.attributes),
+			)
 		} catch (e) {
 			console.error('Failed to record histogram:', e)
 		}
@@ -369,7 +423,10 @@ export class InstrumentationManager {
 				)
 				this._upDownCounters.set(metric.name, upDownCounter)
 			}
-			upDownCounter.add(metric.value, metric.attributes)
+			upDownCounter.add(
+				metric.value,
+				this.withGlobalAttributes(metric.attributes),
+			)
 		} catch (e) {
 			console.error('Failed to record up/down counter:', e)
 		}

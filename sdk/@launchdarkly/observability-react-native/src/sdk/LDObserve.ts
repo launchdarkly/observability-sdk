@@ -60,6 +60,14 @@ class LDObserveClass
 		super._resetForTesting()
 	}
 
+	setAttributes(attributes: Attributes): void {
+		return this._bufferCall('setAttributes', [attributes])
+	}
+
+	removeAttributes(keys: string[]): void {
+		return this._bufferCall('removeAttributes', [keys])
+	}
+
 	recordError(
 		error: Error,
 		attributes?: Attributes,
