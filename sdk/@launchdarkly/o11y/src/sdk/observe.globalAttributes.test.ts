@@ -363,6 +363,34 @@ describe('ObserveSDK global attributes', () => {
 	})
 })
 
+describe('ObserveSDK.start', () => {
+	afterEach(() => {
+		vi.restoreAllMocks()
+	})
+
+	it('gives setupBrowserTracing the global attributes getter', async () => {
+		const setupBrowserTracing = vi
+			.spyOn(otel, 'setupBrowserTracing')
+			.mockImplementation(() => undefined as any)
+		const observe = newObserveSDK()
+		vi.spyOn(observe as any, 'configureSampling').mockResolvedValue(
+			undefined,
+		)
+		vi.spyOn(observe as any, 'setupListeners').mockImplementation(
+			() => undefined,
+		)
+
+		await observe.start()
+		observe.setAttributes({ utm_campaign: 'spring' })
+
+		expect(setupBrowserTracing).toHaveBeenCalledTimes(1)
+		const config = setupBrowserTracing.mock.calls[0][0]
+		expect(config.getGlobalAttributes?.()).toEqual({
+			utm_campaign: 'spring',
+		})
+	})
+})
+
 describe('LDObserve.setAttributes buffering', () => {
 	it('applies calls made before the SDK attaches, before it starts', () => {
 		// A fresh buffer, so the singleton other tests attach is untouched.

@@ -296,6 +296,7 @@ export class ObserveSDK implements Observe {
 					productAnalyticsEvents: this._productAnalyticsEvents(),
 					getLDContextKeyAttributes: () =>
 						this.getLDContextKeyAttributes(),
+					getGlobalAttributes: () => this.getGlobalAttributes(),
 				},
 				getIntegrations: () => this._integrations,
 			},
