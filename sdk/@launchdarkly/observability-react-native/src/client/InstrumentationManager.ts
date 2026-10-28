@@ -17,7 +17,7 @@ import { metrics } from '@opentelemetry/api'
 import { registerInstrumentations } from '@opentelemetry/instrumentation'
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch'
 import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request'
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
+import { createMetricExporter } from '../otel/createMetricExporter'
 import {
 	SpanProcessor,
 	WebTracerProvider,
@@ -242,10 +242,10 @@ export class InstrumentationManager {
 	private initializeMetrics() {
 		if (this.options.disableMetrics) return
 
-		const metricExporter = new OTLPMetricExporter({
-			headers: this.headers,
-			url: `${this.options.otlpEndpoint}/v1/metrics`,
-		})
+		const metricExporter = createMetricExporter(
+			this.headers,
+			`${this.options.otlpEndpoint}/v1/metrics`,
+		)
 
 		const readers = [
 			new PeriodicExportingMetricReader({
