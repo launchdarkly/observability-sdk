@@ -192,25 +192,8 @@ const H: HighlightPublicInterface = {
 			HighlightWarning('snapshot', e)
 		}
 	},
-	addSessionFeedback: ({
-		verbatim,
-		userName,
-		userEmail,
-		timestampOverride,
-	}) => {
-		try {
-			H.onHighlightReady(() =>
-				highlight_obj.addSessionFeedback({
-					verbatim,
-					timestamp: timestampOverride || new Date().toISOString(),
-					user_email: userEmail,
-					user_name: userName,
-				}),
-			)
-		} catch (e) {
-			HighlightWarning('error', e)
-		}
-	},
+	/** @deprecated Session feedback is no longer supported. This is a no-op. */
+	addSessionFeedback: () => {},
 	consumeError: (
 		error: Error,
 		message?: string,
