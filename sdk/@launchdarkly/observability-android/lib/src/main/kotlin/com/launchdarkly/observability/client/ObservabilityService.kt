@@ -232,6 +232,7 @@ class ObservabilityService(
 
     init {
         requireMainThread { "ObservabilityService must be initialized on the main thread" }
+        GlobalAttributesStore.logger = logger
 
         // With `enabled = false` the service is still built, so Session Replay keeps its session,
         // screen, click and lifecycle signals, but nothing is exported: no exporters, span/log
@@ -485,7 +486,7 @@ class ObservabilityService(
                 val histogram = histogramCache.getOrPut(metric.name) {
                     otelMeter.histogramBuilder(metric.name).build()
                 }
-                histogram.record(metric.value, metric.attributes.addSessionId())
+                histogram.record(metric.value, metricAttributes(metric.attributes))
             }
         )
         rumBuilder.addInstrumentation(launchTimeInstrumentation)
@@ -509,7 +510,11 @@ class ObservabilityService(
             delegate = LogRecordProcessor.composite(delegates),
             sampler = customSampler,
         )
-        sdkLoggerProviderBuilder.addLogRecordProcessor(otlpProcessor)
+        ProcessorPipeline.logProcessors(
+            userProcessors = observabilityOptions.logProcessors,
+            sdkProcessors = listOf(otlpProcessor),
+            logger = logger,
+        ).forEach { sdkLoggerProviderBuilder.addLogRecordProcessor(it) }
 
         return sdkLoggerProviderBuilder
     }
@@ -538,7 +543,11 @@ class ObservabilityService(
             delegateExporter = delegateExporter,
             batchWorker = batchWorker,
         )
-        sdkTracerProviderBuilder.addSpanProcessor(otlpProcessor)
+        ProcessorPipeline.spanProcessors(
+            userProcessors = observabilityOptions.spanProcessors,
+            sdkProcessors = listOf(otlpProcessor),
+            logger = logger,
+        ).forEach { sdkTracerProviderBuilder.addSpanProcessor(it) }
 
         return sdkTracerProviderBuilder
     }
@@ -592,7 +601,7 @@ class ObservabilityService(
         val gauge = gaugeCache.getOrPut(metric.name) {
             otelMeter.gaugeBuilder(metric.name).build()
         }
-        gauge.set(metric.value, metric.attributes.addSessionId())
+        gauge.set(metric.value, metricAttributes(metric.attributes))
     }
 
     override fun recordCount(metric: Metric) {
@@ -602,7 +611,7 @@ class ObservabilityService(
         val counter = counterCache.getOrPut(metric.name) {
             otelMeter.counterBuilder(metric.name).build()
         }
-        counter.add(metric.value.toLong(), metric.attributes.addSessionId())
+        counter.add(metric.value.toLong(), metricAttributes(metric.attributes))
     }
 
     override fun recordIncr(metric: Metric) {
@@ -612,7 +621,7 @@ class ObservabilityService(
             otelMeter.counterBuilder(metric.name).build()
         }
         // It increments the value until the metric is exported, then it's reset.
-        counter.add(1, metric.attributes.addSessionId())
+        counter.add(1, metricAttributes(metric.attributes))
     }
 
     override fun recordHistogram(metric: Metric) {
@@ -621,7 +630,7 @@ class ObservabilityService(
         val histogram = histogramCache.getOrPut(metric.name) {
             otelMeter.histogramBuilder(metric.name).build()
         }
-        histogram.record(metric.value, metric.attributes.addSessionId())
+        histogram.record(metric.value, metricAttributes(metric.attributes))
     }
 
     override fun recordUpDownCounter(metric: Metric) {
@@ -630,7 +639,7 @@ class ObservabilityService(
         val upDownCounter = upDownCounterCache.getOrPut(metric.name) {
             otelMeter.upDownCounterBuilder(metric.name).build()
         }
-        upDownCounter.add(metric.value.toLong(), metric.attributes.addSessionId())
+        upDownCounter.add(metric.value.toLong(), metricAttributes(metric.attributes))
     }
 
     override fun recordLog(
@@ -1015,6 +1024,10 @@ class ObservabilityService(
             null
         }
     }
+
+    /** Global attributes, overridden by the per-call [attributes], plus the current session id. */
+    private fun metricAttributes(attributes: Attributes): Attributes =
+        GlobalAttributesStore.merge(attributes).addSessionId()
 
     private fun Attributes.addSessionId() = this.toBuilder().put(SESSION_ID_ATTRIBUTE, ldSessionManager.getSessionId()).build()
 

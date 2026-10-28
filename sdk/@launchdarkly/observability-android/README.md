@@ -397,6 +397,88 @@ OpenTelemetry typing (as shown for `recordError` above). For `trackScreenView`, 
 properties are applied at lower precedence than the reserved `event.*` taxonomy fields,
 so they can never clobber them.
 
+### Global Attributes
+
+Use `LDObserve.setAttributes` to attach attributes to every span (manual and automatic,
+such as lifecycle, screen view, click, and error spans), log record (including crash
+reports), and metric data point recorded after the call. `LDObserve.removeAttributes` removes keys again.
+
+```kotlin
+import com.launchdarkly.observability.sdk.LDObserve
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+
+// Merged by key into the existing global attributes.
+LDObserve.setAttributes(
+    Attributes.of(
+        AttributeKey.stringKey("tenant.id"), "acme",
+        AttributeKey.stringKey("app.flavor"), "beta"
+    )
+)
+
+// A plain map works too, with the same conversion rules as `properties`.
+LDObserve.setAttributes(mapOf("experiment.cohort" to "b"))
+
+LDObserve.removeAttributes(listOf("app.flavor"))
+```
+
+- **Precedence:** attributes passed to an individual call (`startSpan`, `recordLog`,
+  `recordMetric`, ...) win over global attributes, which win over resource attributes.
+  Globals only fill keys that are not already present; they never overwrite.
+- **Spans** take the global values current when the span starts.
+- **Lifetime:** global attributes live in memory for the process. They are not persisted
+  and are not cleared when the session rotates.
+- **Before initialization:** calls made before the SDK finishes initializing take effect
+  once it does.
+- **Reserved keys:** SDK-managed session keys (`session.id`, `highlight.session_id`) are
+  ignored and a warning is logged.
+
+### Custom Span and Log Processors
+
+Pass your own OpenTelemetry `SpanProcessor`s and `LogRecordProcessor`s at initialization to
+inspect, enrich, or redact telemetry before it is exported:
+
+```kotlin
+import com.launchdarkly.observability.api.ObservabilityOptions
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.context.Context
+import io.opentelemetry.sdk.logs.LogRecordProcessor
+import io.opentelemetry.sdk.logs.ReadWriteLogRecord
+import io.opentelemetry.sdk.trace.ReadWriteSpan
+import io.opentelemetry.sdk.trace.ReadableSpan
+import io.opentelemetry.sdk.trace.SpanProcessor
+
+class BuildFlavorSpanProcessor : SpanProcessor {
+    override fun onStart(parentContext: Context, span: ReadWriteSpan) {
+        span.setAttribute(AttributeKey.stringKey("build.flavor"), BuildConfig.FLAVOR)
+    }
+    override fun isStartRequired() = true
+    override fun onEnd(span: ReadableSpan) {}
+    override fun isEndRequired() = false
+}
+
+class RedactEmailLogProcessor : LogRecordProcessor {
+    override fun onEmit(context: Context, logRecord: ReadWriteLogRecord) {
+        if (logRecord.getAttribute(AttributeKey.stringKey("user.email")) != null) {
+            logRecord.setAttribute(AttributeKey.stringKey("user.email"), "[redacted]")
+        }
+    }
+}
+
+val options = ObservabilityOptions(
+    spanProcessors = listOf(BuildFlavorSpanProcessor()),
+    logProcessors = listOf(RedactEmailLogProcessor()),
+)
+```
+
+Java callers can use `ObservabilityOptions.builder().spanProcessors(...).logProcessors(...)`.
+
+Processors run in this order: global attributes, then your processors in the order given,
+then the SDK's own sampling and export processors. Your processors therefore see global
+attributes, and attributes they set are exported. An exception thrown by one of your
+processors (including from `forceFlush` / `shutdown`, which are forwarded) is logged and
+swallowed, so it cannot crash the app or stop export.
+
 ### Deobfuscating Release Stack Traces
 
 R8 shrinks and obfuscates release builds, so a crash or a recorded error arrives naming
