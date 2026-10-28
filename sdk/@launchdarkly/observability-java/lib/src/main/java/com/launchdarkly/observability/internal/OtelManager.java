@@ -32,13 +32,17 @@ import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporterBuilder;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.common.export.ProxyOptions;
+import io.opentelemetry.sdk.logs.LogRecordProcessor;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
+import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder;
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.ReadableSpan;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder;
+import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
 
@@ -236,8 +240,17 @@ public final class OtelManager {
         // current parent comes unsampled from the Java agent, another SDK or
         // an upstream service. Volume is governed by the backend rules that
         // SamplingTraceExporter applies at export.
-        SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
+        //
+        // Processors run in registration order on the same span: global
+        // attributes first, then the user's, so the exporter (and the
+        // sampling rules it applies) sees what they set.
+        SdkTracerProviderBuilder tracerProviderBuilder = SdkTracerProvider.builder()
                 .setSampler(Sampler.alwaysOn())
+                .addSpanProcessor(new GlobalAttributesSpanProcessor());
+        for (SpanProcessor processor : options.getSpanProcessors()) {
+            tracerProviderBuilder.addSpanProcessor(new SafeSpanProcessor(processor));
+        }
+        SdkTracerProvider tracerProvider = tracerProviderBuilder
                 .addSpanProcessor(BatchSpanProcessor.builder(samplingTraceExporter)
                         .setScheduleDelay(Duration.ofSeconds(1))
                         .setExporterTimeout(Duration.ofSeconds(30))
@@ -263,7 +276,14 @@ public final class OtelManager {
         LogLevelFilterProcessor levelFilter = new LogLevelFilterProcessor(
                 samplingLogProcessor, options.getLogsApiLevel().getSeverityNumber());
 
-        SdkLoggerProvider loggerProvider = SdkLoggerProvider.builder()
+        // As for spans: global attributes, then the user's processors, which
+        // see records the level filter later drops.
+        SdkLoggerProviderBuilder loggerProviderBuilder = SdkLoggerProvider.builder()
+                .addLogRecordProcessor(new GlobalAttributesLogProcessor());
+        for (LogRecordProcessor processor : options.getLogProcessors()) {
+            loggerProviderBuilder.addLogRecordProcessor(new SafeLogRecordProcessor(processor));
+        }
+        SdkLoggerProvider loggerProvider = loggerProviderBuilder
                 .addLogRecordProcessor(levelFilter)
                 .setResource(resource)
                 .build();
@@ -567,6 +587,7 @@ public final class OtelManager {
         synchronized (INIT_LOCK) {
             manager = INSTANCE.getAndSet(null);
             PENDING_SAMPLING_CONFIG.set(null);
+            GlobalAttributes.resetForTest();
             registeredSdkKey = null;
             samplingFetchSdkKey = null;
             if (shutdownHook != null) {

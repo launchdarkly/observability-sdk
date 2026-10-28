@@ -15,10 +15,18 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.logs.LogRecordProcessor;
+import io.opentelemetry.sdk.logs.data.LogRecordData;
+import io.opentelemetry.sdk.logs.export.SimpleLogRecordProcessor;
+import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
+import io.opentelemetry.sdk.trace.ReadWriteSpan;
+import io.opentelemetry.sdk.trace.ReadableSpan;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
@@ -34,11 +42,14 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -50,6 +61,11 @@ class PluginUserFlowTest {
     private static final String SAMPLING_RESPONSE =
             "{\"data\":{\"sampling\":{\"spans\":[{\"name\":{\"matchValue\":\"health-check\"},"
                     + "\"attributes\":[],\"events\":[],\"samplingRatio\":0}],\"logs\":[]}}}";
+
+    private static final AttributeKey<String> TENANT = AttributeKey.stringKey("tenant.id");
+    private static final AttributeKey<Long> TIER = AttributeKey.longKey("tenant.tier");
+    private static final AttributeKey<String> REGION = AttributeKey.stringKey("region");
+    private static final AttributeKey<String> STALE = AttributeKey.stringKey("stale");
 
     private HttpServer server;
     private final List<String> traces = new CopyOnWriteArrayList<>();
@@ -376,7 +392,198 @@ class PluginUserFlowTest {
         }
     }
 
+    @Test
+    void globalAttributesSetBeforeStartReachEverySignal() throws Exception {
+        LDObserve.setAttributes(Attributes.of(TENANT, "tenant-global-7", TIER, 3L));
+
+        startCollector();
+        InMemorySpanExporter spans = InMemorySpanExporter.create();
+        InMemoryLogRecordExporter logRecords = InMemoryLogRecordExporter.create();
+        ObservabilityOptions options = optionsBuilder(false)
+                .spanProcessor(SimpleSpanProcessor.create(spans))
+                .logProcessor(SimpleLogRecordProcessor.create(logRecords))
+                .build();
+        LDConfig config = new LDConfig.Builder()
+                .offline(true)
+                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options))))
+                .build();
+
+        try (LDClient client = new LDClient("sdk-test", config)) {
+            client.boolVariation("checkout-enabled", LDContext.create("user-key-test"), false);
+            LDObserve.startSpan("user-checkout", Attributes.empty()).end();
+            LDObserve.recordError(new IllegalStateException("payment declined"), Attributes.empty());
+            LDObserve.recordLog("user signed in", Severity.INFO, Attributes.empty());
+            LDObserve.recordCount("orders.placed", 1, Attributes.empty());
+            LDObserve.recordMetric("queue.depth", 4.0, Attributes.empty());
+            LDObserve.flush();
+        }
+
+        List<SpanData> finished = spans.getFinishedSpanItems();
+        List<String> names = new ArrayList<>();
+        for (SpanData span : finished) {
+            names.add(span.getName());
+            assertEquals("tenant-global-7", span.getAttributes().get(TENANT), span.getName() + " has no global");
+            assertEquals(3L, span.getAttributes().get(TIER), span.getName() + " has no global");
+        }
+        assertTrue(names.contains("user-checkout"), "manual span missing: " + names);
+        assertTrue(names.contains(Constants.ERROR_SPAN_NAME), "error span missing: " + names);
+        assertTrue(finished.stream().anyMatch(s -> "checkout-enabled".equals(
+                        s.getAttributes().get(AttributeKey.stringKey("feature_flag.key")))),
+                "flag evaluation span missing: " + names);
+
+        List<LogRecordData> records = logRecords.getFinishedLogRecordItems();
+        assertEquals(1, records.size());
+        assertEquals("tenant-global-7", records.get(0).getAttributes().get(TENANT));
+
+        assertTrue(payloadContains(traces, "tenant-global-7"), "globals were not exported on spans");
+        assertTrue(payloadContains(logs, "tenant-global-7"), "globals were not exported on logs");
+        assertTrue(payloadContains(metrics, "orders.placed") && payloadContains(metrics, "tenant-global-7"),
+                "globals were not exported on metrics: " + summarize(metrics));
+    }
+
+    @Test
+    void perCallAttributesWinAndSpansKeepTheGlobalsCurrentAtStart() throws Exception {
+        startCollector();
+        InMemorySpanExporter spans = InMemorySpanExporter.create();
+        InMemoryLogRecordExporter logRecords = InMemoryLogRecordExporter.create();
+        LDObserve.start("sdk-test", optionsBuilder(true)
+                .spanProcessor(SimpleSpanProcessor.create(spans))
+                .logProcessor(SimpleLogRecordProcessor.create(logRecords))
+                .build());
+
+        LDObserve.setAttributes(Attributes.of(REGION, "region-global", STALE, "stale-global"));
+        Span early = LDObserve.startSpan("early", Attributes.empty());
+        LDObserve.setAttributes(Attributes.of(REGION, "region-updated"));
+        LDObserve.removeAttributes(List.of("stale"));
+        early.end();
+        LDObserve.startSpan("explicit", Attributes.of(REGION, "region-call")).end();
+        LDObserve.startSpan("late", Attributes.empty()).end();
+        LDObserve.recordLog("explicit log", Severity.INFO, Attributes.of(REGION, "region-call"));
+        LDObserve.recordCount("orders.region", 1, Attributes.of(REGION, "region-call"));
+        LDObserve.flush();
+
+        SpanData earlySpan = span(spans, "early");
+        assertEquals("region-global", earlySpan.getAttributes().get(REGION));
+        assertEquals("stale-global", earlySpan.getAttributes().get(STALE));
+        SpanData explicitSpan = span(spans, "explicit");
+        assertEquals("region-call", explicitSpan.getAttributes().get(REGION));
+        assertNull(explicitSpan.getAttributes().get(STALE), "a removed global must not be applied");
+        assertEquals("region-updated", span(spans, "late").getAttributes().get(REGION));
+
+        assertEquals("region-call", logRecords.getFinishedLogRecordItems().get(0).getAttributes().get(REGION));
+
+        assertTrue(payloadContains(metrics, "region-call"), "per-call metric attribute missing: " + summarize(metrics));
+        assertFalse(payloadContains(metrics, "region-updated"), "a global overwrote a per-call metric attribute");
+    }
+
+    @Test
+    void userProcessorsRunInOrderAndTheirChangesAreExported() throws Exception {
+        List<String> calls = new CopyOnWriteArrayList<>();
+        AttributeKey<String> enriched = AttributeKey.stringKey("enriched.by");
+        AttributeKey<String> saw = AttributeKey.stringKey("second.saw");
+        SpanProcessor first = new OnStartProcessor(span -> {
+            calls.add("first-span");
+            span.setAttribute(enriched, "first-processor");
+        });
+        SpanProcessor second = new OnStartProcessor(span -> {
+            calls.add("second-span");
+            span.setAttribute(saw, span.getAttribute(enriched) + "|" + span.getAttribute(TENANT));
+        });
+        LogRecordProcessor firstLog = (context, record) -> {
+            calls.add("first-log");
+            record.setAttribute(enriched, "first-log-processor");
+        };
+        LogRecordProcessor secondLog = (context, record) -> {
+            calls.add("second-log");
+            Attributes seen = record.toLogRecordData().getAttributes();
+            record.setAttribute(saw, seen.get(enriched) + "|" + seen.get(TENANT));
+        };
+        LDObserve.setAttributes(Attributes.of(TENANT, "tenant-global-7"));
+
+        startCollector();
+        LDObserve.start("sdk-test", optionsBuilder(true)
+                .spanProcessors(List.of(first, second))
+                .logProcessors(List.of(firstLog, secondLog))
+                .build());
+
+        LDObserve.startSpan("ordered", Attributes.empty()).end();
+        LDObserve.recordLog("ordered log", Severity.INFO, Attributes.empty());
+        LDObserve.flush();
+
+        assertEquals(List.of("first-span", "second-span", "first-log", "second-log"), calls);
+        assertTrue(payloadContains(traces, "first-processor|tenant-global-7"),
+                "user span processor changes were not exported: " + summarize(traces));
+        assertTrue(payloadContains(logs, "first-log-processor|tenant-global-7"),
+                "user log processor changes were not exported: " + summarize(logs));
+
+        // The sampling rules still apply after the user's processors.
+        assertTrue(waitForSamplingApplied(), "sampling config was not applied");
+        assertTrue(waitUntilHealthCheckDropped(), "sampling rule did not drop health-check spans");
+    }
+
+    @Test
+    void throwingUserProcessorsDoNotBreakExport() throws Exception {
+        InMemorySpanExporter after = InMemorySpanExporter.create();
+        startCollector();
+        LDObserve.start("sdk-test", optionsBuilder(true)
+                .spanProcessor(new SafeProcessorTest.ThrowingSpanProcessor())
+                .spanProcessor(SimpleSpanProcessor.create(after))
+                .logProcessor(new SafeProcessorTest.ThrowingLogProcessor())
+                .build());
+
+        assertDoesNotThrow(() -> LDObserve.startSpan("after-throw", Attributes.empty()).end());
+        assertDoesNotThrow(() -> LDObserve.recordLog("log after throw", Severity.INFO, Attributes.empty()));
+        assertDoesNotThrow(() -> LDObserve.recordError(new IllegalStateException("still recorded"), Attributes.empty()));
+        assertDoesNotThrow(LDObserve::flush);
+
+        assertTrue(payloadContains(traces, "after-throw"), "span was not exported: " + summarize(traces));
+        assertTrue(payloadContains(traces, "still recorded"), "error span was not exported");
+        assertTrue(payloadContains(logs, "log after throw"), "log was not exported: " + summarize(logs));
+        assertEquals(2, after.getFinishedSpanItems().size(), "processors after the throwing one must still run");
+
+        assertDoesNotThrow(LDObserve::shutdown);
+    }
+
+    private static SpanData span(InMemorySpanExporter exporter, String name) {
+        return exporter.getFinishedSpanItems().stream()
+                .filter(s -> s.getName().equals(name))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no span named " + name));
+    }
+
+    /** A span processor that only acts in {@code onStart}. */
+    private static final class OnStartProcessor implements SpanProcessor {
+        private final Consumer<ReadWriteSpan> onStart;
+
+        OnStartProcessor(Consumer<ReadWriteSpan> onStart) {
+            this.onStart = onStart;
+        }
+
+        @Override
+        public void onStart(Context parentContext, ReadWriteSpan span) {
+            onStart.accept(span);
+        }
+
+        @Override
+        public boolean isStartRequired() {
+            return true;
+        }
+
+        @Override
+        public void onEnd(ReadableSpan span) {
+        }
+
+        @Override
+        public boolean isEndRequired() {
+            return false;
+        }
+    }
+
     private ObservabilityOptions options(boolean manualStart) {
+        return optionsBuilder(manualStart).build();
+    }
+
+    private ObservabilityOptions.Builder optionsBuilder(boolean manualStart) {
         String base = "http".concat("://") + server.getAddress().getHostString() + ":" + server.getAddress().getPort();
         return new ObservabilityOptions.Builder()
                 .serviceName("orders-service")
@@ -384,8 +591,7 @@ class PluginUserFlowTest {
                 .environment("test")
                 .otlpEndpoint(base)
                 .backendUrl(base + "/sampling")
-                .manualStart(manualStart)
-                .build();
+                .manualStart(manualStart);
     }
 
     private void startCollector() throws IOException {
