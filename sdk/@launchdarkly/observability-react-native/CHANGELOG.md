@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.19.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.18.0...observability-react-native-0.19.0) (2026-10-28)
+
+
+### Features
+
+* **react-native:** report OS and device attributes on the Resource ([#849](https://github.com/launchdarkly/observability-sdk/issues/849)) ([40e6761](https://github.com/launchdarkly/observability-sdk/commit/40e676188f582c4cb4ae58ce4260e3778822210e))
+
+
+### Bug Fixes
+
+* **react-native:** record each error once ([#850](https://github.com/launchdarkly/observability-sdk/issues/850)) ([511ad53](https://github.com/launchdarkly/observability-sdk/commit/511ad537715ba236caf056aa82ae7963782ac2db))
+
 ## [0.18.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.17.1...observability-react-native-0.18.0) (2026-08-07)
 
 
