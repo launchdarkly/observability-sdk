@@ -387,6 +387,10 @@ LDObserve.trackScreenView(
     category = "Account",
     properties = mapOf("tab" to "overview")
 )
+
+// Attach attributes to everything recorded from now on (see Global Attributes below).
+LDObserve.setAttributes(mapOf("utm_campaign" to "spring_promo"))
+LDObserve.removeAttributes(listOf("utm_campaign"))
 ```
 
 `recordLog`, `startSpan`, `track`, and `trackScreenView` accept attributes/data as a
@@ -396,6 +400,42 @@ plain Kotlin map via the `properties` parameter — pass `String`, `Boolean`, `I
 OpenTelemetry typing (as shown for `recordError` above). For `trackScreenView`, custom
 properties are applied at lower precedence than the reserved `event.*` taxonomy fields,
 so they can never clobber them.
+
+### Global Attributes
+
+Use `LDObserve.setAttributes` to attach attributes to every span (manual and automatic,
+such as lifecycle, screen view, click, and error spans), log record (including crash
+reports), and metric data point recorded after the call. `LDObserve.removeAttributes` removes keys again.
+
+```kotlin
+import com.launchdarkly.observability.sdk.LDObserve
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+
+// Merged by key into the existing global attributes.
+LDObserve.setAttributes(
+    Attributes.of(
+        AttributeKey.stringKey("tenant.id"), "acme",
+        AttributeKey.stringKey("app.flavor"), "beta"
+    )
+)
+
+// A plain map works too, with the same conversion rules as `properties`.
+LDObserve.setAttributes(mapOf("experiment.cohort" to "b"))
+
+LDObserve.removeAttributes(listOf("app.flavor"))
+```
+
+- **Precedence:** attributes passed to an individual call (`startSpan`, `recordLog`,
+  `recordMetric`, ...) win over global attributes, which win over resource attributes.
+  Globals only fill keys that are not already present; they never overwrite.
+- **Spans** take the global values current when the span starts.
+- **Lifetime:** global attributes live in memory for the process. They are not persisted
+  and are not cleared when the session rotates.
+- **Before initialization:** calls made before the SDK finishes initializing take effect
+  once it does.
+- **Reserved keys:** SDK-managed session keys (`session.id`, `highlight.session_id`) are
+  ignored and a warning is logged.
 
 ### Deobfuscating Release Stack Traces
 

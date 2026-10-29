@@ -75,6 +75,12 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun triggerLog() {
+        GlobalAttributesRepro.note(
+            getApplication(),
+            "Trigger Log",
+            GlobalAttributesRepro.EXPECT_GLOBAL,
+            GlobalAttributesRepro.EXPECT_PER_CALL_WINS,
+        )
         // `recordLog` takes a plain map via `properties`, so no need to build OTel attributes.
         LDObserve.recordLog(
             "Test Log",
@@ -87,7 +93,8 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
                 "test-long" to 9_000_000_000L,
                 "test-double" to 3.14,
                 "test-array" to listOf(3.14),
-                "test-nested" to mapOf("array" to listOf(1))
+                "test-nested" to mapOf("array" to listOf(1)),
+                "utm_source" to "per_call",
             )
         )
     }
@@ -157,6 +164,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
 
     fun triggerCustomSpan(spanName: String) {
         if (spanName.isNotEmpty()) {
+            GlobalAttributesRepro.note(getApplication(), "Send custom span", GlobalAttributesRepro.EXPECT_GLOBAL)
             viewModelScope.launch(Dispatchers.IO) {
                 val customSpan = LDObserve.startSpan(
                     name = spanName,

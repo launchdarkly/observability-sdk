@@ -18,6 +18,7 @@ import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.logs.EventLogRecordProcessor
+import com.launchdarkly.observability.logs.GlobalAttributesLogRecordProcessor
 import com.launchdarkly.observability.logs.OtlpLogExporter
 import com.launchdarkly.observability.metrics.EventMetricExporter
 import com.launchdarkly.observability.metrics.OtlpMetricExporter
@@ -33,6 +34,7 @@ import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
+import com.launchdarkly.observability.traces.GlobalAttributesSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
 import com.launchdarkly.observability.util.requireMainThread
 import io.opentelemetry.android.LDRumSessionManagerAccessor
@@ -232,6 +234,7 @@ class ObservabilityService(
 
     init {
         requireMainThread { "ObservabilityService must be initialized on the main thread" }
+        GlobalAttributesStore.logger = logger
 
         // With `enabled = false` the service is still built, so Session Replay keeps its session,
         // screen, click and lifecycle signals, but nothing is exported: no exporters, span/log
@@ -485,7 +488,7 @@ class ObservabilityService(
                 val histogram = histogramCache.getOrPut(metric.name) {
                     otelMeter.histogramBuilder(metric.name).build()
                 }
-                histogram.record(metric.value, metric.attributes.addSessionId())
+                histogram.record(metric.value, metricAttributes(metric.attributes))
             }
         )
         rumBuilder.addInstrumentation(launchTimeInstrumentation)
@@ -509,6 +512,8 @@ class ObservabilityService(
             delegate = LogRecordProcessor.composite(delegates),
             sampler = customSampler,
         )
+        // Globals must be applied before sampling and export so exported records carry them.
+        sdkLoggerProviderBuilder.addLogRecordProcessor(GlobalAttributesLogRecordProcessor())
         sdkLoggerProviderBuilder.addLogRecordProcessor(otlpProcessor)
 
         return sdkLoggerProviderBuilder
@@ -538,6 +543,8 @@ class ObservabilityService(
             delegateExporter = delegateExporter,
             batchWorker = batchWorker,
         )
+        // Globals must be applied before sampling and export so exported spans carry them.
+        sdkTracerProviderBuilder.addSpanProcessor(GlobalAttributesSpanProcessor())
         sdkTracerProviderBuilder.addSpanProcessor(otlpProcessor)
 
         return sdkTracerProviderBuilder
@@ -592,7 +599,7 @@ class ObservabilityService(
         val gauge = gaugeCache.getOrPut(metric.name) {
             otelMeter.gaugeBuilder(metric.name).build()
         }
-        gauge.set(metric.value, metric.attributes.addSessionId())
+        gauge.set(metric.value, metricAttributes(metric.attributes))
     }
 
     override fun recordCount(metric: Metric) {
@@ -602,7 +609,7 @@ class ObservabilityService(
         val counter = counterCache.getOrPut(metric.name) {
             otelMeter.counterBuilder(metric.name).build()
         }
-        counter.add(metric.value.toLong(), metric.attributes.addSessionId())
+        counter.add(metric.value.toLong(), metricAttributes(metric.attributes))
     }
 
     override fun recordIncr(metric: Metric) {
@@ -612,7 +619,7 @@ class ObservabilityService(
             otelMeter.counterBuilder(metric.name).build()
         }
         // It increments the value until the metric is exported, then it's reset.
-        counter.add(1, metric.attributes.addSessionId())
+        counter.add(1, metricAttributes(metric.attributes))
     }
 
     override fun recordHistogram(metric: Metric) {
@@ -621,7 +628,7 @@ class ObservabilityService(
         val histogram = histogramCache.getOrPut(metric.name) {
             otelMeter.histogramBuilder(metric.name).build()
         }
-        histogram.record(metric.value, metric.attributes.addSessionId())
+        histogram.record(metric.value, metricAttributes(metric.attributes))
     }
 
     override fun recordUpDownCounter(metric: Metric) {
@@ -630,7 +637,7 @@ class ObservabilityService(
         val upDownCounter = upDownCounterCache.getOrPut(metric.name) {
             otelMeter.upDownCounterBuilder(metric.name).build()
         }
-        upDownCounter.add(metric.value.toLong(), metric.attributes.addSessionId())
+        upDownCounter.add(metric.value.toLong(), metricAttributes(metric.attributes))
     }
 
     override fun recordLog(
@@ -1015,6 +1022,10 @@ class ObservabilityService(
             null
         }
     }
+
+    /** Global attributes, overridden by the per-call [attributes], plus the current session id. */
+    private fun metricAttributes(attributes: Attributes): Attributes =
+        GlobalAttributesStore.merge(attributes).addSessionId()
 
     private fun Attributes.addSessionId() = this.toBuilder().put(SESSION_ID_ATTRIBUTE, ldSessionManager.getSessionId()).build()
 
