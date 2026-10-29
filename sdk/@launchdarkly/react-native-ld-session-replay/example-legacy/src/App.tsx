@@ -30,6 +30,7 @@ import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
 import ApiScreen from './ApiScreen';
+import {applyGlobalAttributes} from './repro';
 
 // Pick the LaunchDarkly instance once for the client-side URLs (they must stay
 // paired with the mobile key, or identify fails with a 401). The observability
@@ -102,6 +103,8 @@ const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
   baseUri: endpoints.baseUri,
   eventsUri: endpoints.eventsUri,
 });
+// Runs while the observability SDK's async init is still in flight (see repro.ts).
+applyGlobalAttributes();
 const context = {kind: 'user', key: 'user-key-123abc'};
 
 // Emulates an OTA "soft reload": restarts only the JS runtime, leaving the native
