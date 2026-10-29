@@ -288,3 +288,110 @@ describe('touchSession', () => {
 		expect(() => touchSession()).not.toThrow()
 	})
 })
+
+// A new session carries `session.previous_id` (the ID of the stored session
+// it replaced) so related sessions can be chained in analysis. configureSession
+// runs at plugin init, so again each Plugin instance simulates a page load.
+describe('session.previous_id', () => {
+	let getPreviousSessionData: typeof import('../client/utils/sessionStorage/highlightSession').getPreviousSessionData
+	let getPreviousSessionSecureID: typeof import('../client/utils/sessionStorage/highlightSession').getPreviousSessionSecureID
+	let getStoredSessionData: typeof import('../client/utils/sessionStorage/highlightSession').getStoredSessionData
+	let Plugin: typeof import('../plugins/common').Plugin
+
+	beforeEach(async () => {
+		vi.useFakeTimers()
+		vi.setSystemTime(new Date(2024, 0, 1, 12, 0, 0))
+		clearAllSessionData()
+		vi.resetModules()
+		;({
+			getPreviousSessionData,
+			getPreviousSessionSecureID,
+			getStoredSessionData,
+		} = await import('../client/utils/sessionStorage/highlightSession'))
+		;({ Plugin } = await import('../plugins/common'))
+	})
+
+	afterEach(() => {
+		clearAllSessionData()
+		vi.useRealTimers()
+	})
+
+	const advance = (ms: number) => {
+		vi.setSystemTime(new Date(Date.now() + ms))
+	}
+
+	const startSessionPageLoad = (options?: { sessionKey?: string }) => {
+		const plugin = new Plugin()
+		plugin.configureSession('test-sdk-credential', options)
+		return getPreviousSessionData()
+	}
+
+	it('links a new session to the expired one it replaces', () => {
+		const firstLoad = startSessionPageLoad()
+		expect(firstLoad?.sessionSecureID).toBeDefined()
+
+		advance(16 * 60 * 1000)
+		const secondLoad = startSessionPageLoad()
+
+		expect(secondLoad?.sessionSecureID).not.toBe(firstLoad?.sessionSecureID)
+		expect(getPreviousSessionSecureID()).toBe(firstLoad?.sessionSecureID)
+	})
+
+	it('does not link a session that resumed the stored one', () => {
+		const firstLoad = startSessionPageLoad()
+
+		const secondLoad = startSessionPageLoad()
+
+		expect(secondLoad?.sessionSecureID).toBe(firstLoad?.sessionSecureID)
+		expect(getPreviousSessionSecureID()).toBeUndefined()
+	})
+
+	it('has no previous id for a first-time visitor', () => {
+		startSessionPageLoad()
+
+		expect(getPreviousSessionSecureID()).toBeUndefined()
+	})
+
+	it('does not link a sessionKey session to itself when it resets', () => {
+		// The sessionKey derives the session ID, so an expired record with the
+		// same key has the same ID: the session continues rather than being
+		// replaced.
+		const firstLoad = startSessionPageLoad({ sessionKey: 'sign-up-funnel' })
+
+		advance(16 * 60 * 1000)
+		const secondLoad = startSessionPageLoad({
+			sessionKey: 'sign-up-funnel',
+		})
+
+		expect(secondLoad?.sessionSecureID).toBe(firstLoad?.sessionSecureID)
+		expect(getPreviousSessionSecureID()).toBeUndefined()
+	})
+
+	it('updates the previous id on each rotation', () => {
+		const firstLoad = startSessionPageLoad()
+
+		advance(16 * 60 * 1000)
+		const secondLoad = startSessionPageLoad()
+		expect(getPreviousSessionSecureID()).toBe(firstLoad?.sessionSecureID)
+
+		// The next rotation links to the session it replaces, not further back.
+		advance(16 * 60 * 1000)
+		startSessionPageLoad()
+		expect(getPreviousSessionSecureID()).toBe(secondLoad?.sessionSecureID)
+	})
+
+	it('reads an expired record without pruning it', () => {
+		const session = startSessionPageLoad()
+
+		advance(20 * 60 * 1000)
+
+		// Two reads: getPreviousSessionData would have removed the record on
+		// the first.
+		expect(getStoredSessionData()?.sessionSecureID).toBe(
+			session?.sessionSecureID,
+		)
+		expect(getStoredSessionData()?.sessionSecureID).toBe(
+			session?.sessionSecureID,
+		)
+	})
+})

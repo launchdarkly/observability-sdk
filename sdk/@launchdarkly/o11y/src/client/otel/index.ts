@@ -72,6 +72,7 @@ import version from '../../version'
 import { ExportSampler } from './sampling/ExportSampler'
 import {
 	getPersistentSessionSecureID,
+	getPreviousSessionSecureID,
 	touchSession,
 } from '../utils/sessionStorage/highlightSession'
 import { isSdkDebugLogging, sdkLog } from '../utils/sdkLogger'
@@ -107,6 +108,7 @@ let fetchRequestBodyCaptureCleanup: (() => void) | undefined
 
 const RECORD_ATTRIBUTE = 'highlight.record'
 const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
+const PREVIOUS_SESSION_ID_ATTRIBUTE = 'session.previous_id'
 
 // Shared map to coordinate async response body reads between the
 // FetchInstrumentation's applyCustomAttributesOnSpan callback and
@@ -647,6 +649,22 @@ export const registerFlushOnUnload = (
 	}
 }
 
+/**
+ * Stamps the session identifiers on a starting span: the current session's
+ * ID always, and `session.previous_id` when this page load created a new
+ * session in place of an expired one, so the two can be linked in analysis.
+ */
+export const setSessionSpanAttributes = (span: api.Span): void => {
+	span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
+	const previousSessionSecureID = getPreviousSessionSecureID()
+	if (previousSessionSecureID) {
+		span.setAttribute(
+			PREVIOUS_SESSION_ID_ATTRIBUTE,
+			previousSessionSecureID,
+		)
+	}
+}
+
 class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private _pendingSpans = new Set<Promise<void>>()
 	// When set, forceFlush/shutdown return immediately without waiting for
@@ -659,7 +677,7 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	}
 
 	onStart(span: SDKSpan, parentContext: Context): void {
-		span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
+		setSessionSpanAttributes(span)
 		super.onStart(span, parentContext)
 	}
 
