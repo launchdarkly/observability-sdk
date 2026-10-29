@@ -191,6 +191,10 @@ LDObserve.RecordError(exception);
 
 // Or record errors from a message string
 LDObserve.RecordError("Something went wrong", "The underlying cause of the error.");
+
+// Attach attributes to everything recorded from now on (see Global Attributes below)
+LDObserve.SetAttributes(new Dictionary<string, object?> { { "utm_campaign", "spring_promo" } });
+LDObserve.RemoveAttributes(new[] { "utm_campaign" });
 ```
 
 #### Metrics
