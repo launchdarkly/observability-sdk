@@ -76,6 +76,7 @@ import {
 } from '../utils/sessionStorage/highlightSession'
 import { isSdkDebugLogging, sdkLog } from '../utils/sdkLogger'
 import { ProductAnalyticsEvents } from '../types/observe'
+import { applyGlobalAttributesToSpan } from '../../sdk/globalAttributes'
 
 export type Callback = (span?: Span) => any
 
@@ -647,7 +648,7 @@ export const registerFlushOnUnload = (
 	}
 }
 
-class CustomBatchSpanProcessor extends BatchSpanProcessor {
+export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private _pendingSpans = new Set<Promise<void>>()
 	// When set, forceFlush/shutdown return immediately without waiting for
 	// in-flight response-body reads. Used on page unload where waiting risks
@@ -660,6 +661,7 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 
 	onStart(span: SDKSpan, parentContext: Context): void {
 		span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
+		applyGlobalAttributesToSpan(span)
 		super.onStart(span, parentContext)
 	}
 

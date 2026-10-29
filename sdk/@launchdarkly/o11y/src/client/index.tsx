@@ -103,6 +103,7 @@ import {
 	setSessionSecureID,
 } from './utils/sessionStorage/highlightSession'
 import { SESSION_STORAGE_KEYS } from './utils/sessionStorage/sessionStorageKeys'
+import { getGlobalAttributes } from '../sdk/globalAttributes'
 import {
 	getItem,
 	LocalStorageKeys,
@@ -1400,6 +1401,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this._gauges.set(metric.name, gauge)
 		}
 		gauge.record(metric.value, {
+			...getGlobalAttributes(),
 			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
 			group: metric.group,
 			category: metric.category,
@@ -1421,6 +1423,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this._counters.set(metric.name, counter)
 		}
 		counter.add(metric.value, {
+			...getGlobalAttributes(),
 			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
 			group: metric.group,
 			category: metric.category,
@@ -1443,6 +1446,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this._histograms.set(metric.name, histogram)
 		}
 		histogram.record(metric.value, {
+			...getGlobalAttributes(),
 			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
 			group: metric.group,
 			category: metric.category,
@@ -1461,6 +1465,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
 		up_down_counter.add(metric.value, {
+			...getGlobalAttributes(),
 			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
 			group: metric.group,
 			category: metric.category,

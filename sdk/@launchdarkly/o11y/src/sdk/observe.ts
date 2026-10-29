@@ -88,6 +88,11 @@ import {
 	sanitizeUrl,
 } from '../client/listeners/network-listener/utils/network-sanitizer'
 import { setSdkDebugLogging } from '../client/utils/sdkLogger'
+import {
+	getGlobalAttributes,
+	removeGlobalAttributes,
+	setGlobalAttributes,
+} from './globalAttributes'
 
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
@@ -167,6 +172,14 @@ export class ObserveSDK implements Observe {
 
 	getLDContextKeyAttributes(): Attributes | undefined {
 		return this._ldContextKeys
+	}
+
+	setAttributes(attributes: Attributes): void {
+		setGlobalAttributes(attributes)
+	}
+
+	removeAttributes(keys: string[]): void {
+		removeGlobalAttributes(keys)
 	}
 
 	public async start() {
@@ -258,6 +271,7 @@ export class ObserveSDK implements Observe {
 				? trace.map((s) => s.toString()).join('\n')
 				: undefined
 			span?.addEvent('log', {
+				...getGlobalAttributes(),
 				[ATTR_LOG_SEVERITY]: level,
 				[ATTR_LOG_MESSAGE]: msg,
 				'code.stacktrace': stackTrace,
@@ -380,6 +394,7 @@ export class ObserveSDK implements Observe {
 			this._counters.set(metric.name, counter)
 		}
 		counter.add(metric.value, {
+			...getGlobalAttributes(),
 			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
@@ -397,6 +412,7 @@ export class ObserveSDK implements Observe {
 			this._gauges.set(metric.name, gauge)
 		}
 		const attributes: Attributes = {
+			...getGlobalAttributes(),
 			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
 		}
@@ -438,6 +454,7 @@ export class ObserveSDK implements Observe {
 			this._histograms.set(metric.name, histogram)
 		}
 		histogram.record(metric.value, {
+			...getGlobalAttributes(),
 			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
@@ -455,6 +472,7 @@ export class ObserveSDK implements Observe {
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
 		up_down_counter.add(metric.value, {
+			...getGlobalAttributes(),
 			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
