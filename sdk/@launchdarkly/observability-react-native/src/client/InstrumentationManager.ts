@@ -73,10 +73,13 @@ export type InstrumentationManagerOptions = Required<ReactNativeOptions> & {
 // Span name for custom track events, matching the iOS/Android SDKs (`track`).
 const TRACK_SPAN_NAME = 'track'
 
+// Prefix for LaunchDarkly context keys, matching the web SDK.
+const CONTEXT_KEYS_ATTRIBUTE_PREFIX = 'context.contextKeys.'
+
 // Attribute namespaces the SDK sets itself; `setAttributes` ignores them.
 const RESERVED_ATTRIBUTE_PREFIXES = [
 	'highlight.',
-	'context.contextKeys.',
+	CONTEXT_KEYS_ATTRIBUTE_PREFIX,
 	'launchdarkly.',
 	'session.',
 ]
@@ -115,6 +118,8 @@ export class InstrumentationManager {
 	// Frozen snapshot of `_globalAttributes`, rebuilt on change so the telemetry
 	// hot path doesn't allocate.
 	private _globalAttributesSnapshot: Attributes = EMPTY_ATTRIBUTES
+	// Keys of the current LaunchDarkly context, replaced on each identify.
+	private _contextKeyAttributes: Attributes = EMPTY_ATTRIBUTES
 
 	constructor(
 		private options: Required<ReactNativeOptions> & {
@@ -182,10 +187,30 @@ export class InstrumentationManager {
 		return this._globalAttributesSnapshot
 	}
 
+	// Replaces the context key attributes with `context.contextKeys.<kind>`
+	// for each kind in `contextKeys` (e.g. `{ user: 'u1', device: 'd1' }`).
+	public setContextKeyAttributes(
+		contextKeys: Record<string, AttributeValue | undefined>,
+	): void {
+		const entries = Object.entries(contextKeys ?? {}).filter(
+			([, key]) => key !== undefined && key !== null,
+		)
+		this._contextKeyAttributes = entries.length
+			? Object.freeze(
+					Object.fromEntries(
+						entries.map(([kind, key]) => [
+							`${CONTEXT_KEYS_ATTRIBUTE_PREFIX}${kind}`,
+							key,
+						]),
+					),
+				)
+			: EMPTY_ATTRIBUTES
+	}
+
 	// LaunchDarkly context key attributes (`context.contextKeys.*`) for every
-	// span, log and metric. None are tracked yet.
+	// span, log and metric.
 	public getContextKeyAttributes(): Attributes {
-		return EMPTY_ATTRIBUTES
+		return this._contextKeyAttributes
 	}
 
 	// Attributes stamped on all telemetry by the processors and metric calls.
