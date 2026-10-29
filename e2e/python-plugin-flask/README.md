@@ -44,3 +44,17 @@ environment the data should land in.
 | `/manual-span` | `observe.start_span` and a flag evaluation |
 | `/manual-record-log` | `observe.record_log` |
 | `/record-metrics` | Counters, gauges, and histograms |
+
+# Repro #1: global attributes
+
+`flask_app/repro.py` calls `observe.set_attributes` with
+`utm_campaign=spring_promo` and `utm_source=email` before the LaunchDarkly client
+and observability plugin are initialized. `/manual-span`, `/manual-record-log`,
+and `/record-metrics` print and return what to look for in LaunchDarkly:
+
+- `[#1] expect utm_campaign=spring_promo on this row` on the span, log, and metrics.
+- `[#1] expect utm_source=per_call (per-call wins over global)` on the
+  `manual-record-log` log, which passes `utm_source` itself.
+
+`make install` copies the local `@launchdarkly/observability-python` package into
+the virtualenv, so rerun it after changing the SDK.
