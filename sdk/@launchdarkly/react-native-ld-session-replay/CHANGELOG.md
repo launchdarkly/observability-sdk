@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.25.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.25.0...session-replay-react-native-0.25.1) (2026-10-29)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.20.1
+
 ## [0.25.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.24.3...session-replay-react-native-0.25.0) (2026-10-29)
 
 

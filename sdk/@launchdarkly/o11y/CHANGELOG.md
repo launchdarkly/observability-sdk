@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.4.1...o11y-1.5.0) (2026-10-29)
+
+
+### Features
+
+* **o11y:** link a new browser session to the one it replaces ([#857](https://github.com/launchdarkly/observability-sdk/issues/857)) ([cf5ccbe](https://github.com/launchdarkly/observability-sdk/commit/cf5ccbe5374983262a9b42783bef791cec9b1497))
+
 ## [1.4.1](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.4.0...o11y-1.4.1) (2026-10-29)
 
 

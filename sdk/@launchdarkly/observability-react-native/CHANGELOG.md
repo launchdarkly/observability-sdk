@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.20.0...observability-react-native-0.20.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* export metrics with delta temporality in React Native ([#864](https://github.com/launchdarkly/observability-sdk/issues/864)) ([cae484d](https://github.com/launchdarkly/observability-sdk/commit/cae484d5ba4de4f16d79ab065e912002d007ba1d))
+
 ## [0.20.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.19.0...observability-react-native-0.20.0) (2026-10-29)
 
 
