@@ -5,10 +5,18 @@ import com.launchdarkly.sdk.server.integrations.Hook;
 import com.launchdarkly.sdk.server.integrations.PluginMetadata;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.sdk.logs.LogRecordProcessor;
+import io.opentelemetry.sdk.logs.export.SimpleLogRecordProcessor;
+import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter;
+import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
+import io.opentelemetry.sdk.trace.SpanProcessor;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import org.junit.jupiter.api.Test;
 
 import java.net.Proxy;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -54,6 +62,45 @@ class ObservabilityPluginTest {
         assertTrue(options.getCustomHeaders().isEmpty());
         assertNull(options.getProxySelector());
         assertEquals(ObservabilityOptions.LogLevel.INFO, options.getLogsApiLevel());
+        assertTrue(options.getSpanProcessors().isEmpty());
+        assertTrue(options.getLogProcessors().isEmpty());
+    }
+
+    @Test
+    void processorsAccumulateInOrderAndAreCopied() {
+        SpanProcessor spanA = SimpleSpanProcessor.create(InMemorySpanExporter.create());
+        SpanProcessor spanB = SimpleSpanProcessor.create(InMemorySpanExporter.create());
+        LogRecordProcessor logA = SimpleLogRecordProcessor.create(InMemoryLogRecordExporter.create());
+        LogRecordProcessor logB = SimpleLogRecordProcessor.create(InMemoryLogRecordExporter.create());
+        List<SpanProcessor> spanList = new ArrayList<>(List.of(spanA));
+        ObservabilityOptions.Builder builder = new ObservabilityOptions.Builder()
+                .spanProcessors(spanList)
+                .spanProcessor(spanB)
+                .logProcessors(List.of(logA))
+                .logProcessor(logB);
+        spanList.add(SimpleSpanProcessor.create(InMemorySpanExporter.create()));
+        ObservabilityOptions options = builder.build();
+
+        assertEquals(List.of(spanA, spanB), options.getSpanProcessors());
+        assertEquals(List.of(logA, logB), options.getLogProcessors());
+        assertThrows(UnsupportedOperationException.class, () -> options.getSpanProcessors().add(spanA));
+        assertThrows(UnsupportedOperationException.class, () -> options.getLogProcessors().add(logA));
+
+        ObservabilityOptions replaced = builder.spanProcessors(List.of(spanB)).logProcessors(List.of()).build();
+        assertEquals(List.of(spanB), replaced.getSpanProcessors());
+        assertTrue(replaced.getLogProcessors().isEmpty());
+        assertEquals(List.of(spanA, spanB), options.getSpanProcessors(), "built options must not change");
+    }
+
+    @Test
+    void processorsRejectNull() {
+        ObservabilityOptions.Builder builder = new ObservabilityOptions.Builder();
+        assertThrows(NullPointerException.class, () -> builder.spanProcessors(null));
+        assertThrows(NullPointerException.class, () -> builder.spanProcessors(Arrays.asList((SpanProcessor) null)));
+        assertThrows(NullPointerException.class, () -> builder.spanProcessor(null));
+        assertThrows(NullPointerException.class, () -> builder.logProcessors(null));
+        assertThrows(NullPointerException.class, () -> builder.logProcessors(Arrays.asList((LogRecordProcessor) null)));
+        assertThrows(NullPointerException.class, () -> builder.logProcessor(null));
     }
 
     @Test

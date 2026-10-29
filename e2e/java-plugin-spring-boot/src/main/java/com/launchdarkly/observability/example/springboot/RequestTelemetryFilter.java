@@ -47,13 +47,18 @@ public class RequestTelemetryFilter extends OncePerRequestFilter {
             }
             span.setAttribute(STATUS, (long) status);
             span.end();
+            GlobalAttributesRepro.expectGlobal("span " + request.getMethod() + " " + route);
 
             double millis = TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - started) / 1000.0;
             Attributes attrs = Attributes.of(ROUTE, route, STATUS, (long) status);
             LDObserve.recordHistogram("http.server.request.duration_ms", millis, attrs);
             LDObserve.recordIncr("http.server.requests", attrs);
-            LDObserve.recordLog(request.getMethod() + " " + route + " -> " + status,
-                    status >= 500 ? Severity.ERROR : Severity.INFO, attrs);
+            GlobalAttributesRepro.expectGlobal("metric http.server.requests, route " + route);
+            String message = request.getMethod() + " " + route + " -> " + status;
+            LDObserve.recordLog(message, status >= 500 ? Severity.ERROR : Severity.INFO,
+                    attrs.toBuilder().putAll(GlobalAttributesRepro.PER_CALL_ATTRIBUTES).build());
+            GlobalAttributesRepro.expectGlobal("log \"" + message + "\"");
+            GlobalAttributesRepro.expectPerCallWins("log \"" + message + "\"");
         }
     }
 }

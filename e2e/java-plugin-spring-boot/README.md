@@ -45,6 +45,26 @@ Environment the app honours:
 | `SERVICE_VERSION` | Reported as `service.version`, default `dev`. |
 | `LD_BASE_URI`, `LD_STREAM_URI`, `LD_EVENTS_URI` | Flag SDK polling, streaming and events URLs for a non-default LaunchDarkly instance. Used only when all three are set. |
 
+### Global attributes repro
+
+`Application.main` calls `GlobalAttributesRepro.applyGlobalAttributes()`
+before Spring starts, so `LDObserve.setAttributes` runs before the
+`LDClient` and the plugin exist. It sets `utm_campaign=spring_promo` and
+`utm_source=email` on all telemetry. For every request, `RequestTelemetryFilter`
+prints what to look for in LaunchDarkly:
+
+```
+[#1] expect utm_campaign=spring_promo on this row (span GET /rolldice)
+[#1] expect utm_campaign=spring_promo on this row (metric http.server.requests, route /rolldice)
+[#1] expect utm_campaign=spring_promo on this row (log "GET /rolldice -> 200")
+[#1] expect utm_source=per_call (per-call wins over global) (log "GET /rolldice -> 200")
+```
+
+The request log line passes `utm_source=per_call` itself, so it must show
+`per_call` rather than the global `email`. Flag-evaluation spans and errors
+from `/error` carry the globals too. The tests boot the context without
+`main`, so they run without the globals.
+
 `make build` produces the executable jar in `build/libs/`. `make test` boots
 the application against a local OTLP collector and sampling endpoint
 (`ApplicationTelemetryTest`), drives every route, and checks the exported
