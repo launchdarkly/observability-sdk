@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.19.0...observability-react-native-0.20.0) (2026-10-29)
+
+
+### Features
+
+* **react-native:** add setAttributes and removeAttributes ([#856](https://github.com/launchdarkly/observability-sdk/issues/856)) ([c0e35a0](https://github.com/launchdarkly/observability-sdk/commit/c0e35a04bc8416ad3e067e25d2e74df2a1055fc9))
+
 ## [0.19.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.18.0...observability-react-native-0.19.0) (2026-10-28)
 
 

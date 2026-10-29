@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.4.0...o11y-1.4.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **o11y:** keep once listeners re-addable when user-interaction throttles ([#867](https://github.com/launchdarkly/observability-sdk/issues/867)) ([38aa3cf](https://github.com/launchdarkly/observability-sdk/commit/38aa3cff6baed05351950b89325002b02ef4ef3a))
+
 ## [1.4.0](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.3.1...o11y-1.4.0) (2026-10-28)
 
 
