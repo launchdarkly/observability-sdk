@@ -387,6 +387,10 @@ LDObserve.trackScreenView(
     category = "Account",
     properties = mapOf("tab" to "overview")
 )
+
+// Attach attributes to everything recorded from now on (see Global Attributes below).
+LDObserve.setAttributes(mapOf("utm_campaign" to "spring_promo"))
+LDObserve.removeAttributes(listOf("utm_campaign"))
 ```
 
 `recordLog`, `startSpan`, `track`, and `trackScreenView` accept attributes/data as a
