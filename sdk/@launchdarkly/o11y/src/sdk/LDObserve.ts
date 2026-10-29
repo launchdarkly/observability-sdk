@@ -8,6 +8,7 @@ import { BufferedClass } from './buffer'
 import { getNoopSpan } from '../client/otel/utils'
 import { ConsoleMethods } from '../client/types/client'
 import { internalLogOnce } from './util'
+import { removeGlobalAttributes, setGlobalAttributes } from './globalAttributes'
 
 /**
  * Resolves the span callback from whichever argument position it was passed in,
@@ -134,6 +135,16 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 
 	setLDContextKeyAttributes(contextKeys: Attributes) {
 		return this._bufferCall('setLDContextKeyAttributes', [contextKeys])
+	}
+
+	// Never buffered: the attributes must apply to telemetry recorded as soon
+	// as the SDK starts, including automatic spans emitted during init.
+	setAttributes(attributes: Attributes) {
+		setGlobalAttributes(attributes)
+	}
+
+	removeAttributes(keys: string[]) {
+		removeGlobalAttributes(keys)
 	}
 
 	getLDContextKeyAttributes(): Attributes | undefined {

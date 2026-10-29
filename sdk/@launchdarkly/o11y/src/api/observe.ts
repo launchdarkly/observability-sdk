@@ -168,6 +168,37 @@ export interface Observe {
 		metadata?: Attributes,
 	) => void
 
+	/**
+	 * Set attributes that are added to every span, log, and metric recorded
+	 * after the call, including automatically instrumented telemetry. Merges
+	 * by key into the existing global attributes, which last for the page
+	 * lifetime (they are not persisted and survive session changes).
+	 *
+	 * Attributes set explicitly on a span, log, or metric take precedence;
+	 * global attributes only fill in keys that are missing. A span gets the
+	 * global attributes current when it starts. SDK-managed session keys
+	 * (`highlight.session_id`, `session.id`) and values that are not valid
+	 * OpenTelemetry attribute values are ignored.
+	 *
+	 * Can be called before the SDK has initialized or started.
+	 *
+	 * @example
+	 * ```typescript
+	 * LDObserve.setAttributes({ 'app.tenant': 'acme', 'app.build': 42 })
+	 * ```
+	 */
+	setAttributes: (attributes: Attributes) => void
+	/**
+	 * Remove global attributes previously set with `setAttributes`.
+	 * Telemetry recorded after the call no longer carries them.
+	 *
+	 * @example
+	 * ```typescript
+	 * LDObserve.removeAttributes(['app.tenant'])
+	 * ```
+	 */
+	removeAttributes: (keys: string[]) => void
+
 	register(
 		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,

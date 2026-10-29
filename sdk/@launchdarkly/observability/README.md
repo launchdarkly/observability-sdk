@@ -45,6 +45,24 @@ const client = init3(
 
 Refer to the [SDK documentation](https://docs.launchdarkly.com/sdk/client-side/javascript#getting-started) for instructions on getting started with using the SDK.
 
+## Global attributes
+
+Use `LDObserve.setAttributes(attributes)` to add attributes to every span, log, and metric the SDK records after the call, including automatic telemetry (network requests, document load, user interactions, errors, flag evaluations, and track events). Calls merge by key; `LDObserve.removeAttributes(keys)` removes keys.
+
+```ts
+LDObserve.setAttributes({ 'app.tenant': 'acme', 'app.build': 42 })
+
+// Later, e.g. on sign-out:
+LDObserve.removeAttributes(['app.tenant'])
+```
+
+-   Attributes set explicitly on a span, log, or metric take precedence: global attributes only fill in missing keys. A span gets the global attributes current when it starts.
+-   Values must be OpenTelemetry attribute values (string, number, boolean, or a homogeneous array of them); other values are ignored. SDK-managed session keys (`highlight.session_id`, `session.id`) cannot be set.
+-   Global attributes are kept in memory for the lifetime of the page. They are not persisted and are not cleared when the session changes.
+-   Calls take effect immediately, even before the SDK has initialized or, with `manualStart`, before `LDObserve.start()`.
+
+Global attributes differ from `LDRecord.addSessionProperties` (session replay), which attaches properties to the recorded session itself rather than to each span, log, and metric.
+
 ## Session continuity
 
 A session continues across full page loads on the same origin until it has been idle for 15 minutes; a full page load on a different origin starts a new session.

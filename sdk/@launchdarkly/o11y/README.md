@@ -12,5 +12,9 @@ Most applications should install `@launchdarkly/observability` and/or
 `@launchdarkly/session-replay` rather than depending on this package directly.
 See the [SDK reference](https://docs.launchdarkly.com/sdk/observability).
 
+To add attributes to every span, log, and metric, use
+`LDObserve.setAttributes` / `LDObserve.removeAttributes`; see
+[Global attributes](https://github.com/launchdarkly/observability-sdk/tree/main/sdk/%40launchdarkly/observability#global-attributes).
+
 Session replay recording is powered by the
 [launchdarkly/rrweb](https://github.com/launchdarkly/rrweb) fork.
