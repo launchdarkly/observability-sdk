@@ -1,0 +1,6 @@
+# Used by builds whose context is the repository root (e2e/java-plugin/Dockerfile).
+.git
+**/node_modules
+**/build
+**/.gradle
+rrweb

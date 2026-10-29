@@ -1,6 +1,10 @@
 import type { RecordOptions } from '../client/types/record'
 import type { ObserveOptions } from '../client/types/observe'
-import { setCookieWriteEnabled, setStorageMode } from '../client/utils/storage'
+import {
+	setCookieDomain,
+	setCookieWriteEnabled,
+	setStorageMode,
+} from '../client/utils/storage'
 import {
 	getPersistentSessionSecureID,
 	getPreviousSessionData,
@@ -19,6 +23,11 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 				setStorageMode(options?.storageMode)
 			}
 			setCookieWriteEnabled(!!options?.sessionCookie)
+			// Only override when set, so options without a domain (e.g. a second
+			// plugin) keep a domain configured earlier.
+			if (options?.sessionCookieDomain !== undefined) {
+				setCookieDomain(options.sessionCookieDomain)
+			}
 
 			if (options?.sessionCookie) {
 				loadCookieSessionData()

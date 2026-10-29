@@ -32,6 +32,7 @@ import {
 	InstrumentationManagerOptions,
 } from '../client/InstrumentationManager'
 import { ErrorInstrumentation } from '../instrumentation/ErrorInstrumentation'
+import { getPlatformResourceAttributes } from '../utils/platformAttributes'
 import {
 	DEFAULT_MAX_BUFFER_SIZE,
 	DEFAULT_UPLOAD_INTERVAL_MILLIS,
@@ -202,6 +203,11 @@ export class ObservabilityClient {
 				// future in favor of X-LaunchDarkly-Project header.
 				'highlight.project_id': this.sdkKey,
 				'highlight.session_id': sessionAttributes.sessionId,
+				// Platform / device attributes (semantic conventions `os.*`,
+				// `device.*`) are constant for the app process and flow onto every
+				// log, span, error and metric through the Resource. They go before
+				// user `resourceAttributes` so an explicit user value wins.
+				...getPlatformResourceAttributes(),
 				...this.options.resourceAttributes,
 				...sessionAttributes,
 			})
