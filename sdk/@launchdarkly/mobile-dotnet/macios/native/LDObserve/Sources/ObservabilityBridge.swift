@@ -41,6 +41,21 @@ public final class ObservabilityBridge: NSObject {
         return LDReplay.shared.hookProxy
     }
 
+    /// Merges `attributes` into the process-wide global attributes, converting values the same
+    /// way as log/span attributes from C#. Safe to call before `start`.
+    @objc(setAttributes:)
+    public static func setAttributes(_ attributes: NSDictionary) {
+        let converted = AttributeConverter.convert((attributes as? [String: Any]) ?? [:])
+        guard !converted.isEmpty else { return }
+        LDObserve.shared.setAttributes(converted)
+    }
+
+    /// Removes the global attributes with the given `keys`. Safe to call before `start`.
+    @objc(removeAttributes:)
+    public static func removeAttributes(_ keys: [String]) {
+        LDObserve.shared.removeAttributes(keys)
+    }
+
     @objc public func start(mobileKey: String, 
                             observability: ObjcObservabilityOptions, 
                             replay: ObjcSessionReplayOptions,

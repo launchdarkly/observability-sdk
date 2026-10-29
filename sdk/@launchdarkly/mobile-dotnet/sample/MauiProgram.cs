@@ -115,6 +115,8 @@ public static class MauiProgram
 	        )
         );
 
+        GlobalAttributesRepro.ApplyGlobalAttributes();
+
         _ = Task.Run(async () =>
         {
             try
