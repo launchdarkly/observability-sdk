@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.25.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.24.3...session-replay-react-native-0.25.0) (2026-10-29)
+
+
+### Features
+
+* **react-native:** add setAttributes and removeAttributes ([#856](https://github.com/launchdarkly/observability-sdk/issues/856)) ([c0e35a0](https://github.com/launchdarkly/observability-sdk/commit/c0e35a04bc8416ad3e067e25d2e74df2a1055fc9))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.20.0
+
+## [0.24.3](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.24.2...session-replay-react-native-0.24.3) (2026-10-28)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.19.0
+
 ## [0.24.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.24.1...session-replay-react-native-0.24.2) (2026-10-20)
 
 

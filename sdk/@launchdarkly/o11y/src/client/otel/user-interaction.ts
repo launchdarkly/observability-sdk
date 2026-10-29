@@ -323,6 +323,13 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 					this: HTMLElement,
 					...args: any[]
 				) {
+					// The browser removes a once listener when it runs, so drop our
+					// record first: the early returns below must not skip it, or
+					// re-adding the same listener is treated as a duplicate.
+					if (once) {
+						plugin.removePatchedListener(this, type, listener)
+					}
+
 					let parentSpan: api.Span | undefined
 					const event: Event | undefined = args[0]
 
@@ -343,9 +350,6 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 
 					if (event) {
 						parentSpan = plugin._eventsSpanMap.get(event)
-					}
-					if (once) {
-						plugin.removePatchedListener(this, type, listener)
 					}
 					const span = plugin._createSpan(event, parentSpan)
 					if (span) {

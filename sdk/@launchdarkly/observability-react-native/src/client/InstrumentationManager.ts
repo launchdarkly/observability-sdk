@@ -1,5 +1,6 @@
 import {
 	Attributes,
+	AttributeValue,
 	Context,
 	context,
 	Counter,
@@ -17,7 +18,7 @@ import { metrics } from '@opentelemetry/api'
 import { registerInstrumentations } from '@opentelemetry/instrumentation'
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch'
 import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request'
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
+import { createMetricExporter } from '../otel/createMetricExporter'
 import {
 	SpanProcessor,
 	WebTracerProvider,
@@ -58,6 +59,8 @@ import {
 import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
 import { CustomTraceExporter } from '../otel/CustomTraceExporter'
 import { CustomLogExporter } from '../otel/CustomLogExporter'
+import { GlobalAttributesSpanProcessor } from '../otel/GlobalAttributesSpanProcessor'
+import { GlobalAttributesLogRecordProcessor } from '../otel/GlobalAttributesLogRecordProcessor'
 import {
 	DEFAULT_EXPORT_TIMEOUT_MILLIS,
 	DEFAULT_MAX_EXPORT_BATCH_SIZE,
@@ -69,6 +72,19 @@ export type InstrumentationManagerOptions = Required<ReactNativeOptions> & {
 
 // Span name for custom track events, matching the iOS/Android SDKs (`track`).
 const TRACK_SPAN_NAME = 'track'
+
+// Attribute namespaces the SDK sets itself; `setAttributes` ignores them.
+const RESERVED_ATTRIBUTE_PREFIXES = [
+	'highlight.',
+	'context.contextKeys.',
+	'launchdarkly.',
+	'session.',
+]
+
+const EMPTY_ATTRIBUTES: Attributes = Object.freeze({})
+
+const isReservedAttribute = (key: string) =>
+	RESERVED_ATTRIBUTE_PREFIXES.some((prefix) => key.startsWith(prefix))
 
 export class InstrumentationManager {
 	private traceProvider?: WebTracerProvider
@@ -93,6 +109,12 @@ export class InstrumentationManager {
 		string,
 		UpDownCounter
 	>()
+	// Attributes from `setAttributes`, kept in memory for the life of the JS
+	// process only (never persisted).
+	private readonly _globalAttributes: Map<string, AttributeValue> = new Map()
+	// Frozen snapshot of `_globalAttributes`, rebuilt on change so the telemetry
+	// hot path doesn't allocate.
+	private _globalAttributesSnapshot: Attributes = EMPTY_ATTRIBUTES
 
 	constructor(
 		private options: Required<ReactNativeOptions> & {
@@ -129,6 +151,62 @@ export class InstrumentationManager {
 		this.sessionManager = sessionManager
 	}
 
+	public setAttributes(
+		attributes: Record<string, AttributeValue | null | undefined>,
+	): void {
+		let changed = false
+		for (const [key, value] of Object.entries(attributes ?? {})) {
+			if (isReservedAttribute(key)) {
+				this._warn(`ignoring reserved attribute "${key}"`)
+				continue
+			}
+			if (value === null || value === undefined) {
+				changed = this._globalAttributes.delete(key) || changed
+			} else {
+				this._globalAttributes.set(key, value)
+				changed = true
+			}
+		}
+		if (changed) this.updateGlobalAttributesSnapshot()
+	}
+
+	public removeAttributes(keys: string[]): void {
+		let changed = false
+		for (const key of keys ?? []) {
+			changed = this._globalAttributes.delete(key) || changed
+		}
+		if (changed) this.updateGlobalAttributesSnapshot()
+	}
+
+	public getGlobalAttributes(): Attributes {
+		return this._globalAttributesSnapshot
+	}
+
+	// LaunchDarkly context key attributes (`context.contextKeys.*`) for every
+	// span, log and metric. None are tracked yet.
+	public getContextKeyAttributes(): Attributes {
+		return EMPTY_ATTRIBUTES
+	}
+
+	// Attributes stamped on all telemetry by the processors and metric calls.
+	private getSharedAttributes(): Attributes {
+		const contextKeys = this.getContextKeyAttributes()
+		if (contextKeys === EMPTY_ATTRIBUTES) {
+			return this._globalAttributesSnapshot
+		}
+		return { ...this._globalAttributesSnapshot, ...contextKeys }
+	}
+
+	private updateGlobalAttributesSnapshot() {
+		this._globalAttributesSnapshot = Object.freeze(
+			Object.fromEntries(this._globalAttributes),
+		)
+	}
+
+	private withSharedAttributes(attributes?: Attributes): Attributes {
+		return { ...this.getSharedAttributes(), ...attributes }
+	}
+
 	private initializeTracing() {
 		const compositePropagator = new CompositePropagator({
 			propagators: [
@@ -157,6 +235,7 @@ export class InstrumentationManager {
 		)
 
 		const processors: SpanProcessor[] = [
+			new GlobalAttributesSpanProcessor(() => this.getSharedAttributes()),
 			new CustomBatchSpanProcessor(exporter, {
 				maxQueueSize: this.options.maxBufferSize,
 				scheduledDelayMillis: this.options.uploadIntervalMillis,
@@ -225,6 +304,9 @@ export class InstrumentationManager {
 		this.loggerProvider = new LoggerProvider({
 			resource: this.resource,
 			processors: [
+				new GlobalAttributesLogRecordProcessor(() =>
+					this.getSharedAttributes(),
+				),
 				new BatchLogRecordProcessor(logExporter, {
 					maxQueueSize: this.options.maxBufferSize,
 					scheduledDelayMillis: this.options.uploadIntervalMillis,
@@ -242,10 +324,10 @@ export class InstrumentationManager {
 	private initializeMetrics() {
 		if (this.options.disableMetrics) return
 
-		const metricExporter = new OTLPMetricExporter({
-			headers: this.headers,
-			url: `${this.options.otlpEndpoint}/v1/metrics`,
-		})
+		const metricExporter = createMetricExporter(
+			this.headers,
+			`${this.options.otlpEndpoint}/v1/metrics`,
+		)
 
 		const readers = [
 			new PeriodicExportingMetricReader({
@@ -285,6 +367,9 @@ export class InstrumentationManager {
 			if (sessionId) {
 				span.setAttribute('highlight.session_id', sessionId)
 			}
+			// The exception event is the single error record (the backend derives
+			// the error log row from it), so no separate error log is emitted.
+			span.setAttribute('log.source', 'react-native-plugin')
 			span.setStatus({ code: SpanStatusCode.ERROR })
 
 			if (attributes) {
@@ -294,18 +379,6 @@ export class InstrumentationManager {
 			if (!activeSpan) {
 				span.end()
 			}
-
-			this.recordLog(error.message, 'error', {
-				...attributes,
-				'exception.type': error.name,
-				'exception.message': error.message,
-				'exception.stacktrace': error.stack,
-				...(sessionId
-					? {
-							['highlight.session_id']: sessionId,
-						}
-					: {}),
-			})
 		} catch (e) {
 			console.error('Failed to record error:', e)
 		}
@@ -322,7 +395,10 @@ export class InstrumentationManager {
 				)
 				this._gauges.set(metric.name, gauge)
 			}
-			gauge.record(metric.value, metric.attributes)
+			gauge.record(
+				metric.value,
+				this.withSharedAttributes(metric.attributes),
+			)
 		} catch (e) {
 			console.error('Failed to record metric:', e)
 		}
@@ -339,7 +415,10 @@ export class InstrumentationManager {
 				)
 				this._counters.set(metric.name, counter)
 			}
-			counter.add(metric.value, metric.attributes)
+			counter.add(
+				metric.value,
+				this.withSharedAttributes(metric.attributes),
+			)
 		} catch (e) {
 			console.error('Failed to record count:', e)
 		}
@@ -361,7 +440,10 @@ export class InstrumentationManager {
 				)
 				this._histograms.set(metric.name, histogram)
 			}
-			histogram.record(metric.value, metric.attributes)
+			histogram.record(
+				metric.value,
+				this.withSharedAttributes(metric.attributes),
+			)
 		} catch (e) {
 			console.error('Failed to record histogram:', e)
 		}
@@ -378,7 +460,10 @@ export class InstrumentationManager {
 				)
 				this._upDownCounters.set(metric.name, upDownCounter)
 			}
-			upDownCounter.add(metric.value, metric.attributes)
+			upDownCounter.add(
+				metric.value,
+				this.withSharedAttributes(metric.attributes),
+			)
 		} catch (e) {
 			console.error('Failed to record up/down counter:', e)
 		}
@@ -586,6 +671,12 @@ export class InstrumentationManager {
 	private _log(...data: any[]): void {
 		if (this.options.debug) {
 			console.log('[InstrumentationManager]', ...data)
+		}
+	}
+
+	private _warn(...data: any[]): void {
+		if (this.options.debug) {
+			console.warn('[InstrumentationManager]', ...data)
 		}
 	}
 }

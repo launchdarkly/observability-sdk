@@ -535,7 +535,8 @@ export interface HighlightPublicInterface {
 	getRecordingState: () => 'NotRecording' | 'Recording'
 	options: HighlightOptions | undefined
 	/**
-	 * Calling this will add a feedback comment to the session.
+	 * @deprecated Session feedback is no longer supported. This is a no-op and
+	 * will be removed in a future major version.
 	 */
 	addSessionFeedback: (feedbackOptions: SessionFeedbackOptions) => void
 	snapshot: (element: HTMLCanvasElement) => Promise<void>

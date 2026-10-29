@@ -13,6 +13,7 @@ import {LDClick} from '@launchdarkly/session-replay-react-native';
 import {useLDClient} from '@launchdarkly/react-native-client-sdk';
 import {context, SpanStatusCode, type Span} from '@opentelemetry/api';
 import {SERVICE_VERSION} from './serviceVersion';
+import {globalAttributesNote, perCallOverrideNote} from './repro';
 
 // Hermes/V8 truncate `error.stack` at Error.stackTraceLimit (often ~10 frames).
 // Raise it so the recorded error carries the full call chain.
@@ -96,6 +97,7 @@ export default function ApiScreen() {
     span.setAttribute('feature1', value);
     span.end();
     log(`[span] button-pressed + boolVariation(feature1)=${value}`);
+    log(globalAttributesNote());
   };
 
   // -- Flag evaluation -----------------------------------------------------
@@ -258,8 +260,11 @@ export default function ApiScreen() {
       // primitives, so the iOS sample's nested map is represented as JSON here.
       'test-array': [3.14],
       'test-nested': JSON.stringify({array: [1]}),
+      utm_source: 'per_call',
     });
     log('[log] recordLog(logs-button-pressed) with mixed attributes');
+    log(globalAttributesNote());
+    log(perCallOverrideNote());
   };
 
   // -- Track (via Observability API) ---------------------------------------

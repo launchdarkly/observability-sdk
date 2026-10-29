@@ -1,5 +1,6 @@
 import type {
 	Attributes,
+	AttributeValue,
 	Context,
 	Span as OtelSpan,
 	SpanOptions,
@@ -303,6 +304,16 @@ export class ObservabilityClient {
 	): void {
 		if (this.options.disableLogs) return
 		this.instrumentationManager.recordLog(message, level, attributes)
+	}
+
+	public setAttributes(
+		attributes: Record<string, AttributeValue | null | undefined>,
+	): void {
+		this.instrumentationManager.setAttributes(attributes)
+	}
+
+	public removeAttributes(keys: string[]): void {
+		this.instrumentationManager.removeAttributes(keys)
 	}
 
 	public track(

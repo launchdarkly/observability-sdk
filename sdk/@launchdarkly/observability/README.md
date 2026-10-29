@@ -69,6 +69,8 @@ LaunchDarkly context keys from `identify` (`context.contextKeys.<kind>`) are add
 
 A session continues across full page loads on the same origin until it has been idle for 15 minutes; a full page load on a different origin starts a new session.
 
+When a full page load starts a new session instead of continuing the stored one (for example, because it has been idle past the timeout), the new session's telemetry carries `session.previous_id`: the ID of the session it replaced. Use it to chain related sessions in analysis, for example to join events before and after a long idle gap.
+
 Session storage options:
 
 - `sessionCookie: true` — also store the session in a cookie (expiring 15 minutes after it is last written). This can help with cookie-consent compliance.
