@@ -8,6 +8,7 @@ import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observab
 import 'click_scenarios.dart';
 import 'getx_app.dart';
 import 'my_app.dart';
+import 'repro.dart';
 
 class LDSingleton {
   static LDClient? client;
@@ -61,6 +62,7 @@ void main() {
       // Mirrors the two `LDObserve.Init(...)` variants in
       // sdk/@launchdarkly/mobile-dotnet/sample/MauiProgram.cs.
       _startObservability();
+      applyGlobalAttributes();
 
       // Report any errors handled by flutter.
       FlutterError.onError = (FlutterErrorDetails details) {
