@@ -1,5 +1,6 @@
 import {
 	Attributes,
+	AttributeValue,
 	Context,
 	Span as OtelSpan,
 	SpanOptions,
@@ -66,6 +67,33 @@ export interface Observe {
 	 * @param attributes Optional additional attributes
 	 */
 	recordLog(message: any, level: string, attributes?: Attributes): void
+
+	/**
+	 * Add attributes to every span, log, error and metric recorded from now on,
+	 * including auto-instrumented network spans and flag evaluation spans.
+	 *
+	 * Values are kept in memory for the current app process only; they are
+	 * never persisted, so call this again after the app restarts. Calling it
+	 * again merges with (and overwrites) earlier keys. A `null` or `undefined`
+	 * value removes that key. Attributes passed to an individual call (for
+	 * example `recordLog(message, level, attributes)`) take precedence. Keys
+	 * in the SDK's own namespaces (`highlight.*`, `context.contextKeys.*`,
+	 * `launchdarkly.*`, `session.*`) are ignored.
+	 *
+	 * Every attribute is also added to metrics, so each distinct value creates
+	 * a new metric series; avoid high-cardinality values such as user ids.
+	 *
+	 * @param attributes The attributes to add
+	 */
+	setAttributes(
+		attributes: Record<string, AttributeValue | null | undefined>,
+	): void
+
+	/**
+	 * Stop adding attributes previously set with {@link setAttributes}.
+	 * @param keys The attribute keys to remove
+	 */
+	removeAttributes(keys: string[]): void
 
 	/**
 	 * Record a custom track event as a `track` span.
