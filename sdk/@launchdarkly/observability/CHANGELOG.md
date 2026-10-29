@@ -1,5 +1,19 @@
 # @launchdarkly/observability
 
+## [1.4.0](https://github.com/launchdarkly/observability-sdk/compare/observability-1.3.1...observability-1.4.0) (2026-10-29)
+
+
+### Features
+
+* **o11y:** link a new browser session to the one it replaces ([#857](https://github.com/launchdarkly/observability-sdk/issues/857)) ([cf5ccbe](https://github.com/launchdarkly/observability-sdk/commit/cf5ccbe5374983262a9b42783bef791cec9b1497))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/o11y bumped to 1.5.0
+
 ## [1.3.1](https://github.com/launchdarkly/observability-sdk/compare/observability-1.3.0...observability-1.3.1) (2026-10-29)
 
 
