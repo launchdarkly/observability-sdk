@@ -76,6 +76,10 @@ class TracingHook implements Hook {
 		data: IdentifySeriesData,
 		result: IdentifySeriesResult,
 	): IdentifySeriesData {
+		// Stamp the context keys on all telemetry from now on, matching the
+		// web SDK (which also sets them regardless of the identify status).
+		_LDObserve._setContextKeys(getContextKeys(hookContext.context))
+
 		if (result.status === 'completed') {
 			// The evaluation context changed, so previously recorded exposures
 			// are no longer relevant for deduplication. Only reset on a
