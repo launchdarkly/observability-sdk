@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ObservabilityClient } from './ObservabilityClient'
 import { Platform } from 'react-native'
+import {
+	SESSION_RESUME_THRESHOLD_MS,
+	SESSION_STORAGE_KEY,
+} from '../constants/sessions'
 
 describe('ObservabilityClient — stop during async init', () => {
 	beforeEach(() => {
@@ -154,5 +158,33 @@ describe('ObservabilityClient — platform attributes on the Resource', () => {
 			'os.name': 'CustomOS',
 			'device.model.identifier': 'user-model',
 		})
+	})
+
+	it('carries session.previous_id when a new session replaces a stale one', async () => {
+		const now = Date.now()
+		localStorage.setItem(
+			SESSION_STORAGE_KEY,
+			JSON.stringify({
+				sessionId: 'stale-session-id',
+				startTime: now - SESSION_RESUME_THRESHOLD_MS * 2,
+				lastActivityTime: now - SESSION_RESUME_THRESHOLD_MS - 1_000,
+				reloadCount: 0,
+			}),
+		)
+		try {
+			const attributes = await buildInitializedResource()
+
+			expect(attributes['session.previous_id']).toBe('stale-session-id')
+			expect(attributes['session.id']).not.toBe('stale-session-id')
+		} finally {
+			localStorage.clear()
+		}
+	})
+
+	it('omits session.previous_id when there was no previous session', async () => {
+		localStorage.clear()
+		const attributes = await buildInitializedResource()
+
+		expect(attributes).not.toHaveProperty('session.previous_id')
 	})
 })
