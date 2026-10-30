@@ -73,7 +73,7 @@ jobs:
 
     ios-legacy:
         name: iOS build (legacy arch, RN 0.78)
-        timeout-minutes: 90
+        timeout-minutes: 45
         runs-on: macos-14
         steps:
             - name: Checkout
@@ -86,8 +86,14 @@ jobs:
                   node-version: 24.15.0
                   cache: 'yarn'
 
-            - name: Install workspace dependencies
-              run: yarn install --immutable
+            # A full-monorepo `yarn install` hangs on macOS in the Link step
+            # (an unrelated package's build script never exits), so the job
+            # used to sit until the timeout. Install only the example app
+            # and its workspace deps; `focus` reads yarn.lock without
+            # rewriting it.
+            - name: Install example app dependencies
+              timeout-minutes: 15
+              run: yarn workspaces focus session-replay-react-native-legacy-example
 
             - name: Install pods (legacy arch)
               working-directory: ${{ env.EXAMPLE_DIR }}/ios
