@@ -73,8 +73,8 @@ jobs:
 
     ios-legacy:
         name: iOS build (legacy arch, RN 0.78)
-        timeout-minutes: 90
-        runs-on: macos-14
+        timeout-minutes: 45
+        runs-on: macos-15
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -86,14 +86,26 @@ jobs:
                   node-version: 24.15.0
                   cache: 'yarn'
 
-            - name: Install workspace dependencies
-              run: yarn install --immutable
+            # A full-monorepo `yarn install` stalls on macOS in the Link step:
+            # an unrelated package's `node install.js` build script sits idle
+            # on the network (4-5 min on macos-15, never returned on macos-14),
+            # so the job used to hit its timeout. Install only the example app
+            # and its workspace deps; `focus` reads yarn.lock without
+            # rewriting it.
+            - name: Install example app dependencies
+              timeout-minutes: 15
+              run: yarn workspaces focus session-replay-react-native-legacy-example
 
             - name: Install pods (legacy arch)
               working-directory: ${{ env.EXAMPLE_DIR }}/ios
               env:
                   RCT_NEW_ARCH_ENABLED: '0'
-              run: bundle install && bundle exec pod install --repo-update
+              # The committed Podfile.lock lags the SDK podspec whenever the
+              # native LaunchDarkly pods are bumped, so let CocoaPods move just
+              # those pods (and their deps) to what the podspec asks for.
+              run: |
+                  bundle install
+                  bundle exec pod update LaunchDarklySessionReplay LaunchDarklyObservability --repo-update
 
             - name: Build iOS (Debug, simulator)
               working-directory: ${{ env.EXAMPLE_DIR }}/ios
