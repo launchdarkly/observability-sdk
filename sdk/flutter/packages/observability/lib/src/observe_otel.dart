@@ -265,7 +265,7 @@ final class ObserveOtel {
       message,
       severity: severity,
       stackTrace: stackTrace,
-      attributes: GlobalAttributes.fillAttributes(attributes),
+      attributes: attributes,
     );
   }
 

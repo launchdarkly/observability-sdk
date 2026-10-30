@@ -283,7 +283,7 @@ class _NativeLogRecorder implements LogRecorder {
     Map<String, Attribute>? attributes,
   }) {
     final attrs = <String, Object?>{};
-    attributes?.forEach((key, attribute) {
+    GlobalAttributes.fillAttributes(attributes)?.forEach((key, attribute) {
       final converted = convertAttribute(key, attribute);
       if (converted != null) {
         attrs[key] = converted.value;

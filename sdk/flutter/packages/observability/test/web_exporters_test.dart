@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:launchdarkly_flutter_observability/src/api/attribute.dart';
 import 'package:launchdarkly_flutter_observability/src/api/log_severity.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_factory.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_factory_web.dart'
@@ -102,6 +103,29 @@ void main() {
       }
       final click = processor.ended.singleWhere((s) => s.name == 'click');
       expect(click.attributes.get('event.type'), 'click');
+    });
+
+    test('add globals to the log event beneath the log and call keys', () {
+      GlobalAttributes.set({
+        'tenant': 'acme',
+        'log.message': 'global',
+        'log.severity': 'global',
+        'tier': 'global',
+      });
+      exporters
+          .createLogRecorder(configFromOptions(const ObservabilityOptions()))
+          .recordLog(
+            'hi',
+            severity: LogSeverity.warn,
+            attributes: {'tier': StringAttribute('call')},
+          );
+
+      final event = processor.ended.single.events.single;
+      final attributes = {for (final a in event.attributes) a.key: a.value};
+      expect(attributes['tenant'], 'acme');
+      expect(attributes['log.message'], 'hi');
+      expect(attributes['log.severity'], 'warn');
+      expect(attributes['tier'], 'call');
     });
   });
 
