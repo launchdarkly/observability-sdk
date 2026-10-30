@@ -6,9 +6,14 @@ from opentelemetry.instrumentation.logging import LEVELS
 from opentelemetry.sdk._logs import LoggingHandler
 from opentelemetry.trace import Span, Tracer
 import opentelemetry.trace as trace
-from opentelemetry.util.types import Attributes
+from opentelemetry.util.types import Attributes, AttributeValue
 from opentelemetry._logs import get_logger_provider
 from ldobserve._otel.configuration import _OTELConfiguration
+from ldobserve._otel.global_attributes import (
+    merge_global_attributes,
+    remove_global_attributes,
+    set_global_attributes,
+)
 from ldobserve._source_context import exception_attributes
 from ldobserve._util.dict import flatten_dict
 
@@ -74,14 +79,14 @@ class _ObserveInstance:
     ):
         if name not in self._gauges:
             self._gauges[name] = self._otel_configuration.meter.create_gauge(name)
-        self._gauges[name].set(value, attributes=attributes)
+        self._gauges[name].set(value, attributes=merge_global_attributes(attributes))
 
     def record_count(
         self, name: str, value: int, attributes: typing.Optional[Attributes] = None
     ):
         if name not in self._counters:
             self._counters[name] = self._otel_configuration.meter.create_counter(name)
-        self._counters[name].add(value, attributes=attributes)
+        self._counters[name].add(value, attributes=merge_global_attributes(attributes))
 
     def record_incr(self, name: str, attributes: typing.Optional[Attributes] = None):
         return self.record_count(name, 1, attributes)
@@ -93,7 +98,9 @@ class _ObserveInstance:
             self._histograms[name] = self._otel_configuration.meter.create_histogram(
                 name
             )
-        self._histograms[name].record(value, attributes=attributes)
+        self._histograms[name].record(
+            value, attributes=merge_global_attributes(attributes)
+        )
 
     def record_up_down_counter(
         self, name: str, value: int, attributes: typing.Optional[Attributes] = None
@@ -102,7 +109,9 @@ class _ObserveInstance:
             self._up_down_counters[name] = (
                 self._otel_configuration.meter.create_up_down_counter(name)
             )
-        self._up_down_counters[name].add(value, attributes=attributes)
+        self._up_down_counters[name].add(
+            value, attributes=merge_global_attributes(attributes)
+        )
 
     def log(
         self, message: str, level: int, attributes: typing.Optional[Attributes] = None
@@ -272,6 +281,45 @@ def record_log(
     :return: None
     """
     _use_instance(lambda instance: instance.log(message, level, attributes))
+
+
+def set_attributes(attributes: typing.Mapping[str, AttributeValue]) -> None:
+    """
+    Set global attributes that are added to every span, log record, and metric data point
+    recorded after this call. Attributes are merged by key into the existing global attributes.
+
+    Attributes provided on an individual span, log, or metric take precedence over global
+    attributes, and global attributes take precedence over resource attributes. A span uses the
+    global attributes that are set when it starts.
+
+    Global attributes are kept in memory for the lifetime of the process and are shared by all
+    threads. They may be set before the observability plugin is initialized.
+
+    Example:
+        import ldobserve.observe as observe
+
+        observe.set_attributes({"tenant.id": "acme", "deployment.region": "us-east-1"})
+
+    :param attributes: the attributes to set. Values must be valid OpenTelemetry attribute values;
+        invalid values are ignored.
+    :return: None
+    """
+    set_global_attributes(attributes)
+
+
+def remove_attributes(keys: typing.Iterable[str]) -> None:
+    """
+    Remove global attributes previously set with :func:`set_attributes`.
+
+    Example:
+        import ldobserve.observe as observe
+
+        observe.remove_attributes(["tenant.id"])
+
+    :param keys: the keys of the global attributes to remove. Unknown keys are ignored.
+    :return: None
+    """
+    remove_global_attributes(keys)
 
 
 def logging_handler() -> logging.Handler:

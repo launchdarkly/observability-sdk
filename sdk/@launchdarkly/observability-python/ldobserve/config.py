@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 import logging
 import os
-from typing import Optional
+from typing import Optional, Sequence
 
 from opentelemetry.instrumentation.logging import OTEL_PYTHON_LOG_CORRELATION
+from opentelemetry.sdk._logs import LogRecordProcessor
+from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.environment_variables import (
     OTEL_EXPORTER_OTLP_ENDPOINT,
     _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED,
@@ -136,6 +138,32 @@ class ObservabilityConfig:
     Defaults to True.
     """
 
+    span_processors: Optional[Sequence[SpanProcessor]] = None
+    """
+    Additional OpenTelemetry span processors, invoked in order for every span.
+
+    They run after global attributes (see :func:`ldobserve.observe.set_attributes`) are applied
+    and before spans are exported, so attributes set in `on_start` are exported. An exception
+    raised by a processor is logged and does not prevent the span from being exported.
+
+    For example:
+    >>> from opentelemetry.sdk.trace import SpanProcessor
+    >>> class TenantSpanProcessor(SpanProcessor):
+    ...     def on_start(self, span, parent_context=None):
+    ...         span.set_attribute("tenant.id", current_tenant_id())
+    >>> ObservabilityConfig(span_processors=[TenantSpanProcessor()])
+    """
+
+    log_processors: Optional[Sequence[LogRecordProcessor]] = None
+    """
+    Additional OpenTelemetry log record processors, invoked in order for every log record.
+
+    They run after global attributes (see :func:`ldobserve.observe.set_attributes`) are applied
+    and before log records are exported, so changes made to `log_data.log_record` in `emit` are
+    exported. An exception raised by a processor is logged and does not prevent the log record
+    from being exported.
+    """
+
     def __getitem__(self, key: str):
         return getattr(self, key)
 
@@ -154,6 +182,8 @@ class _ProcessedConfig:
     backend_url: str
     process_resources: bool
     os_resources: bool
+    span_processors: list[SpanProcessor]
+    log_processors: list[LogRecordProcessor]
 
     def __init__(self, config: ObservabilityConfig):
         self.otlp_endpoint = config.otlp_endpoint or os.getenv(
@@ -210,3 +240,6 @@ class _ProcessedConfig:
             if config.os_resources is not None
             else _DEFAULT_OS_RESOURCES
         )
+
+        self.span_processors = list(config.span_processors or [])
+        self.log_processors = list(config.log_processors or [])
