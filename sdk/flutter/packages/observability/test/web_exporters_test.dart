@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:launchdarkly_flutter_observability/src/api/attribute.dart';
+import 'package:launchdarkly_flutter_observability/src/api/log_severity.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_factory.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_factory_web.dart'
     as web;
+import 'package:launchdarkly_flutter_observability/src/otel/global_attributes.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/setup.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/symbols_id.dart';
 import 'package:launchdarkly_flutter_observability/src/options/observability_options.dart';
@@ -35,11 +38,14 @@ void main() {
 
   setUpAll(() {
     api.registerGlobalTracerProvider(
-      sdk.TracerProviderBase(processors: [processor]),
+      sdk.TracerProviderBase(
+        processors: [GlobalAttributesSpanProcessor(), processor],
+      ),
     );
   });
 
   setUp(processor.ended.clear);
+  tearDown(GlobalAttributes.resetForTesting);
 
   void recordAll(ObservabilityConfig config) {
     exporters.createTrackRecorder(config).track('purchase');
@@ -82,6 +88,44 @@ void main() {
         ),
       );
       expect(spanNames(), ['track', 'click']);
+    });
+
+    test('carry globals without overriding the SDK attributes', () {
+      GlobalAttributes.set({'tenant': 'acme', 'event.type': 'global'});
+      recordAll(configFromOptions(const ObservabilityOptions()));
+      exporters
+          .createLogRecorder(configFromOptions(const ObservabilityOptions()))
+          .recordLog('hi', severity: LogSeverity.info);
+
+      expect(processor.ended, hasLength(4));
+      for (final span in processor.ended) {
+        expect(span.attributes.get('tenant'), 'acme', reason: span.name);
+      }
+      final click = processor.ended.singleWhere((s) => s.name == 'click');
+      expect(click.attributes.get('event.type'), 'click');
+    });
+
+    test('add globals to the log event beneath the log and call keys', () {
+      GlobalAttributes.set({
+        'tenant': 'acme',
+        'log.message': 'global',
+        'log.severity': 'global',
+        'tier': 'global',
+      });
+      exporters
+          .createLogRecorder(configFromOptions(const ObservabilityOptions()))
+          .recordLog(
+            'hi',
+            severity: LogSeverity.warn,
+            attributes: {'tier': StringAttribute('call')},
+          );
+
+      final event = processor.ended.single.events.single;
+      final attributes = {for (final a in event.attributes) a.key: a.value};
+      expect(attributes['tenant'], 'acme');
+      expect(attributes['log.message'], 'hi');
+      expect(attributes['log.severity'], 'warn');
+      expect(attributes['tier'], 'call');
     });
   });
 
