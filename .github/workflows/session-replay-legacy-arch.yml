@@ -86,9 +86,10 @@ jobs:
                   node-version: 24.15.0
                   cache: 'yarn'
 
-            # A full-monorepo `yarn install` hangs on macOS in the Link step
-            # (an unrelated package's build script never exits), so the job
-            # used to sit until the timeout. Install only the example app
+            # A full-monorepo `yarn install` stalls on macOS in the Link step:
+            # an unrelated package's `node install.js` build script sits idle
+            # on the network (4-5 min on macos-15, never returned on macos-14),
+            # so the job used to hit its timeout. Install only the example app
             # and its workspace deps; `focus` reads yarn.lock without
             # rewriting it.
             - name: Install example app dependencies
