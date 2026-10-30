@@ -43,8 +43,10 @@ import {
 	getBodyThatShouldBeRecorded,
 } from '../listeners/network-listener/utils/xhr-listener'
 import {
+	HttpSpanRequest,
 	NetworkRecordingOptions,
 	OtelInstrumentatonOptions,
+	OtelOptions,
 } from '../types/client'
 import { AggregationTemporalityPreference } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
@@ -95,6 +97,7 @@ export type BrowserTracingConfig = {
 	getIntegrations?: () => IntegrationClient[]
 	productAnalyticsEvents?: ProductAnalyticsEvents
 	getLDContextKeyAttributes?: () => Attributes | undefined
+	onHttpRequestSpan?: OtelOptions['onHttpRequestSpan']
 }
 
 let providers: {
@@ -119,6 +122,39 @@ const pendingResponseAttributes = new Map<string, Promise<void>>()
 const spanKey = (span: {
 	spanContext(): { traceId: string; spanId: string }
 }) => `${span.spanContext().traceId}:${span.spanContext().spanId}`
+// Runs the app-supplied span hook. Request details come from the attributes
+// the OTel instrumentations set at span start: the fetch callback only gets a
+// `Request | RequestInit` (no url), and the XHR callback only the XHR.
+export const applyHttpRequestSpanHook = (
+	hook: OtelOptions['onHttpRequestSpan'],
+	type: HttpSpanRequest['type'],
+	span: Span,
+	fallback?: { method?: string; url?: string },
+) => {
+	if (!hook) {
+		return
+	}
+	try {
+		const attributes =
+			(span as unknown as Partial<ReadableSpan>).attributes ?? {}
+		const method =
+			attributes[SemanticAttributes.SEMATTRS_HTTP_METHOD] ??
+			fallback?.method ??
+			''
+		const url =
+			attributes[SemanticAttributes.SEMATTRS_HTTP_URL] ??
+			fallback?.url ??
+			''
+		hook(span, {
+			type,
+			method: String(method).toUpperCase(),
+			url: String(url),
+		})
+	} catch (e) {
+		console.warn('onHttpRequestSpan threw an error', e)
+	}
+}
+
 export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
 export const ATTR_EXCEPTION_ID = 'launchdarkly.exception.id'
@@ -283,6 +319,15 @@ export const setupBrowserTracing = (
 					config.tracingOrigins,
 				),
 				applyCustomAttributesOnSpan: (span, request, response) => {
+					// Runs first so the app can rename the span even when
+					// recording is skipped for it below. The span has not
+					// ended yet, so updateName still applies.
+					applyHttpRequestSpanHook(
+						config.onHttpRequestSpan,
+						'fetch',
+						span,
+						{ method: (request as RequestInit).method },
+					)
 					if (!(span as any).attributes) {
 						return
 					}
@@ -441,6 +486,15 @@ export const setupBrowserTracing = (
 					),
 					applyCustomAttributesOnSpan: (span, xhr) => {
 						const browserXhr = xhr as BrowserXHR
+						applyHttpRequestSpanHook(
+							config.onHttpRequestSpan,
+							'xhr',
+							span,
+							{
+								method: browserXhr._method,
+								url: browserXhr._url,
+							},
+						)
 						if (!(span as any).attributes) {
 							return
 						}

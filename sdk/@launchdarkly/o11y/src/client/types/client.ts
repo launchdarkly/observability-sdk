@@ -1,3 +1,4 @@
+import type { Span } from '@opentelemetry/api'
 import { RequestResponsePair } from '../listeners/network-listener/utils/models'
 
 export const ALL_CONSOLE_METHODS = [
@@ -141,8 +142,47 @@ export type NetworkRecordingOptions = {
 	) => RequestResponsePair | null
 }
 
+/**
+ * Describes the request behind an auto-instrumented browser `fetch` or
+ * `XMLHttpRequest` span.
+ */
+export type HttpSpanRequest = {
+	/** Which instrumentation created the span. */
+	type: 'fetch' | 'xhr'
+	/** Upper-cased HTTP method, e.g. `GET`. */
+	method: string
+	/** The concrete request URL, e.g. `https://app.example.com/api/users/42`. */
+	url: string
+}
+
 export type OtelOptions = {
 	instrumentations?: OtelInstrumentatonOptions
+	/**
+	 * Called for each auto-instrumented `fetch` and `XMLHttpRequest` span just
+	 * before it ends, so the response and error status are already on it.
+	 * Use it to rename the span or add attributes, for example to give it a
+	 * route template:
+	 *
+	 * ```ts
+	 * onHttpRequestSpan: (span, { method, url }) => {
+	 *   const route = matchRoute(url) // '/api/users/{userId}'
+	 *   if (!route) return
+	 *   span.updateName(`${method} ${route}`)
+	 *   span.setAttributes({
+	 *     'http.route': route,
+	 *     'url.template': route,
+	 *     'launchdarkly.operation.name': route,
+	 *   })
+	 * }
+	 * ```
+	 *
+	 * The span's trace and span ids are fixed when the request starts, so
+	 * renaming does not affect the `traceparent` sent to your backend.
+	 * Errors thrown by the callback are swallowed. Requires
+	 * `networkRecording` to be enabled, as the instrumentations are not
+	 * installed otherwise.
+	 */
+	onHttpRequestSpan?: (span: Span, request: HttpSpanRequest) => void
 }
 
 export type OtelInstrumentatonOptions = {
