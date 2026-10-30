@@ -661,6 +661,7 @@ export class Highlight {
 					serviceName:
 						this.options?.serviceName ?? 'highlight-browser',
 					instrumentations: this.options?.otel?.instrumentations,
+					onHttpRequestSpan: this.options?.otel?.onHttpRequestSpan,
 					getIntegrations: () => [...this._integrations],
 					productAnalyticsEvents: this._productAnalyticsEvents(),
 				},

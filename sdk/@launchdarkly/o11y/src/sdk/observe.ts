@@ -194,6 +194,7 @@ export class ObserveSDK implements Observe {
 					serviceName: this._options?.serviceName ?? 'browser',
 					serviceVersion: this._options?.version,
 					instrumentations: this._options?.otel?.instrumentations,
+					onHttpRequestSpan: this._options?.otel?.onHttpRequestSpan,
 					productAnalyticsEvents: this._productAnalyticsEvents(),
 					getLDContextKeyAttributes: () =>
 						this.getLDContextKeyAttributes(),
