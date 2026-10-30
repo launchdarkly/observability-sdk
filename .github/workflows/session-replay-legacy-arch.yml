@@ -99,7 +99,12 @@ jobs:
               working-directory: ${{ env.EXAMPLE_DIR }}/ios
               env:
                   RCT_NEW_ARCH_ENABLED: '0'
-              run: bundle install && bundle exec pod install --repo-update
+              # The committed Podfile.lock lags the SDK podspec whenever the
+              # native LaunchDarkly pods are bumped, so let CocoaPods move just
+              # those pods (and their deps) to what the podspec asks for.
+              run: |
+                  bundle install
+                  bundle exec pod update LaunchDarklySessionReplay LaunchDarklyObservability --repo-update
 
             - name: Build iOS (Debug, simulator)
               working-directory: ${{ env.EXAMPLE_DIR }}/ios
