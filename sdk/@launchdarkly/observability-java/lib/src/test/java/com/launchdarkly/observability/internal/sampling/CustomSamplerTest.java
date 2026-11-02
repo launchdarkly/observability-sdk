@@ -1,0 +1,396 @@
+package com.launchdarkly.observability.internal.sampling;
+
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.Value;
+import io.opentelemetry.api.logs.Severity;
+import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.TraceFlags;
+import io.opentelemetry.api.trace.TraceState;
+import io.opentelemetry.sdk.logs.data.LogRecordData;
+import io.opentelemetry.sdk.testing.logs.TestLogRecordData;
+import io.opentelemetry.sdk.testing.trace.TestSpanData;
+import io.opentelemetry.sdk.trace.data.SpanData;
+import io.opentelemetry.sdk.trace.data.StatusData;
+import org.junit.jupiter.api.Test;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class CustomSamplerTest {
+
+    // Deterministic sampler that always samples (ratio >= 1)
+    private static final CustomSampler ALWAYS_SAMPLE = new CustomSampler(ratio -> true);
+    // Deterministic sampler that never samples (used when ratio config matches)
+    private static final CustomSampler NEVER_SAMPLE = new CustomSampler(ratio -> false);
+
+    @Test
+    void noConfigAlwaysSamples() {
+        CustomSampler sampler = new CustomSampler();
+        SpanData span = createTestSpan("test-span", Attributes.empty());
+        CustomSampler.SamplingResult result = sampler.sampleSpan(span);
+        assertTrue(result.isSampled());
+    }
+
+    @Test
+    void spanNameValueMatchFilters() {
+        SamplingConfig config = new SamplingConfig(
+                List.of(new SamplingConfig.SpanSamplingConfig(
+                        SamplingConfig.MatchConfig.ofValue("health-check"),
+                        Collections.emptyList(),
+                        Collections.emptyList(),
+                        1
+                )),
+                Collections.emptyList()
+        );
+
+        NEVER_SAMPLE.setConfig(config);
+
+        // Matching span should be filtered (NEVER_SAMPLE says no)
+        SpanData healthSpan = createTestSpan("health-check", Attributes.empty());
+        CustomSampler.SamplingResult result = NEVER_SAMPLE.sampleSpan(healthSpan);
+        assertFalse(result.isSampled());
+
+        // Non-matching span should pass through (no config match = always sample)
+        SpanData otherSpan = createTestSpan("user-request", Attributes.empty());
+        result = NEVER_SAMPLE.sampleSpan(otherSpan);
+        assertTrue(result.isSampled());
+    }
+
+    @Test
+    void spanNameRegexMatchFilters() {
+        SamplingConfig config = new SamplingConfig(
+                List.of(new SamplingConfig.SpanSamplingConfig(
+                        SamplingConfig.MatchConfig.ofRegex("health.*"),
+                        Collections.emptyList(),
+                        Collections.emptyList(),
+                        1
+                )),
+                Collections.emptyList()
+        );
+
+        NEVER_SAMPLE.setConfig(config);
+
+        SpanData healthSpan = createTestSpan("health-check", Attributes.empty());
+        assertFalse(NEVER_SAMPLE.sampleSpan(healthSpan).isSampled());
+
+        SpanData otherSpan = createTestSpan("user-request", Attributes.empty());
+        assertTrue(NEVER_SAMPLE.sampleSpan(otherSpan).isSampled());
+    }
+
+    @Test
+    void spanAttributeMatchFilters() {
+        SamplingConfig config = new SamplingConfig(
+                List.of(new SamplingConfig.SpanSamplingConfig(
+                        null,
+                        List.of(new SamplingConfig.AttributeMatchConfig(
+                                SamplingConfig.MatchConfig.ofValue("http.route"),
+                                SamplingConfig.MatchConfig.ofValue("/health")
+                        )),
+                        Collections.emptyList(),
+                        1
+                )),
+                Collections.emptyList()
+        );
+
+        NEVER_SAMPLE.setConfig(config);
+
+        Attributes matchAttrs = Attributes.of(AttributeKey.stringKey("http.route"), "/health");
+        assertFalse(NEVER_SAMPLE.sampleSpan(createTestSpan("request", matchAttrs)).isSampled());
+
+        Attributes noMatchAttrs = Attributes.of(AttributeKey.stringKey("http.route"), "/api/users");
+        assertTrue(NEVER_SAMPLE.sampleSpan(createTestSpan("request", noMatchAttrs)).isSampled());
+    }
+
+    @Test
+    void matchConfigAlwaysSampleReturnsAttributes() {
+        SamplingConfig config = new SamplingConfig(
+                List.of(new SamplingConfig.SpanSamplingConfig(
+                        SamplingConfig.MatchConfig.ofValue("my-span"),
+                        Collections.emptyList(),
+                        Collections.emptyList(),
+                        5
+                )),
+                Collections.emptyList()
+        );
+
+        ALWAYS_SAMPLE.setConfig(config);
+        SpanData span = createTestSpan("my-span", Attributes.empty());
+        CustomSampler.SamplingResult result = ALWAYS_SAMPLE.sampleSpan(span);
+        assertTrue(result.isSampled());
+        assertNotNull(result.getAttributes());
+        assertEquals(5L, result.getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+    }
+
+    @Test
+    void matchesValueHelperExactMatch() {
+        assertTrue(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofValue("hello"), "hello"));
+        assertFalse(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofValue("hello"), "world"));
+    }
+
+    @Test
+    void matchesValueHelperRegex() {
+        assertTrue(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("hel.*"), "hello"));
+        assertFalse(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("^world$"), "hello"));
+    }
+
+    @Test
+    void matchesValueNullConfigAlwaysMatches() {
+        assertTrue(CustomSampler.matchesValue(null, "anything"));
+    }
+
+    @Test
+    void matchesValueNullActualNeverMatches() {
+        assertFalse(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofValue("test"), null));
+    }
+
+    @Test
+    void regexMatchesSubstringLikeOtherSdks() {
+        assertTrue(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("health"), "GET /health-check"));
+        assertTrue(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("check$"), "health-check"));
+        assertFalse(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("^check"), "health-check"));
+    }
+
+    @Test
+    void validRegexIsCompiledAsSent() {
+        // Constructs outside a character allowlist still compile and match.
+        assertTrue(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("(?i)^HEALTH\\b"), "health check"));
+        assertTrue(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("(a+)+b"), "aaab"));
+    }
+
+    @Test
+    void invalidRegexIsSkippedWithWarning() {
+        Logger logger = Logger.getLogger(SamplingConfig.MatchConfig.class.getName());
+        List<LogRecord> records = new CopyOnWriteArrayList<>();
+        Handler handler = new Handler() {
+            @Override public void publish(LogRecord record) { records.add(record); }
+            @Override public void flush() {}
+            @Override public void close() {}
+        };
+        logger.addHandler(handler);
+        try {
+            SamplingConfig.MatchConfig invalid =
+                    assertDoesNotThrow(() -> SamplingConfig.MatchConfig.ofRegex("(unclosed"));
+            assertFalse(CustomSampler.matchesValue(invalid, "(unclosed"));
+        } finally {
+            logger.removeHandler(handler);
+        }
+        assertEquals(1, records.size());
+        assertEquals(Level.WARNING, records.get(0).getLevel());
+        assertTrue(records.get(0).getMessage().contains("(unclosed"));
+    }
+
+    @Test
+    void invalidRegexRuleIsSkippedAndOtherRulesStillApply() {
+        SamplingConfig config = new SamplingConfig(
+                List.of(
+                        new SamplingConfig.SpanSamplingConfig(
+                                SamplingConfig.MatchConfig.ofRegex("[broken"),
+                                Collections.emptyList(),
+                                Collections.emptyList(),
+                                0),
+                        new SamplingConfig.SpanSamplingConfig(
+                                SamplingConfig.MatchConfig.ofRegex("health"),
+                                Collections.emptyList(),
+                                Collections.emptyList(),
+                                0)
+                ),
+                Collections.emptyList()
+        );
+        CustomSampler sampler = new CustomSampler();
+        sampler.setConfig(config);
+
+        assertTrue(sampler.sampleSpan(createTestSpan("[broken", Attributes.empty())).isSampled());
+        assertFalse(sampler.sampleSpan(createTestSpan("health-check", Attributes.empty())).isSampled());
+    }
+
+    @Test
+    void sampleLogWithoutConfigAlwaysSamples() {
+        CustomSampler.SamplingResult result = new CustomSampler().sampleLog(createTestLog("anything", "INFO", Attributes.empty()));
+        assertTrue(result.isSampled());
+        assertNull(result.getAttributes());
+    }
+
+    @Test
+    void sampleLogMatchesSeverityTextField() {
+        CustomSampler sampler = new CustomSampler(ratio -> false);
+        sampler.setConfig(logConfig(new SamplingConfig.LogSamplingConfig(
+                null, SamplingConfig.MatchConfig.ofValue("error"), Collections.emptyList(), 7)));
+
+        CustomSampler.SamplingResult matched = sampler.sampleLog(createTestLog("boom", "error", Attributes.empty()));
+        assertFalse(matched.isSampled());
+        assertEquals(7L, matched.getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+
+        // The rule reads severityText, not the Severity enum: a log with
+        // only the ERROR number and no text does not match "error".
+        LogRecordData numberOnly = TestLogRecordData.builder()
+                .setSeverity(Severity.ERROR)
+                .setBodyValue(Value.of("boom"))
+                .build();
+        assertTrue(sampler.sampleLog(numberOnly).isSampled());
+        assertTrue(sampler.sampleLog(createTestLog("boom", "info", Attributes.empty())).isSampled());
+    }
+
+    @Test
+    void sampleLogMatchesMessageByValueAndSubstringRegex() {
+        CustomSampler sampler = new CustomSampler(ratio -> false);
+        sampler.setConfig(new SamplingConfig(Collections.emptyList(), List.of(
+                new SamplingConfig.LogSamplingConfig(
+                        SamplingConfig.MatchConfig.ofValue("exact message"), null, Collections.emptyList(), 2),
+                new SamplingConfig.LogSamplingConfig(
+                        SamplingConfig.MatchConfig.ofRegex("timed out"), null, Collections.emptyList(), 3))));
+
+        assertEquals(2L, sampler.sampleLog(createTestLog("exact message", null, Attributes.empty()))
+                .getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+        assertEquals(3L, sampler.sampleLog(createTestLog("Error: request timed out after 30s", null, Attributes.empty()))
+                .getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+        assertTrue(sampler.sampleLog(createTestLog("exact message, but longer", null, Attributes.empty())).isSampled());
+        assertTrue(sampler.sampleLog(createTestLog(null, null, Attributes.empty())).isSampled());
+    }
+
+    @Test
+    void sampleLogMatchesTypedAttributes() {
+        CustomSampler sampler = new CustomSampler(ratio -> false);
+        sampler.setConfig(logConfig(new SamplingConfig.LogSamplingConfig(null, null, List.of(
+                new SamplingConfig.AttributeMatchConfig(
+                        SamplingConfig.MatchConfig.ofValue("http.status_code"), SamplingConfig.MatchConfig.ofValue("503")),
+                new SamplingConfig.AttributeMatchConfig(
+                        SamplingConfig.MatchConfig.ofValue("retry.enabled"), SamplingConfig.MatchConfig.ofValue("true"))),
+                4)));
+
+        Attributes both = Attributes.of(
+                AttributeKey.longKey("http.status_code"), 503L,
+                AttributeKey.booleanKey("retry.enabled"), true);
+        assertFalse(sampler.sampleLog(createTestLog("x", null, both)).isSampled());
+
+        Attributes onlyOne = Attributes.of(AttributeKey.longKey("http.status_code"), 503L);
+        assertTrue(sampler.sampleLog(createTestLog("x", null, onlyOne)).isSampled(),
+                "every attribute rule must match");
+    }
+
+    @Test
+    void sampleLogFirstMatchingRuleWins() {
+        CustomSampler sampler = new CustomSampler(ratio -> ratio == 1);
+        sampler.setConfig(new SamplingConfig(Collections.emptyList(), List.of(
+                new SamplingConfig.LogSamplingConfig(null, SamplingConfig.MatchConfig.ofValue("debug"), Collections.emptyList(), 1),
+                new SamplingConfig.LogSamplingConfig(null, null, Collections.emptyList(), 100))));
+
+        CustomSampler.SamplingResult debug = sampler.sampleLog(createTestLog("x", "debug", Attributes.empty()));
+        assertTrue(debug.isSampled());
+        assertEquals(1L, debug.getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+
+        CustomSampler.SamplingResult other = sampler.sampleLog(createTestLog("x", "info", Attributes.empty()));
+        assertFalse(other.isSampled());
+        assertEquals(100L, other.getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
+    }
+
+    @Test
+    void matchValuesCompareByTypeLikeGoAndDotNet() {
+        SamplingConfig.MatchConfig number = SamplingConfig.MatchConfig.ofValue(2.0);
+        assertTrue(number.matches(2L), "a JSON number matches a long attribute of equal value");
+        assertTrue(number.matches(2.0d));
+        assertFalse(number.matches(3L));
+        assertFalse(number.matches("2"), "a number does not match a string");
+
+        SamplingConfig.MatchConfig bool = SamplingConfig.MatchConfig.ofValue(true);
+        assertTrue(bool.matches(true));
+        assertFalse(bool.matches(false));
+        assertFalse(bool.matches("true"), "a boolean does not match a string");
+
+        SamplingConfig.MatchConfig text = SamplingConfig.MatchConfig.ofValue("503");
+        assertTrue(text.matches("503"));
+        assertTrue(text.matches(503L), "a string matches the value's text");
+
+        SamplingConfig.MatchConfig regex = SamplingConfig.MatchConfig.ofRegex("^5");
+        assertTrue(regex.matches("503"));
+        assertFalse(regex.matches(503L), "a regex only matches string values");
+
+        assertFalse(SamplingConfig.MatchConfig.ofValue(List.of("a")).matches("a"),
+                "an unsupported value type never matches");
+    }
+
+    @Test
+    void numericRuleMatchesDoubleAttributeOfIntegralValue() {
+        CustomSampler sampler = new CustomSampler(ratio -> false);
+        sampler.setConfig(new SamplingConfig(List.of(new SamplingConfig.SpanSamplingConfig(null,
+                List.of(new SamplingConfig.AttributeMatchConfig(
+                        SamplingConfig.MatchConfig.ofValue("load"), SamplingConfig.MatchConfig.ofValue(2.0))),
+                Collections.emptyList(), 0)), Collections.emptyList()));
+
+        assertFalse(sampler.sampleSpan(createTestSpan("s", Attributes.of(AttributeKey.doubleKey("load"), 2.0)))
+                .isSampled());
+        assertFalse(sampler.sampleSpan(createTestSpan("s", Attributes.of(AttributeKey.longKey("load"), 2L)))
+                .isSampled());
+        assertTrue(sampler.sampleSpan(createTestSpan("s", Attributes.of(AttributeKey.doubleKey("load"), 2.5)))
+                .isSampled());
+    }
+
+    private static SamplingConfig logConfig(SamplingConfig.LogSamplingConfig rule) {
+        return new SamplingConfig(Collections.emptyList(), List.of(rule));
+    }
+
+    private static LogRecordData createTestLog(String message, String severityText, Attributes attributes) {
+        TestLogRecordData.Builder builder = TestLogRecordData.builder().setAttributes(attributes);
+        if (message != null) {
+            builder.setBodyValue(Value.of(message));
+        }
+        if (severityText != null) {
+            builder.setSeverityText(severityText);
+        }
+        return builder.build();
+    }
+
+    @Test
+    void defaultSamplerBehavior() {
+        assertFalse(CustomSampler.defaultSampler(0));
+        assertTrue(CustomSampler.defaultSampler(1));
+        // ratio of 2 should sample ~50% (not deterministic, but at least doesn't throw)
+        CustomSampler.defaultSampler(2);
+    }
+
+    // --- Helper to create a minimal SpanData using SDK testing utilities ---
+
+    private static SpanData createTestSpan(String name, Attributes attributes) {
+        return TestSpanData.builder()
+                .setName(name)
+                .setKind(SpanKind.INTERNAL)
+                .setSpanContext(SpanContext.create(
+                        traceId(),
+                        spanId('1'),
+                        TraceFlags.getSampled(),
+                        TraceState.getDefault()
+                ))
+                .setStatus(StatusData.unset())
+                .setHasEnded(true)
+                .setStartEpochNanos(0)
+                .setEndEpochNanos(1)
+                .setAttributes(attributes)
+                .build();
+    }
+
+    private static String traceId() {
+        return "0".repeat(31) + "1";
+    }
+
+    private static String spanId(char tail) {
+        return "0".repeat(15) + tail;
+    }
+}

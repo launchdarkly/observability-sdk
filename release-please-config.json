@@ -7,6 +7,8 @@
 	],
 	"packages": {
 		"sdk/@launchdarkly/observability-python": {
+			"draft": true,
+			"force-tag-creation": true,
 			"package-name": "launchdarkly-observability-python",
 			"release-type": "python",
 			"versioning": "default",
@@ -21,6 +23,19 @@
 			"include-v-in-tag": false,
 			"include-component-in-tag": true,
 			"extra-files": ["gradle.properties"]
+		},
+		"sdk/@launchdarkly/observability-java": {
+			"draft": true,
+			"force-tag-creation": true,
+			"package-name": "launchdarkly-java-server-sdk-observability",
+			"release-type": "simple",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true,
+			"extra-files": [
+				"gradle.properties",
+				"lib/src/main/java/com/launchdarkly/observability/internal/Constants.java"
+			]
 		},
 		"sdk/flutter/packages/observability": {
 			"package-name": "launchdarkly_flutter_observability",
@@ -41,6 +56,8 @@
 			"extra-files": ["internal/metadata/metadata.go"]
 		},
 		"sdk/@launchdarkly/observability-dotnet": {
+			"draft": true,
+			"force-tag-creation": true,
 			"bump-minor-pre-major": true,
 			"package-name": "launchdarkly-observability-dotnet",
 			"release-type": "simple",
@@ -107,6 +124,8 @@
 			"include-component-in-tag": true
 		},
 		"sdk/@launchdarkly/observability-ruby": {
+			"draft": true,
+			"force-tag-creation": true,
 			"package-name": "launchdarkly-observability-ruby",
 			"release-type": "ruby",
 			"versioning": "default",

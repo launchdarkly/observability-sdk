@@ -58,6 +58,29 @@ describe('LDObserve Buffering', () => {
 			expect(bufferStatus.bufferSize).toBe(0)
 		})
 
+		it('should buffer setAttributes and removeAttributes calls when not initialized', async () => {
+			_LDObserve.setAttributes({ campaign: 'spring', intent: 'signup' })
+			_LDObserve.removeAttributes(['intent'])
+
+			let bufferStatus = _LDObserve._getBufferStatus()
+			expect(bufferStatus.bufferSize).toBe(2)
+			expect(bufferStatus.buffer[0].method).toBe('setAttributes')
+			expect(bufferStatus.buffer[1].method).toBe('removeAttributes')
+
+			const client = new ObservabilityClient('sdkKey', {})
+			_LDObserve._init(client)
+
+			await vi.waitFor(
+				() => expect(_LDObserve.isInitialized()).toBe(true),
+				{ timeout: 2000 },
+			)
+			bufferStatus = _LDObserve._getBufferStatus()
+			expect(bufferStatus.bufferSize).toBe(0)
+			expect(
+				(client as any).instrumentationManager.getGlobalAttributes(),
+			).toEqual({ campaign: 'spring' })
+		})
+
 		it('should buffer startSpan calls when not initialized', async () => {
 			const spanName = 'Test span'
 			const attributes = { test: 'value' }

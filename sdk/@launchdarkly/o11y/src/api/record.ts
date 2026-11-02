@@ -7,11 +7,16 @@ export interface Record {
 	/**
 	 * Start the session when running in `manualStart` mode.
 	 * Can be used to force start a new session.
+	 * Can safely be called before the SDK has initialized (e.g. before the
+	 * plugin registers): the call resolves once the SDK is attached and
+	 * started, without throwing.
 	 * @param options the session start options.
 	 */
 	start: (options?: StartOptions) => Promise<void>
 	/**
 	 * Stop the session recording.
+	 * Can safely be called before the SDK has initialized; before `start()`
+	 * it cancels a pending start instead of throwing.
 	 */
 	stop: () => void
 	/**

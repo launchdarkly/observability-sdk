@@ -1,5 +1,28 @@
 # @launchdarkly/observability
 
+## [1.3.1](https://github.com/launchdarkly/observability-sdk/compare/observability-1.3.0...observability-1.3.1) (2026-10-29)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/o11y bumped to 1.4.1
+
+## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/observability-1.2.2...observability-1.3.0) (2026-10-28)
+
+
+### Features
+
+* **o11y:** add sessionCookieDomain option and session docs ([#848](https://github.com/launchdarkly/observability-sdk/issues/848)) ([4ac4ccb](https://github.com/launchdarkly/observability-sdk/commit/4ac4ccb24b270f910c20b6e434569e507405e510))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/o11y bumped to 1.4.0
+
 ## [1.2.2](https://github.com/launchdarkly/observability-sdk/compare/observability-1.2.1...observability-1.2.2) (2026-10-21)
 
 

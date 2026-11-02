@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ObservabilityClient } from './ObservabilityClient'
+import { Platform } from 'react-native'
 
 describe('ObservabilityClient — stop during async init', () => {
 	beforeEach(() => {
@@ -67,5 +68,91 @@ describe('ObservabilityClient — stop during async init', () => {
 		expect(ready).toBe(false)
 		expect(client.getIsInitialized()).toBe(false)
 		errorSpy.mockRestore()
+	})
+})
+
+describe('ObservabilityClient — platform attributes on the Resource', () => {
+	// React Native is aliased to src/__mocks__/react-native.ts, whose Platform
+	// is a plain mutable object; set it per test and restore afterwards.
+	const platform = Platform as unknown as {
+		OS: string
+		Version?: number | string
+		constants?: Record<string, unknown>
+	}
+	const original = {
+		OS: platform.OS,
+		Version: platform.Version,
+		constants: platform.constants,
+	}
+
+	beforeEach(() => {
+		platform.OS = 'ios'
+		platform.Version = '17.0'
+		platform.constants = {
+			systemName: 'iOS',
+			osVersion: '17.0',
+			interfaceIdiom: 'phone',
+		}
+	})
+
+	afterEach(() => {
+		platform.OS = original.OS
+		platform.Version = original.Version
+		platform.constants = original.constants
+	})
+
+	// Builds a fully-initialized client with the telemetry pipeline stubbed out
+	// and captures the OTel Resource that would back every exporter.
+	async function buildInitializedResource(
+		options: ConstructorParameters<typeof ObservabilityClient>[1] = {},
+	): Promise<Record<string, unknown>> {
+		const client = new ObservabilityClient('projectKey', {
+			disableErrorTracking: true,
+			...options,
+		})
+
+		let resource: { attributes: Record<string, unknown> } | undefined
+		;(
+			client as unknown as {
+				instrumentationManager: {
+					initialize: (...args: unknown[]) => Promise<void>
+				}
+			}
+		).instrumentationManager.initialize = vi.fn(async (r: unknown) => {
+			resource = r as { attributes: Record<string, unknown> }
+		})
+
+		const ready = await client.whenInitialized()
+		expect(ready).toBe(true)
+		expect(resource).toBeDefined()
+		return resource!.attributes
+	}
+
+	it('carries the platform os/device attributes on the Resource', async () => {
+		const attributes = await buildInitializedResource()
+
+		expect(attributes).toMatchObject({
+			'os.type': 'darwin',
+			'os.name': 'iOS',
+			'os.version': '17.0',
+		})
+	})
+
+	it('lets user resourceAttributes override the platform attributes', async () => {
+		const attributes = await buildInitializedResource({
+			resourceAttributes: {
+				'os.name': 'CustomOS',
+				'device.model.identifier': 'user-model',
+			},
+		})
+
+		expect(attributes).toMatchObject({
+			// Platform-derived values are still present...
+			'os.type': 'darwin',
+			'os.version': '17.0',
+			// ...but the user values win.
+			'os.name': 'CustomOS',
+			'device.model.identifier': 'user-model',
+		})
 	})
 })

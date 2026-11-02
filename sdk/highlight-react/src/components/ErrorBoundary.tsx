@@ -9,13 +9,19 @@ export type FallbackRender = (errorData: {
 
 export type ErrorBoundaryProps = {
 	children?: React.ReactNode
-	/** If a Highlight report dialog should be rendered on error. Defaults to true. */
+	/**
+	 * If a Highlight report dialog should be rendered on error. Defaults to true.
+	 * @deprecated The report dialog's feedback is discarded because session
+	 * feedback is no longer supported. Set to false and use {@link customDialog}
+	 * or {@link fallback} instead.
+	 */
 	showDialog?: boolean
 	/** A custom dialog that you can provide to be shown when the ErrorBoundary is shown. */
 	customDialog?: React.ReactNode
 	/**
 	 * Options to be passed into the Highlight report dialog.
 	 * No-op if {@link showDialog} is false.
+	 * @deprecated See {@link showDialog}.
 	 */
 	dialogOptions?: ReportDialogOptions
 	/**

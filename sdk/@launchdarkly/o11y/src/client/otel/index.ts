@@ -46,6 +46,7 @@ import {
 	NetworkRecordingOptions,
 	OtelInstrumentatonOptions,
 } from '../types/client'
+import { AggregationTemporalityPreference } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
 	OTLPMetricExporterBrowser,
 	OTLPTraceExporterBrowserWithXhrRetry,
@@ -69,7 +70,11 @@ import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
 import version from '../../version'
 
 import { ExportSampler } from './sampling/ExportSampler'
-import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
+import {
+	getPersistentSessionSecureID,
+	getPreviousSessionSecureID,
+	touchSession,
+} from '../utils/sessionStorage/highlightSession'
 import { isSdkDebugLogging, sdkLog } from '../utils/sdkLogger'
 import { ProductAnalyticsEvents } from '../types/observe'
 
@@ -103,6 +108,7 @@ let fetchRequestBodyCaptureCleanup: (() => void) | undefined
 
 const RECORD_ATTRIBUTE = 'highlight.record'
 const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
+const PREVIOUS_SESSION_ID_ATTRIBUTE = 'session.previous_id'
 
 // Shared map to coordinate async response body reads between the
 // FetchInstrumentation's applyCustomAttributesOnSpan callback and
@@ -215,10 +221,10 @@ export const setupBrowserTracing = (
 	})
 	api.trace.setGlobalTracerProvider(providers.tracerProvider)
 
-	const meterExporter = new OTLPMetricExporterBrowser({
-		...exporterOptions,
-		url: config.otlpEndpoint + '/v1/metrics',
-	})
+	const meterExporter = createMetricExporter(
+		exporterOptions,
+		config.otlpEndpoint + '/v1/metrics',
+	)
 	const reader = new PeriodicExportingMetricReader({
 		exporter: meterExporter,
 		exportIntervalMillis: exporterOptions.timeoutMillis,
@@ -581,6 +587,21 @@ type FlushableSpanProcessor = {
 // Setting skipPendingOnFlush on the span processor prevents forceFlush from
 // awaiting in-flight response-body reads — those won't finish before the page
 // freezes, and spans without body attributes are still worth keeping.
+// Counters and histograms are exported as deltas: each export carries only the
+// increments recorded since the previous one. A page load is a short-lived
+// stream, so cumulative totals would leave the backend nothing but a baseline
+// point for most series. Up-down counters stay cumulative and gauges are
+// unaffected, per the OTel DELTA preference.
+export const createMetricExporter = (
+	exporterOptions: TraceExporterConfig,
+	url: string,
+) =>
+	new OTLPMetricExporterBrowser({
+		...exporterOptions,
+		url,
+		temporalityPreference: AggregationTemporalityPreference.DELTA,
+	})
+
 export const registerFlushOnUnload = (
 	traceExporter: FlushableExporter,
 	metricExporter: FlushableExporter,
@@ -628,6 +649,22 @@ export const registerFlushOnUnload = (
 	}
 }
 
+/**
+ * Stamps the session identifiers on a starting span: the current session's
+ * ID always, and `session.previous_id` when this page load created a new
+ * session in place of an expired one, so the two can be linked in analysis.
+ */
+export const setSessionSpanAttributes = (span: api.Span): void => {
+	span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
+	const previousSessionSecureID = getPreviousSessionSecureID()
+	if (previousSessionSecureID) {
+		span.setAttribute(
+			PREVIOUS_SESSION_ID_ATTRIBUTE,
+			previousSessionSecureID,
+		)
+	}
+}
+
 class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private _pendingSpans = new Set<Promise<void>>()
 	// When set, forceFlush/shutdown return immediately without waiting for
@@ -640,7 +677,7 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	}
 
 	onStart(span: SDKSpan, parentContext: Context): void {
-		span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
+		setSessionSpanAttributes(span)
 		super.onStart(span, parentContext)
 	}
 
@@ -648,6 +685,15 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 		if (span.attributes[RECORD_ATTRIBUTE] === false) {
 			return // don't record spans that are marked as not to be recorded
 		}
+
+		// Observe-only sessions have no push loop to refresh their
+		// `lastPushTime` (RecordSDK._save does it for replay), so exported
+		// telemetry counts as session activity here — without it any page
+		// load more than SESSION_PUSH_THRESHOLD after the session _start_
+		// starts a new session regardless of activity. Unrecorded spans
+		// (our own endpoints) must not keep a session alive, so this runs
+		// after the check above.
+		touchSession()
 
 		// If there is a pending async response body read for this span
 		// (started in applyCustomAttributesOnSpan), wait for it to

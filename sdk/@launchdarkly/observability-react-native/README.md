@@ -39,6 +39,29 @@ const client = new LDClient(
 );
 ```
 
+### Attributes on all telemetry
+
+Use `setAttributes` to tag every span, log, error and metric recorded after the
+call with values known only at runtime, including network spans and flag
+evaluation spans the SDK records automatically. `removeAttributes` (or a `null`
+value) stops adding a key:
+
+```typescript
+import { LDObserve } from '@launchdarkly/observability-react-native';
+
+LDObserve.setAttributes({ utm_campaign: 'spring_promo', utm_source: 'email' });
+
+// Later:
+LDObserve.removeAttributes(['utm_campaign']);
+```
+
+Attributes are kept in memory for the current app process only and are never
+persisted, so set them again after the app restarts. Attributes passed to an
+individual call take precedence, and keys in the SDK's own namespaces
+(`highlight.*`, `context.contextKeys.*`, `launchdarkly.*`, `session.*`) are
+ignored. Attributes are also added to metrics, where each distinct value creates
+a new series, so avoid high-cardinality values such as user ids.
+
 ### Manual tracing
 
 Use the `LDObserve` singleton to create spans by hand. `withSpan` runs your

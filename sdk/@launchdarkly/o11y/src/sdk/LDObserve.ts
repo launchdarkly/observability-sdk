@@ -7,6 +7,7 @@ import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { BufferedClass } from './buffer'
 import { getNoopSpan } from '../client/otel/utils'
 import { ConsoleMethods } from '../client/types/client'
+import { internalLogOnce } from './util'
 
 /**
  * Resolves the span callback from whichever argument position it was passed in,
@@ -30,14 +31,21 @@ function resolveSpanCallback(
 }
 
 class _LDObserve extends BufferedClass<Observe> implements Observe {
-	start() {
-		// avoid buffering the start call
-		return this._sdk.start()
+	protected async _startSdk() {
+		await this._sdk.start()
 	}
 
-	stop() {
-		// avoid buffering the stop call
-		return this._sdk.stop()
+	// Never buffered: with `manualStart`, `start()` may run before the plugin
+	// has attached an SDK. It then stays pending and resolves once `load`
+	// attaches and starts the SDK.
+	async start() {
+		return this._start()
+	}
+
+	// Never buffered, and never throws: before an SDK is attached it just
+	// cancels a start that has not run yet.
+	async stop() {
+		await this._stop(() => this._sdk.stop())
 	}
 
 	recordGauge(metric: Metric) {
@@ -68,7 +76,8 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		context?: Context | ((span?: Span) => any),
 		fn?: (span?: Span) => any,
 	) {
-		if (!this._isLoaded) {
+		if (!this._isReady) {
+			this._logNoopSpanWarning()
 			return resolveSpanCallback(options, context, fn)?.(getNoopSpan())
 		}
 		return this._bufferCall('startSpan', [name, options, context, fn])
@@ -80,10 +89,20 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		context?: Context | ((span: Span) => any),
 		fn?: (span: Span) => any,
 	) {
-		if (!this._isLoaded) {
+		if (!this._isReady) {
+			this._logNoopSpanWarning()
 			return resolveSpanCallback(options, context, fn)?.(getNoopSpan())
 		}
 		return this._bufferCall('startManualSpan', [name, options, context, fn])
+	}
+
+	private _logNoopSpanWarning() {
+		internalLogOnce(
+			'startSpan/startManualSpan called before start()',
+			'span-before-start',
+			'warn',
+			'The span callback runs on a no-op span and the span is not recorded.',
+		)
 	}
 
 	register(
@@ -118,7 +137,10 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 	}
 
 	getLDContextKeyAttributes(): Attributes | undefined {
-		return this._bufferCall('getLDContextKeyAttributes', [])
+		// A getter: read directly once attached rather than buffering.
+		return this._isLoaded
+			? this._callSdk('getLDContextKeyAttributes', [])
+			: undefined
 	}
 }
 
