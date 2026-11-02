@@ -42,19 +42,30 @@ function resolveSpanCallback(
 const ATTRIBUTE_METHODS = new Set(['setAttributes', 'removeAttributes'])
 
 class _LDObserve extends BufferedClass<Observe> implements Observe {
-	load(sdk: Observe, options?: BufferedLoadOptions) {
+	/**
+	 * Applies buffered `setAttributes`/`removeAttributes` calls to `sdk`
+	 * without attaching it. Call it before `sdk.start()` so attributes set
+	 * before init reach spans recorded synchronously during start (e.g. the
+	 * document load span). `load` also does this, so calling it is optional.
+	 */
+	applyBufferedAttributes(sdk: Observe) {
 		const attributeCalls = this._callBuffer.filter(({ method }) =>
 			ATTRIBUTE_METHODS.has(method),
 		)
-		if (attributeCalls.length) {
-			this._callBuffer = this._callBuffer.filter(
-				({ method }) => !ATTRIBUTE_METHODS.has(method),
-			)
-			this._sdk = sdk
-			for (const { method, args } of attributeCalls) {
-				this._callSdk(method, args)
-			}
+		if (!attributeCalls.length) {
+			return
 		}
+		this._callBuffer = this._callBuffer.filter(
+			({ method }) => !ATTRIBUTE_METHODS.has(method),
+		)
+		this._sdk = sdk
+		for (const { method, args } of attributeCalls) {
+			this._callSdk(method, args)
+		}
+	}
+
+	load(sdk: Observe, options?: BufferedLoadOptions) {
+		this.applyBufferedAttributes(sdk)
 		super.load(sdk, options)
 	}
 

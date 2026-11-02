@@ -410,6 +410,36 @@ describe('LDObserve.setAttributes buffering', () => {
 		expect(recordLog).not.toHaveBeenCalled()
 	})
 
+	it('applyBufferedAttributes makes pre-init attributes visible during start', async () => {
+		const ldObserve = new (Object.getPrototypeOf(LDObserve).constructor)()
+		ldObserve.setAttributes({ utm_campaign: 'spring' })
+
+		// Snapshot the attributes at the moment tracing is set up, which is
+		// when the document load span is created.
+		let attributesAtSetup: Attributes | undefined
+		vi.spyOn(otel, 'setupBrowserTracing').mockImplementation(((
+			config: any,
+		) => {
+			attributesAtSetup = config.getGlobalAttributes?.()
+		}) as any)
+		const observe = newObserveSDK()
+		vi.spyOn(observe as any, 'configureSampling').mockResolvedValue(
+			undefined,
+		)
+		vi.spyOn(observe as any, 'setupListeners').mockImplementation(
+			() => undefined,
+		)
+
+		// The plugin's non-manualStart order: apply, start, then load.
+		ldObserve.applyBufferedAttributes(observe)
+		const started = observe.start()
+		ldObserve.load(observe, { ready: true, started })
+		await started
+
+		expect(attributesAtSetup).toEqual({ utm_campaign: 'spring' })
+		vi.restoreAllMocks()
+	})
+
 	it('applies calls directly once the SDK is attached', () => {
 		const ldObserve = new (Object.getPrototypeOf(LDObserve).constructor)()
 		const observe = newObserveSDK()
