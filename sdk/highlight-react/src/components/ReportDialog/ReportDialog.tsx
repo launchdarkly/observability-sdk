@@ -3,6 +3,10 @@ import React, { useMemo, useRef, useState } from 'react'
 import classnames from 'classnames'
 import styles from './styles.module.css'
 
+/**
+ * @deprecated Session feedback is no longer supported, so feedback submitted
+ * through the report dialog is discarded.
+ */
 export interface ReportDialogOptions {
 	user?: {
 		email?: string
@@ -29,6 +33,11 @@ type ReportDialogProps = ReportDialogOptions & {
 	onSubmitHandler?: () => void
 }
 
+/**
+ * @deprecated Session feedback is no longer supported. The dialog still renders
+ * and reports the passed `error`, but submitted feedback is discarded. Use
+ * `customDialog` or `fallback` on `ErrorBoundary` instead.
+ */
 export function ReportDialog({
 	labelClose = 'Cancel',
 	labelComments = 'Message',

@@ -1,10 +1,16 @@
 import type { RecordOptions } from '../client/types/record'
 import type { ObserveOptions } from '../client/types/observe'
-import { setCookieWriteEnabled, setStorageMode } from '../client/utils/storage'
+import {
+	setCookieDomain,
+	setCookieWriteEnabled,
+	setStorageMode,
+} from '../client/utils/storage'
 import {
 	getPersistentSessionSecureID,
 	getPreviousSessionData,
+	getStoredSessionData,
 	loadCookieSessionData,
+	setPreviousSessionSecureID,
 	setSessionData,
 	setSessionSecureID,
 } from '../client/utils/sessionStorage/highlightSession'
@@ -19,6 +25,11 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 				setStorageMode(options?.storageMode)
 			}
 			setCookieWriteEnabled(!!options?.sessionCookie)
+			// Only override when set, so options without a domain (e.g. a second
+			// plugin) keep a domain configured earlier.
+			if (options?.sessionCookieDomain !== undefined) {
+				setCookieDomain(options.sessionCookieDomain)
+			}
 
 			if (options?.sessionCookie) {
 				loadCookieSessionData()
@@ -37,6 +48,12 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 	configureSession(ldCredential: string, options?: T) {
 		try {
 			const persistentSessionSecureID = getPersistentSessionSecureID()
+			// Read the stored record before getPreviousSessionData(): an expired
+			// record is removed on that call, and its ID is what links the new
+			// session to the one it replaced.
+			const storedSession = getStoredSessionData(
+				persistentSessionSecureID,
+			)
 			let previousSession = getPreviousSessionData(
 				persistentSessionSecureID,
 			)
@@ -49,6 +66,15 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 					)
 				} else {
 					this.sessionSecureID = GenerateSecureID()
+				}
+				// A sessionKey derives a deterministic ID; an expired record for
+				// the same key has the same ID, and the session continues rather
+				// than being replaced.
+				if (
+					storedSession?.sessionSecureID &&
+					storedSession.sessionSecureID !== this.sessionSecureID
+				) {
+					setPreviousSessionSecureID(storedSession.sessionSecureID)
 				}
 				setSessionSecureID(this.sessionSecureID)
 				setSessionData({

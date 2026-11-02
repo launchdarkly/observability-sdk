@@ -107,6 +107,7 @@ import {
 	getItem,
 	LocalStorageKeys,
 	removeItem,
+	setCookieDomain,
 	setCookieWriteEnabled,
 	setItem,
 	setStorageMode,
@@ -181,6 +182,7 @@ export type HighlightClassOptions = {
 	sessionSecureID: string // Introduced in firstLoad 3.0.1
 	storageMode?: 'sessionStorage' | 'localStorage'
 	sessionCookie?: boolean
+	sessionCookieDomain?: string
 	sendMode?: 'webworker' | 'local'
 	otlpEndpoint?: HighlightOptions['otlpEndpoint']
 	otel?: HighlightOptions['otel']
@@ -286,6 +288,11 @@ export class Highlight {
 			setStorageMode(options.storageMode)
 		}
 		setCookieWriteEnabled(!!options?.sessionCookie)
+		// Only override when set, so options without a domain (e.g. a second
+		// plugin) keep a domain configured earlier.
+		if (options?.sessionCookieDomain !== undefined) {
+			setCookieDomain(options.sessionCookieDomain)
+		}
 
 		this._worker =
 			new HighlightClientWorker() as HighlightClientRequestWorker
@@ -1512,28 +1519,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		await record.snapshotCanvas(element)
 	}
 
-	addSessionFeedback({
-		timestamp,
-		verbatim,
-		user_email,
-		user_name,
-	}: {
+	/** @deprecated Session feedback is no longer supported. This is a no-op. */
+	addSessionFeedback(_feedback: {
 		verbatim: string
 		timestamp: string
 		user_name?: string
 		user_email?: string
-	}) {
-		this._worker.postMessage({
-			message: {
-				type: MessageType.Feedback,
-				verbatim,
-				timestamp,
-				userName: user_name || this.sessionData.userIdentifier,
-				userEmail:
-					user_email || (this.sessionData.userObject as any)?.name,
-			},
-		})
-	}
+	}) {}
 
 	// Reset the events array and push to a backend.
 	async _save() {

@@ -8,10 +8,15 @@ import type { Hook, LDClient } from '../integrations/launchdarkly'
 export interface Observe {
 	/**
 	 * Start the observability data capture when running in `manualStart` mode.
+	 * Can safely be called before the SDK has initialized (e.g. before the
+	 * plugin registers): the call resolves once the SDK is attached and
+	 * started, without throwing.
 	 */
 	start: () => Promise<void>
 	/**
 	 * Stop the observability data capture.
+	 * Can safely be called before the SDK has initialized; before `start()`
+	 * it cancels a pending start instead of throwing.
 	 */
 	stop: () => Promise<void>
 	/**

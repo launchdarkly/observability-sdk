@@ -1,0 +1,15 @@
+rootProject.name = 'java-plugin-example'
+
+// By default the example builds against the plugin sources in this repository,
+// so it needs no published artifact. Pass -PuseMavenLocal to resolve the
+// plugin from ~/.m2 instead (after `./gradlew :lib:publishToMavenLocal` in the
+// SDK directory). CI uses that mode to check the published POM: the example
+// must compile against OpenTelemetry API types it never declares itself, and
+// no OkHttp, Okio or Kotlin may arrive transitively.
+if (!gradle.startParameter.projectProperties.containsKey('useMavenLocal')) {
+    includeBuild('../../sdk/@launchdarkly/observability-java') {
+        dependencySubstitution {
+            substitute module('com.launchdarkly:launchdarkly-java-server-sdk-observability') using project(':lib')
+        }
+    }
+}
