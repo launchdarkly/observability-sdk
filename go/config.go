@@ -87,10 +87,7 @@ func WithOTLPEndpoint(otlpEndpoint string) Option {
 	}
 }
 
-// WithTelemetrySDKKey attributes telemetry to sdkKey instead of the key of the
-// LaunchDarkly client the plugin is registered with. Flag evaluation still uses
-// the client's key. Only needed when flags and telemetry belong to different
-// LaunchDarkly environments.
+// WithTelemetrySDKKey sets the SDK key telemetry is attributed to, instead of the LaunchDarkly client's key.
 func WithTelemetrySDKKey(sdkKey string) Option {
 	return func(c *observabilityConfig) {
 		c.telemetrySDKKey = sdkKey
