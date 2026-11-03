@@ -1,5 +1,21 @@
 # @launchdarkly/observability
 
+## [1.4.0](https://github.com/launchdarkly/observability-sdk/compare/observability-1.3.1...observability-1.4.0) (2026-11-03)
+
+
+### Features
+
+* **o11y:** add otel.onHttpRequestSpan hook for auto fetch/XHR spans ([#872](https://github.com/launchdarkly/observability-sdk/issues/872)) ([4387ead](https://github.com/launchdarkly/observability-sdk/commit/4387eadbeddfbdd6f2449d81c906b63f42c1736d))
+* **o11y:** add setAttributes/removeAttributes and stamp context keys on every span ([#855](https://github.com/launchdarkly/observability-sdk/issues/855)) ([c086c84](https://github.com/launchdarkly/observability-sdk/commit/c086c846eb1ea0832f4337885c0064004a2c2de4))
+* **o11y:** link a new browser session to the one it replaces ([#857](https://github.com/launchdarkly/observability-sdk/issues/857)) ([cf5ccbe](https://github.com/launchdarkly/observability-sdk/commit/cf5ccbe5374983262a9b42783bef791cec9b1497))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/o11y bumped to 1.5.0
+
 ## [1.3.1](https://github.com/launchdarkly/observability-sdk/compare/observability-1.3.0...observability-1.3.1) (2026-10-29)
 
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.21.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.20.0...observability-react-native-0.21.0) (2026-11-03)
+
+
+### Features
+
+* **react-native:** add LaunchDarkly context keys to all telemetry ([#869](https://github.com/launchdarkly/observability-sdk/issues/869)) ([d9693c8](https://github.com/launchdarkly/observability-sdk/commit/d9693c814a9f1424486c37b4512ff0dd4f8f563b))
+* **react-native:** link new sessions to the one they replace via session.previous_id ([#870](https://github.com/launchdarkly/observability-sdk/issues/870)) ([2299015](https://github.com/launchdarkly/observability-sdk/commit/2299015d92bec7fd7693927bc59c92f87a560039))
+
+
+### Bug Fixes
+
+* export metrics with delta temporality in React Native ([#864](https://github.com/launchdarkly/observability-sdk/issues/864)) ([cae484d](https://github.com/launchdarkly/observability-sdk/commit/cae484d5ba4de4f16d79ab065e912002d007ba1d))
+
 ## [0.20.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.19.0...observability-react-native-0.20.0) (2026-10-29)
 
 
