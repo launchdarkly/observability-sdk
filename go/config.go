@@ -35,6 +35,7 @@ type observabilityConfig struct {
 	spanMaxQueueSize       int
 	logMaxExportBatchSize  int
 	logMaxQueueSize        int
+	telemetrySDKKey        string
 }
 
 func defaultConfig() observabilityConfig {
@@ -83,6 +84,13 @@ func WithBackendURL(backendURL string) Option {
 func WithOTLPEndpoint(otlpEndpoint string) Option {
 	return func(c *observabilityConfig) {
 		c.otlpEndpoint = otlpEndpoint
+	}
+}
+
+// WithTelemetrySDKKey sets the SDK key telemetry is attributed to, instead of the LaunchDarkly client's key.
+func WithTelemetrySDKKey(sdkKey string) Option {
+	return func(c *observabilityConfig) {
+		c.telemetrySDKKey = sdkKey
 	}
 }
 

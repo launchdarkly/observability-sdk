@@ -123,6 +123,17 @@ func TestWithOTLPEndpoint(t *testing.T) {
 	}
 }
 
+func TestWithTelemetrySDKKey(t *testing.T) {
+	config := defaultConfig()
+	sdkKey := "telemetry-key"
+
+	WithTelemetrySDKKey(sdkKey)(&config)
+
+	if config.telemetrySDKKey != sdkKey {
+		t.Errorf("Expected telemetrySDKKey to be '%s', got '%s'", sdkKey, config.telemetrySDKKey)
+	}
+}
+
 func TestWithManualStart(t *testing.T) {
 	config := defaultConfig()
 

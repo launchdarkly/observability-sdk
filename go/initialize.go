@@ -28,6 +28,9 @@ func getSamplingConfig(projectId string, config observabilityConfig) (*gql.GetSa
 }
 
 func setupOtel(sdkKey string, config observabilityConfig) {
+	if config.telemetrySDKKey != "" {
+		sdkKey = config.telemetrySDKKey
+	}
 	attributes := []attribute.KeyValue{
 		semconv.TelemetryDistroNameKey.String(metadata.InstrumentationName),
 		semconv.TelemetryDistroVersionKey.String(metadata.InstrumentationVersion),
