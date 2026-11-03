@@ -54,5 +54,5 @@ func (p ObservabilityPlugin) Register(client interfaces.LDClientInterface, ldmd 
 	if p.config == nil {
 		return
 	}
-	setupOtel(ldmd.SdkKey, *p.config)
+	setupOtel(p.config.telemetryKey(ldmd.SdkKey), *p.config)
 }

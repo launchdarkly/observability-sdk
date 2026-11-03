@@ -123,6 +123,18 @@ func TestWithOTLPEndpoint(t *testing.T) {
 	}
 }
 
+func TestTelemetryKey(t *testing.T) {
+	config := defaultConfig()
+	if got := config.telemetryKey("client-key"); got != "client-key" {
+		t.Errorf("Expected the client key without an override, got '%s'", got)
+	}
+
+	WithTelemetrySDKKey("telemetry-key")(&config)
+	if got := config.telemetryKey("client-key"); got != "telemetry-key" {
+		t.Errorf("Expected the override key, got '%s'", got)
+	}
+}
+
 func TestWithManualStart(t *testing.T) {
 	config := defaultConfig()
 
