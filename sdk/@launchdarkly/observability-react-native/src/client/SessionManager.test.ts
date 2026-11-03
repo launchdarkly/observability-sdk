@@ -156,6 +156,80 @@ describe('SessionManager session preservation', () => {
 		expect(mgr.getResumeInfo().reloadCount).toBe(0)
 	})
 
+	it('links a session started after a stale one via session.previous_id', async () => {
+		const store = new MemoryStore()
+		const now = Date.now()
+		store.seed({
+			sessionId: 'stale-session-id',
+			startTime: now - SESSION_RESUME_THRESHOLD_MS * 2,
+			lastActivityTime: now - SESSION_RESUME_THRESHOLD_MS - 1_000,
+			reloadCount: 0,
+		})
+
+		const mgr = new SessionManager({}, store)
+		await mgr.initialize()
+
+		expect(mgr.getPreviousSessionId()).toBe('stale-session-id')
+		expect(mgr.getSessionAttributes()).toEqual({
+			'session.id': mgr.getSessionInfo().sessionId,
+			'session.start_time': mgr.getSessionInfo().startTime.toString(),
+			'session.previous_id': 'stale-session-id',
+		})
+		// The next load links to this session, not the one before it.
+		expect(store.read().sessionId).toBe(mgr.getSessionInfo().sessionId)
+	})
+
+	it('links a session started by a cold start via session.previous_id', async () => {
+		const store = new MemoryStore()
+		const now = Date.now()
+		store.seed({
+			sessionId: 'prev-session-id',
+			startTime: now - 60_000,
+			lastActivityTime: now - 1_000,
+			reloadCount: 0,
+		})
+
+		const mgr = new SessionManager(
+			{ getProcessStartTimeMs: () => now - 500 },
+			store,
+		)
+		await mgr.initialize()
+
+		expect(mgr.getSessionAttributes()['session.previous_id']).toBe(
+			'prev-session-id',
+		)
+	})
+
+	it('omits session.previous_id when the session is resumed', async () => {
+		const store = new MemoryStore()
+		const now = Date.now()
+		store.seed({
+			sessionId: 'prev-session-id',
+			startTime: now - 60_000,
+			lastActivityTime: now - 1_000,
+			reloadCount: 0,
+		})
+
+		const mgr = new SessionManager({}, store)
+		await mgr.initialize()
+
+		expect(mgr.getSessionInfo().sessionId).toBe('prev-session-id')
+		expect(mgr.getPreviousSessionId()).toBeUndefined()
+		expect(mgr.getSessionAttributes()).not.toHaveProperty(
+			'session.previous_id',
+		)
+	})
+
+	it('omits session.previous_id when nothing was persisted', async () => {
+		const mgr = new SessionManager({}, new MemoryStore())
+		await mgr.initialize()
+
+		expect(mgr.getPreviousSessionId()).toBeUndefined()
+		expect(mgr.getSessionAttributes()).not.toHaveProperty(
+			'session.previous_id',
+		)
+	})
+
 	it('does not resume without a persistent store', async () => {
 		const mgr = new SessionManager({}, noOpStore)
 		await mgr.initialize()
