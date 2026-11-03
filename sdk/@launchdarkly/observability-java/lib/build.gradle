@@ -41,7 +41,9 @@ dependencies {
     // types such as Attributes and Severity, so consumers must compile against
     // it. 'api' publishes it with compile scope in the POM.
     api "io.opentelemetry:opentelemetry-api:${otelVersion}"
-    implementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+    // ObservabilityOptions takes SDK SpanProcessor and LogRecordProcessor
+    // instances, so the SDK is part of the public API too.
+    api "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
     implementation "io.opentelemetry:opentelemetry-sdk-logs:${otelVersion}"
     implementation "io.opentelemetry:opentelemetry-sdk-metrics:${otelVersion}"
 
@@ -102,7 +104,7 @@ tasks.register('checkRuntimeClasspath') {
 
 tasks.register('checkPublishedPom') {
     group = 'verification'
-    description = 'Checks the generated POM exposes opentelemetry-api at compile scope and depends on nothing but OpenTelemetry.'
+    description = 'Checks the generated POM exposes opentelemetry-api and opentelemetry-sdk at compile scope and depends on nothing but OpenTelemetry.'
     dependsOn 'generatePomFileForReleasePublication'
     def pomFile = layout.buildDirectory.file('publications/release/pom-default.xml')
     doLast {
@@ -113,6 +115,11 @@ tasks.register('checkPublishedPom') {
         if (otelApi.size() == 0 || otelApi.scope.text() != 'compile') {
             throw new GradleException("opentelemetry-api must be a compile-scoped dependency in the POM, found scope '"
                     + (otelApi.size() == 0 ? 'missing' : otelApi.scope.text()) + "'")
+        }
+        def otelSdk = deps.find { it.artifactId.text() == 'opentelemetry-sdk' }
+        if (otelSdk.size() == 0 || otelSdk.scope.text() != 'compile') {
+            throw new GradleException("opentelemetry-sdk must be a compile-scoped dependency in the POM, found scope '"
+                    + (otelSdk.size() == 0 ? 'missing' : otelSdk.scope.text()) + "'")
         }
         def okhttp = deps.find { it.artifactId.text() == 'opentelemetry-exporter-sender-okhttp' }
         if (okhttp.size() != 0) {

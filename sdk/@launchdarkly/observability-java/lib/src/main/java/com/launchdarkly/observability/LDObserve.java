@@ -1,6 +1,7 @@
 package com.launchdarkly.observability;
 
 import com.launchdarkly.observability.internal.Constants;
+import com.launchdarkly.observability.internal.GlobalAttributes;
 import com.launchdarkly.observability.internal.OtelManager;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
@@ -9,6 +10,8 @@ import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
+
+import java.util.Collection;
 
 /**
  * Static singleton public API for LaunchDarkly Observability.
@@ -23,11 +26,43 @@ public final class LDObserve {
     private LDObserve() {}
 
     /**
+     * Merges attributes into the process-wide global attributes, which are
+     * added to every span and log record the plugin exports (flag
+     * evaluations, error spans and spans or records from instrumentation
+     * using {@link #getOpenTelemetry()} included) and to every metric
+     * recorded through {@code LDObserve}. A key already in the global
+     * attributes takes the new value.
+     *
+     * <p>Global attributes never replace an attribute the span, record or
+     * metric call already has: the attributes passed to an {@code LDObserve}
+     * method, or set on a span builder, win; resource attributes are
+     * separate and stay as they are. A span gets the values current when it
+     * starts; changing them later does not touch spans already started.</p>
+     *
+     * <p>Kept in memory for the life of the process, including across
+     * {@link #shutdown()}. Safe to call before the plugin starts, and from
+     * any thread. Keys are matched by name, whatever the attribute type.
+     * Null or empty attributes are ignored.</p>
+     */
+    public static void setAttributes(Attributes attributes) {
+        GlobalAttributes.set(attributes);
+    }
+
+    /**
+     * Removes the global attributes with these key names. See
+     * {@link #setAttributes(Attributes)}. Names that are not set are
+     * ignored, as is a null collection.
+     */
+    public static void removeAttributes(Collection<String> keys) {
+        GlobalAttributes.remove(keys);
+    }
+
+    /**
      * Records a gauge metric.
      */
     public static void recordMetric(String name, double value, Attributes attributes) {
         try {
-            OtelManager.getGauge(name).set(value, orEmpty(attributes));
+            OtelManager.getGauge(name).set(value, GlobalAttributes.merge(attributes));
         } catch (LinkageError e) {
             // The synchronous gauge API arrived in OpenTelemetry 1.38. On an
             // older API (Spring Boot 3.2 pins 1.31) the plugin is already off
@@ -39,7 +74,7 @@ public final class LDObserve {
      * Records a counter metric.
      */
     public static void recordCount(String name, long value, Attributes attributes) {
-        OtelManager.getCounter(name).add(value, orEmpty(attributes));
+        OtelManager.getCounter(name).add(value, GlobalAttributes.merge(attributes));
     }
 
     /**
@@ -53,14 +88,14 @@ public final class LDObserve {
      * Records a histogram metric.
      */
     public static void recordHistogram(String name, double value, Attributes attributes) {
-        OtelManager.getHistogram(name).record(value, orEmpty(attributes));
+        OtelManager.getHistogram(name).record(value, GlobalAttributes.merge(attributes));
     }
 
     /**
      * Records an up/down counter metric.
      */
     public static void recordUpDownCounter(String name, long value, Attributes attributes) {
-        OtelManager.getUpDownCounter(name).add(value, orEmpty(attributes));
+        OtelManager.getUpDownCounter(name).add(value, GlobalAttributes.merge(attributes));
     }
 
     /**
