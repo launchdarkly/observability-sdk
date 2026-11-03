@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/launchdarkly/observability-sdk/compare/go/v1.3.1...go/v1.4.0) (2026-11-03)
+
+
+### Features
+
+* **go:** add WithTelemetrySDKKey to attribute telemetry to a separate key ([#875](https://github.com/launchdarkly/observability-sdk/issues/875)) ([b11da65](https://github.com/launchdarkly/observability-sdk/commit/b11da657be56e1c27a6111879fe8f0b56ec477c6))
+
 ## [1.3.1](https://github.com/launchdarkly/observability-sdk/compare/go/v1.3.0...go/v1.3.1) (2026-10-20)
 
 
