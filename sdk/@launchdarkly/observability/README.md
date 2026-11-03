@@ -10,6 +10,7 @@
 ## Install
 
 Install the package
+
 ```shell
 # npm
 npm i @launchdarkly/observability
@@ -19,31 +20,50 @@ yarn add @launchdarkly/observability
 ```
 
 Update your web app entrypoint.
+
 ```tsx
 import { initialize } from 'launchdarkly-js-client-sdk'
 import Observability, { LDObserve } from '@launchdarkly/observability'
 
 const client = init3(
-        '<CLIENT_SIDE_ID>',
-        { key: 'authenticated-user@example.com' },
-        {
-          // Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
-          plugins: [
-            new Observability({
-              networkRecording: {
-                enabled: true,
-                recordHeadersAndBody: true,
-              },
-            }),
-          ],
-        },
+	'<CLIENT_SIDE_ID>',
+	{ key: 'authenticated-user@example.com' },
+	{
+		// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
+		plugins: [
+			new Observability({
+				networkRecording: {
+					enabled: true,
+					recordHeadersAndBody: true,
+				},
+			}),
+		],
+	},
 )
-
 ```
 
 ## Getting started
 
 Refer to the [SDK documentation](https://docs.launchdarkly.com/sdk/client-side/javascript#getting-started) for instructions on getting started with using the SDK.
+
+## Adding attributes to all telemetry
+
+Use `LDObserve.setAttributes` to tag everything recorded afterwards with values known only after start-up, such as the campaign that brought the user in. The attributes are added to every span (including document load, fetch/XHR, click and page view spans), log, error and metric.
+
+```ts
+LDObserve.setAttributes({ utm_campaign: 'spring_promo', utm_source: 'email' })
+
+// Later: stop sending a key. A `null` value in setAttributes does the same.
+LDObserve.removeAttributes(['utm_campaign'])
+```
+
+- Attributes are kept in memory for the current page load only. They are never persisted, so after a full page load, call `setAttributes` again (persist the values yourself if you need them to survive the load).
+- Calls made before the SDK initializes are applied once it does.
+- Attributes passed to an individual call (log metadata, span or metric attributes) take precedence. Keys in the namespaces the SDK sets itself (`highlight.*`, `launchdarkly.*`, `session.*`, `context.contextKeys.*`) are ignored.
+- Values can be strings, numbers, booleans or arrays of those.
+- Every attribute is also added to metrics, so an attribute with many distinct values creates as many metric series.
+
+LaunchDarkly context keys from `identify` (`context.contextKeys.<kind>`) are added to every span in the same way.
 
 ## Session continuity
 
@@ -53,9 +73,9 @@ When a full page load starts a new session instead of continuing the stored one 
 
 Session storage options:
 
--   `sessionCookie: true` — also store the session in a cookie (expiring 15 minutes after it is last written). This can help with cookie-consent compliance.
--   `sessionCookieDomain: 'example.com'` — set the session cookie's `Domain` attribute so the session can be continued across your subdomains (e.g. `app.example.com` and `checkout.example.com`). Requires `sessionCookie: true`. By default, the cookie is scoped to the exact host that created it.
--   `storageMode: 'sessionStorage'` — keep the session in `sessionStorage` instead of `localStorage`, so each tab has its own session and closing the tab ends it.
+- `sessionCookie: true` — also store the session in a cookie (expiring 15 minutes after it is last written). This can help with cookie-consent compliance.
+- `sessionCookieDomain: 'example.com'` — set the session cookie's `Domain` attribute so the session can be continued across your subdomains (e.g. `app.example.com` and `checkout.example.com`). Requires `sessionCookie: true`. By default, the cookie is scoped to the exact host that created it.
+- `storageMode: 'sessionStorage'` — keep the session in `sessionStorage` instead of `localStorage`, so each tab has its own session and closing the tab ends it.
 
 ### Continuing a session across domains
 
