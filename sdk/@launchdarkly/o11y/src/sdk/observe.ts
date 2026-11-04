@@ -161,6 +161,9 @@ export class ObserveSDK implements Observe {
 	private readonly _capturedQueryParams = new Map<string, string>()
 	// Unsubscribes the last-touch navigation listener; set while it runs.
 	private _stopLandingListener: (() => void) | undefined
+	// URL whose query parameters were last applied, kept across stop() and
+	// start() so a resume applies a landing made while stopped.
+	private _lastLandingUrl: string | undefined
 	// ECMAScript-private (#) so the internal GraphQL SDK type — which
 	// references graphql-request / graphql — does not leak into the published
 	// declaration file and break consumer type-checking.
@@ -205,6 +208,7 @@ export class ObserveSDK implements Observe {
 			if (!names.length) {
 				return
 			}
+			this._lastLandingUrl = location.href
 			this._applyCapturedQueryParams(
 				pickQueryParams(location.search, names),
 			)
@@ -228,12 +232,13 @@ export class ObserveSDK implements Observe {
 			return
 		}
 		try {
-			let lastUrl = location.href
+			// PathListener calls back with the current URL right away, which
+			// applies a landing made while stopped (start() after stop()).
 			this._stopLandingListener = PathListener((url) => {
-				if (url === lastUrl) {
+				if (url === this._lastLandingUrl) {
 					return
 				}
-				lastUrl = url
+				this._lastLandingUrl = url
 				try {
 					this._applyCapturedQueryParams(
 						pickQueryParams(new URL(url).search, names),

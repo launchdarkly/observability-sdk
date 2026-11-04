@@ -473,6 +473,9 @@ describe('ObserveSDK captureQueryParams last touch', () => {
 		})
 
 		await observe.start()
+		expect(observe.getGlobalAttributes()).toEqual({
+			utm_campaign: 'fall',
+		})
 		window.history.pushState({}, '', '/promo?utm_campaign=winter')
 		expect(observe.getGlobalAttributes()).toEqual({
 			utm_campaign: 'winter',
