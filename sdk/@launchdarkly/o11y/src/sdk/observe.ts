@@ -159,6 +159,8 @@ export class ObserveSDK implements Observe {
 	// Keys of `_globalAttributes` whose value came from `captureQueryParams`,
 	// so last-touch capture only replaces or removes those.
 	private readonly _capturedQueryParams = new Map<string, string>()
+	// Unsubscribes the last-touch navigation listener; set while it runs.
+	private _stopLandingListener: (() => void) | undefined
 	// ECMAScript-private (#) so the internal GraphQL SDK type — which
 	// references graphql-request / graphql — does not leak into the published
 	// declaration file and break consumer type-checking.
@@ -206,9 +208,28 @@ export class ObserveSDK implements Observe {
 			this._applyCapturedQueryParams(
 				pickQueryParams(location.search, names),
 			)
+			this._listenForLandings()
+		} catch (error) {
+			internalLog('captureQueryParams', 'warn', error)
+		}
+	}
+
+	/**
+	 * Follows SPA navigation for last-touch `captureQueryParams` capture.
+	 * Installs at most one listener per instance; `stop()` removes it and a
+	 * later `start()` installs it again.
+	 */
+	private _listenForLandings() {
+		if (this._stopLandingListener || typeof window === 'undefined') {
+			return
+		}
+		const names = capturedQueryParamNames(this._options.captureQueryParams)
+		if (!names.length) {
+			return
+		}
+		try {
 			let lastUrl = location.href
-			// Never removed: captured values live for the whole page load.
-			PathListener((url) => {
+			this._stopLandingListener = PathListener((url) => {
 				if (url === lastUrl) {
 					return
 				}
@@ -374,6 +395,7 @@ export class ObserveSDK implements Observe {
 			return
 		}
 		this._started = true
+		this._listenForLandings()
 		setupBrowserTracing(
 			{
 				...{
@@ -426,6 +448,8 @@ export class ObserveSDK implements Observe {
 			return
 		}
 		this._started = false
+		this._stopLandingListener?.()
+		this._stopLandingListener = undefined
 		await shutdown()
 	}
 

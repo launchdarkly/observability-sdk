@@ -443,6 +443,42 @@ describe('ObserveSDK captureQueryParams last touch', () => {
 		expect(observe.getGlobalAttributes()).toEqual({ utm_campaign: 'fall' })
 	})
 
+	it('fires one locationchange per navigation however many SDKs follow it', () => {
+		newObserveSDK()
+		const wrapped = window.history.pushState
+		newObserveSDK()
+		newObserveSDK()
+		expect(window.history.pushState).toBe(wrapped)
+		const locationChanges = vi.fn()
+		window.addEventListener('locationchange', locationChanges)
+		window.history.pushState({}, '', '/promo?utm_campaign=fall')
+		window.removeEventListener('locationchange', locationChanges)
+		expect(locationChanges).toHaveBeenCalledTimes(1)
+	})
+
+	it('stops following navigation on stop() and resumes on start()', async () => {
+		vi.spyOn(otel, 'shutdown').mockResolvedValue(undefined)
+		vi.spyOn(otel, 'setupBrowserTracing').mockReturnValue(undefined)
+		const observe = newObserveSDK()
+		vi.spyOn(observe as any, 'configureSampling').mockResolvedValue(
+			undefined,
+		)
+		vi.spyOn(observe as any, 'setupListeners').mockImplementation(() => {})
+		await observe.start()
+		await observe.stop()
+		window.history.pushState({}, '', '/promo?utm_campaign=fall')
+		expect(observe.getGlobalAttributes()).toEqual({
+			utm_campaign: 'spring',
+			utm_source: 'email',
+		})
+
+		await observe.start()
+		window.history.pushState({}, '', '/promo?utm_campaign=winter')
+		expect(observe.getGlobalAttributes()).toEqual({
+			utm_campaign: 'winter',
+		})
+	})
+
 	it('does not track navigation when disabled', () => {
 		const observe = newObserveSDK({ captureQueryParams: false })
 		window.history.pushState({}, '', '/promo?utm_campaign=fall')
