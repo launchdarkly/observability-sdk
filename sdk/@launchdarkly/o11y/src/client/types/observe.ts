@@ -110,6 +110,55 @@ export type ObserveOptions = CommonOptions & {
 	 * @default 2000
 	 */
 	flagExposureDedupeMaxSize?: number
+	/**
+	 * Query parameters to read from the page URL and add as attributes to all
+	 * telemetry, as if passed to `LDObserve.setAttributes`.
+	 *
+	 * When the SDK initializes, each listed parameter present in
+	 * `location.search` becomes an attribute named after the parameter (e.g.
+	 * `utm_campaign`) on every span (including document load, page view and
+	 * fetch/XHR spans), log, error and metric for the rest of the page load,
+	 * including after SPA navigation drops it from the URL.
+	 *
+	 * Last touch: when an SPA navigation lands on a URL with any listed
+	 * parameter, the captured values are replaced by that URL's values, and
+	 * previously captured keys missing from it are removed, so the set always
+	 * reflects one landing. A navigation without listed parameters keeps the
+	 * current values. Spans already started keep the values they had.
+	 *
+	 * Values are kept in memory only; nothing is written to storage or
+	 * cookies, so a later full page load captures again from its own URL.
+	 *
+	 * Only the listed keys are captured, so other query parameters (which may
+	 * hold personal data such as emails or tokens) are never recorded this
+	 * way. The default list contains UTM parameters only. A name ending in `*`
+	 * matches every parameter with that prefix (e.g. `'utm_*'`).
+	 *
+	 * Keys set with `setAttributes` win: capture never replaces or removes a
+	 * key the app set itself. `removeAttributes` removes a captured value
+	 * (a later landing with that parameter captures it again). Keys in the
+	 * namespaces the SDK sets itself (`highlight.*`, `launchdarkly.*`,
+	 * `session.*`, `context.contextKeys.*`) are ignored.
+	 *
+	 * A custom list replaces the default. Set to `false` or `[]` to turn
+	 * capture off.
+	 * @default ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+	 * @example captureQueryParams: ['utm_source', 'utm_campaign', 'gclid']
+	 */
+	captureQueryParams?: string[] | false
+	/**
+	 * Specifies whether to record the page that linked to this one. When the
+	 * SDK initializes and `document.referrer` is a different origin, it is
+	 * added as the `landing.referrer` attribute to all telemetry for the rest
+	 * of the page load, as if passed to `LDObserve.setAttributes`.
+	 *
+	 * Only the origin and path are kept: the query string, fragment and any
+	 * credentials are stripped so tokens or personal data in the referrer URL
+	 * are not recorded. An empty or same-origin referrer sets nothing, and
+	 * the value is not updated on SPA navigation.
+	 * @default true
+	 */
+	captureReferrer?: boolean
 }
 
 export type ProductAnalyticsEvents = {

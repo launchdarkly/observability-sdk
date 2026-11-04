@@ -57,13 +57,59 @@ LDObserve.setAttributes({ utm_campaign: 'spring_promo', utm_source: 'email' })
 LDObserve.removeAttributes(['utm_campaign'])
 ```
 
-- Attributes are kept in memory for the current page load only. They are never persisted, so after a full page load, call `setAttributes` again (persist the values yourself if you need them to survive the load).
+- Attributes are kept in memory for the current page load only. They are never persisted, so after a full page load, call `setAttributes` again (persist the values yourself if you need them to survive the load; see [Keeping campaign data across a full page load](#keeping-campaign-data-across-a-full-page-load)).
+- UTM query parameters are captured this way automatically; see [Capturing UTM and other query parameters](#capturing-utm-and-other-query-parameters).
 - Calls made before the SDK initializes are applied once it does.
 - Attributes passed to an individual call (log metadata, span or metric attributes) take precedence. Keys in the namespaces the SDK sets itself (`highlight.*`, `launchdarkly.*`, `session.*`, `context.contextKeys.*`) are ignored.
 - Values can be strings, numbers, booleans or arrays of those.
 - Every attribute is also added to metrics, so an attribute with many distinct values creates as many metric series.
 
 LaunchDarkly context keys from `identify` (`context.contextKeys.<kind>`) are added to every span in the same way.
+
+### Capturing UTM and other query parameters
+
+By default, the SDK reads the UTM parameters (`utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`) from the page URL and adds the ones that are present as attributes, exactly as if you had passed them to `setAttributes`. A visitor landing on `/?utm_campaign=spring&utm_source=email&other=x` gets `utm_campaign: 'spring'` and `utm_source: 'email'` on every span (including document load, page view and fetch/XHR spans), log, error and metric for the rest of the page load, even after SPA navigation drops the query string from the URL. `other` is not captured.
+
+```ts
+new Observability({
+	// Replace the default list. A trailing `*` matches a prefix, e.g. 'utm_*'.
+	captureQueryParams: ['utm_source', 'utm_campaign', 'gclid'],
+})
+
+new Observability({ captureQueryParams: false }) // turn capture off ([] does the same)
+```
+
+- Only the listed keys are captured. Other query parameters, which may hold personal data such as emails or tokens, are never recorded this way. The default list contains UTM parameters only, so check any key you add.
+- The URL is read when the SDK initializes (with `manualStart`, too: the values are on telemetry recorded before and after `start()`). Each attribute is named after its parameter.
+- Last touch: when an SPA navigation lands on a URL with any listed parameter (for example `/promo?utm_campaign=fall`), the captured values are replaced by that URL's values and previously captured keys it lacks are removed, so the attributes always describe one landing. The page view span of that navigation already carries the new values; spans started earlier keep theirs. A navigation without listed parameters keeps the current values.
+- Values you set with `setAttributes` win: capture never replaces or removes a key your app set. `removeAttributes(['utm_campaign'])` removes a captured value (a later landing with `utm_campaign` captures it again). Keys in the SDK's own namespaces are ignored.
+- Values are kept in memory for the current page load only; nothing is written to storage or cookies. A later full page load captures again from its own URL.
+
+#### Keeping campaign data across a full page load
+
+If the landing page redirects (for example through a sign-in provider) or the user reloads, the next page load has no UTM parameters. To keep them for the rest of the browser tab's life, store them yourself and set them again on loads whose URL has none:
+
+```ts
+const KEY = 'utm-attributes'
+const names = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+const params = new URLSearchParams(window.location.search)
+const fromUrl = Object.fromEntries(
+	names.filter((n) => params.get(n)).map((n) => [n, params.get(n)!]),
+)
+if (Object.keys(fromUrl).length) {
+	// The SDK captures these itself; just remember them.
+	sessionStorage.setItem(KEY, JSON.stringify(fromUrl))
+} else {
+	// Safe to call before the SDK initializes; it is applied once it does.
+	LDObserve.setAttributes(JSON.parse(sessionStorage.getItem(KEY) ?? '{}'))
+}
+```
+
+Values set this way are your app's, so a later SPA landing with new UTM parameters does not replace them. SPA landings are not stored by this snippet.
+
+### Landing referrer
+
+By default, when the page was opened from another site, the SDK adds `landing.referrer` to all telemetry for the page load: the `document.referrer` URL with its query string, fragment and credentials stripped (origin and path only, e.g. `https://www.google.com/search`), so tokens or personal data in the referring URL are not recorded. A same-origin or empty referrer sets nothing, and the value is not updated on SPA navigation. Turn it off with `captureReferrer: false`.
 
 ## Session continuity
 
