@@ -16,6 +16,7 @@ import { LD_PAGE_VIEW_SPAN_NAME } from '../integrations/launchdarkly'
 import type { ObserveOptions } from '../client/types/observe'
 import {
 	DEFAULT_CAPTURED_QUERY_PARAMS,
+	landingReferrer,
 	pickQueryParams,
 } from '../client/utils/queryParams'
 
@@ -116,6 +117,27 @@ describe('pickQueryParams', () => {
 	it('returns nothing for an empty search or list', () => {
 		expect(pickQueryParams('', ['a'])).toEqual({})
 		expect(pickQueryParams('?a=1', [])).toEqual({})
+	})
+})
+
+describe('landingReferrer', () => {
+	const origin = 'https://app.example.com'
+
+	it('keeps the origin and path of a cross-origin referrer', () => {
+		expect(
+			landingReferrer(
+				'https://user:pw@www.google.com/search/x?q=me%40mail.com&token=1#frag',
+				origin,
+			),
+		).toBe('https://www.google.com/search/x')
+	})
+
+	it('ignores empty, same-origin and unparseable referrers', () => {
+		expect(landingReferrer('', origin)).toBeUndefined()
+		expect(
+			landingReferrer('https://app.example.com/login?next=/', origin),
+		).toBeUndefined()
+		expect(landingReferrer('not a url', origin)).toBeUndefined()
 	})
 })
 
@@ -349,6 +371,169 @@ describe('ObserveSDK captureQueryParams', () => {
 		await vi.waitFor(async () => {
 			const [log] = spansNamed(await finished(), otel.LOG_SPAN_NAME)
 			expect(log?.attributes).toMatchObject(ALL_UTMS)
+		})
+	})
+})
+
+describe('ObserveSDK captureQueryParams last touch', () => {
+	beforeEach(() => {
+		landOn('/?utm_campaign=spring&utm_source=email&other=x')
+	})
+
+	afterEach(() => {
+		vi.restoreAllMocks()
+		landOn('/')
+	})
+
+	it('replaces captured values when a navigation lands on listed params, removing keys it lacks', () => {
+		const observe = newObserveSDK()
+		window.history.pushState({}, '', '/promo?utm_campaign=fall&other=y')
+		expect(observe.getGlobalAttributes()).toEqual({ utm_campaign: 'fall' })
+	})
+
+	it('keeps captured values on a navigation without listed params', () => {
+		const observe = newObserveSDK()
+		window.history.pushState({}, '', '/products?other=y')
+		window.history.pushState({}, '', '/checkout#step-2')
+		expect(observe.getGlobalAttributes()).toEqual({
+			utm_campaign: 'spring',
+			utm_source: 'email',
+		})
+	})
+
+	it('follows back/forward navigation', () => {
+		const observe = newObserveSDK()
+		window.history.pushState({}, '', '/promo?utm_campaign=fall')
+		window.history.replaceState({}, '', '/?utm_source=ad')
+		expect(observe.getGlobalAttributes()).toEqual({ utm_source: 'ad' })
+	})
+
+	it('never replaces or removes keys set with setAttributes after capture', () => {
+		const observe = newObserveSDK()
+		observe.setAttributes({ utm_source: 'explicit' })
+		window.history.pushState({}, '', '/promo?utm_campaign=fall')
+		expect(observe.getGlobalAttributes()).toEqual({
+			utm_campaign: 'fall',
+			utm_source: 'explicit',
+		})
+		window.history.pushState({}, '', '/again?utm_source=ad&utm_medium=cpc')
+		expect(observe.getGlobalAttributes()).toEqual({
+			utm_source: 'explicit',
+			utm_medium: 'cpc',
+		})
+	})
+
+	it('never replaces keys set with setAttributes before init', () => {
+		const ldObserve = new (Object.getPrototypeOf(LDObserve).constructor)()
+		ldObserve.setAttributes({ utm_campaign: 'explicit' })
+		const observe = newObserveSDK()
+		ldObserve.applyBufferedAttributes(observe)
+
+		window.history.pushState({}, '', '/promo?utm_campaign=fall')
+
+		expect(observe.getGlobalAttributes()).toEqual({
+			utm_campaign: 'explicit',
+		})
+	})
+
+	it('captures a key again on a later landing after removeAttributes', () => {
+		const observe = newObserveSDK()
+		observe.removeAttributes(['utm_campaign'])
+		window.history.pushState({}, '', '/promo?utm_campaign=fall')
+		expect(observe.getGlobalAttributes()).toEqual({ utm_campaign: 'fall' })
+	})
+
+	it('does not track navigation when disabled', () => {
+		const observe = newObserveSDK({ captureQueryParams: false })
+		window.history.pushState({}, '', '/promo?utm_campaign=fall')
+		expect(observe.getGlobalAttributes()).toEqual({})
+	})
+
+	it('puts the new values on the page view of the new landing, keeping started spans unchanged', async () => {
+		const observe = newObserveSDK()
+		const { provider, finished } = setupTracing(observe)
+		const tracer = provider.getTracer('test')
+		const locationChange = new LocationChangeInstrumentation()
+		locationChange.setTracerProvider(provider)
+		locationChange.enable()
+		try {
+			const open = tracer.startSpan('started-before')
+			window.history.pushState({}, '', '/promo?utm_campaign=fall')
+			open.end()
+			tracer.startSpan('started-after').end()
+
+			await vi.waitFor(async () => {
+				const spans = await finished()
+				const [pageView] = spansNamed(spans, LD_PAGE_VIEW_SPAN_NAME)
+				expect(pageView?.attributes).toMatchObject({
+					'url.full': expect.stringContaining('/promo'),
+					utm_campaign: 'fall',
+				})
+				expect(pageView.attributes).not.toHaveProperty('utm_source')
+				expect(
+					spansNamed(spans, 'started-before')[0].attributes,
+				).toMatchObject({ utm_campaign: 'spring', utm_source: 'email' })
+				const [after] = spansNamed(spans, 'started-after')
+				expect(after.attributes).toMatchObject({ utm_campaign: 'fall' })
+				expect(after.attributes).not.toHaveProperty('utm_source')
+			})
+		} finally {
+			locationChange.disable()
+		}
+	})
+})
+
+describe('ObserveSDK captureReferrer', () => {
+	const mockReferrer = (referrer: string) =>
+		vi
+			.spyOn(Document.prototype, 'referrer', 'get')
+			.mockReturnValue(referrer)
+
+	afterEach(() => {
+		vi.restoreAllMocks()
+	})
+
+	it('captures a cross-origin referrer by default, stripping query and fragment', () => {
+		mockReferrer('https://www.google.com/search?q=me%40mail.com#top')
+		expect(newObserveSDK().getGlobalAttributes()).toEqual({
+			'landing.referrer': 'https://www.google.com/search',
+		})
+	})
+
+	it('sets nothing for a same-origin referrer', () => {
+		mockReferrer(`${window.location.origin}/login?next=/home`)
+		expect(newObserveSDK().getGlobalAttributes()).toEqual({})
+	})
+
+	it('sets nothing for an empty referrer', () => {
+		mockReferrer('')
+		expect(newObserveSDK().getGlobalAttributes()).toEqual({})
+	})
+
+	it('is disabled by false', () => {
+		mockReferrer('https://www.google.com/')
+		expect(
+			newObserveSDK({ captureReferrer: false }).getGlobalAttributes(),
+		).toEqual({})
+	})
+
+	it('is independent of captureQueryParams and not updated on navigation', () => {
+		mockReferrer('https://news.example.org/article/1?ref=feed')
+		landOn('/?utm_campaign=spring')
+		const observe = newObserveSDK({ captureQueryParams: false })
+		window.history.pushState({}, '', '/promo?utm_campaign=fall')
+		expect(observe.getGlobalAttributes()).toEqual({
+			'landing.referrer': 'https://news.example.org/article/1',
+		})
+		landOn('/')
+	})
+
+	it('lets setAttributes override it', () => {
+		mockReferrer('https://www.google.com/')
+		const observe = newObserveSDK()
+		observe.setAttributes({ 'landing.referrer': 'explicit' })
+		expect(observe.getGlobalAttributes()).toEqual({
+			'landing.referrer': 'explicit',
 		})
 	})
 })

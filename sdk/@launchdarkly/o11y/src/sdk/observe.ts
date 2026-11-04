@@ -91,8 +91,11 @@ import {
 import { setSdkDebugLogging } from '../client/utils/sdkLogger'
 import {
 	capturedQueryParamNames,
+	LANDING_REFERRER_ATTR,
+	landingReferrer,
 	pickQueryParams,
 } from '../client/utils/queryParams'
+import { PathListener } from '../client/listeners/path-listener'
 
 // Attribute namespaces the SDK sets itself; `setAttributes` ignores them.
 const RESERVED_ATTRIBUTE_PREFIXES = [
@@ -153,6 +156,9 @@ export class ObserveSDK implements Observe {
 	// Frozen snapshot of `_globalAttributes`, rebuilt on change so the
 	// per-span hot path does not allocate.
 	private _globalAttributesSnapshot: Attributes = Object.freeze({})
+	// Keys of `_globalAttributes` whose value came from `captureQueryParams`,
+	// so last-touch capture only replaces or removes those.
+	private readonly _capturedQueryParams = new Map<string, string>()
 	// ECMAScript-private (#) so the internal GraphQL SDK type — which
 	// references graphql-request / graphql — does not leak into the published
 	// declaration file and break consumer type-checking.
@@ -168,27 +174,86 @@ export class ObserveSDK implements Observe {
 		if (options.debug) {
 			setSdkDebugLogging(true)
 		}
-		this._captureQueryParams()
+		this._captureLanding()
 	}
 
 	/**
-	 * Adds the `captureQueryParams` parameters of the URL the page loaded
-	 * with as global attributes. Runs once, before buffered and later
-	 * `setAttributes` calls, so those win.
+	 * Captures the landing referrer (`captureReferrer`) and the
+	 * `captureQueryParams` parameters of the current URL, then keeps the
+	 * parameters up to date on SPA navigation (last touch). Runs before
+	 * buffered and later `setAttributes` calls, so those win.
 	 */
-	private _captureQueryParams() {
-		const names = capturedQueryParamNames(this._options.captureQueryParams)
-		if (!names.length || typeof location === 'undefined') {
+	private _captureLanding() {
+		if (typeof window === 'undefined' || typeof location === 'undefined') {
 			return
 		}
 		try {
-			const captured = pickQueryParams(location.search, names)
-			if (Object.keys(captured).length) {
-				this.setAttributes(captured)
+			if (this._options.captureReferrer !== false) {
+				const referrer = landingReferrer(
+					typeof document === 'undefined' ? '' : document.referrer,
+					location.origin,
+				)
+				if (referrer) {
+					this._setAttributes({ [LANDING_REFERRER_ATTR]: referrer })
+				}
 			}
+			const names = capturedQueryParamNames(
+				this._options.captureQueryParams,
+			)
+			if (!names.length) {
+				return
+			}
+			this._applyCapturedQueryParams(
+				pickQueryParams(location.search, names),
+			)
+			let lastUrl = location.href
+			// Never removed: captured values live for the whole page load.
+			PathListener((url) => {
+				if (url === lastUrl) {
+					return
+				}
+				lastUrl = url
+				try {
+					this._applyCapturedQueryParams(
+						pickQueryParams(new URL(url).search, names),
+					)
+				} catch (error) {
+					internalLog('captureQueryParams', 'warn', error)
+				}
+			})
 		} catch (error) {
 			internalLog('captureQueryParams', 'warn', error)
 		}
+	}
+
+	/**
+	 * Makes the captured query parameters reflect one landing: a URL with
+	 * any listed parameter replaces the previously captured values (keys it
+	 * lacks are removed); one without keeps them. Keys the app set itself
+	 * with `setAttributes` are never touched.
+	 */
+	private _applyCapturedQueryParams(picked: Record<string, string>) {
+		if (!Object.keys(picked).length) {
+			return
+		}
+		for (const key of this._capturedQueryParams.keys()) {
+			if (!(key in picked)) {
+				this._capturedQueryParams.delete(key)
+				this._globalAttributes.delete(key)
+			}
+		}
+		const toSet: Record<string, string> = {}
+		for (const [key, value] of Object.entries(picked)) {
+			const explicit =
+				this._globalAttributes.has(key) &&
+				!this._capturedQueryParams.has(key)
+			if (explicit || isReservedAttributeKey(key)) {
+				continue
+			}
+			this._capturedQueryParams.set(key, value)
+			toSet[key] = value
+		}
+		this._setAttributes(toSet)
 	}
 
 	private _productAnalyticsEvents(): ProductAnalyticsEvents {
@@ -236,6 +301,16 @@ export class ObserveSDK implements Observe {
 		if (!attributes) {
 			return
 		}
+		// The app now owns these keys: capture no longer replaces them.
+		for (const key of Object.keys(attributes)) {
+			this._capturedQueryParams.delete(key)
+		}
+		this._setAttributes(attributes)
+	}
+
+	private _setAttributes(
+		attributes: Record<string, AttributeValue | null | undefined>,
+	): void {
 		for (const [key, value] of Object.entries(attributes)) {
 			if (isReservedAttributeKey(key)) {
 				internalLog(
@@ -265,6 +340,7 @@ export class ObserveSDK implements Observe {
 			return
 		}
 		for (const key of keys) {
+			this._capturedQueryParams.delete(key)
 			this._globalAttributes.delete(key)
 		}
 		this._updateGlobalAttributesSnapshot()
