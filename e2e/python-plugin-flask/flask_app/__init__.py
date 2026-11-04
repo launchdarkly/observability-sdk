@@ -6,12 +6,19 @@ from ldclient.context import Context
 from ldclient.config import Config
 from loguru import logger
 from opentelemetry import trace
+from flask_app.repro import (
+    EXPECT_GLOBAL,
+    EXPECT_PER_CALL,
+    apply_global_attributes,
+    expect,
+)
 
 sdk_key = os.getenv("LAUNCHDARKLY_SDK_KEY")
 
 if not sdk_key:
     raise ValueError("LAUNCHDARKLY_SDK_KEY is not set")
 
+apply_global_attributes()
 
 ldclient.set_config(Config(sdk_key,
 plugins=[
@@ -43,7 +50,7 @@ def manual_span():
         client.variation("test", Context.create("bob"), default=False)
         span.set_attribute("my-attribute", "my-value")
         # Any user defined code I want to capture.
-        return 'Manual span'
+        return expect('Manual span', EXPECT_GLOBAL)
 
 @app.route('/manual-record-exception')
 def manual_record_exception():
@@ -75,8 +82,12 @@ def manual_record_chained_exception():
 
 @app.route('/manual-record-log')
 def manual_record_log():
-    observe.record_log("manual-record-log", logging.INFO, {"custom": "value"})
-    return "Manually recorded log"
+    observe.record_log(
+        "manual-record-log",
+        logging.INFO,
+        {"custom": "value", "utm_source": "per_call"},
+    )
+    return expect("Manually recorded log", EXPECT_GLOBAL, EXPECT_PER_CALL)
 
 @app.route('/record-metrics')
 def record_metrics():
@@ -84,4 +95,4 @@ def record_metrics():
     observe.record_count("manual-record-counter", 1)
     observe.record_histogram("manual-record-histogram", 1)
     observe.record_up_down_counter("manual-record-uptime", 1)
-    return "Manually recorded metric"
+    return expect("Manually recorded metric", EXPECT_GLOBAL)

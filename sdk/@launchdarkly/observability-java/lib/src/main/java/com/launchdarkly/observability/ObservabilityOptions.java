@@ -3,12 +3,15 @@ package com.launchdarkly.observability;
 import com.launchdarkly.observability.internal.Constants;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Severity;
+import io.opentelemetry.sdk.logs.LogRecordProcessor;
+import io.opentelemetry.sdk.trace.SpanProcessor;
 
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,6 +37,8 @@ public final class ObservabilityOptions {
     private final boolean debug;
     private final boolean manualStart;
     private final boolean shutdownHook;
+    private final List<SpanProcessor> spanProcessors;
+    private final List<LogRecordProcessor> logProcessors;
 
     private ObservabilityOptions(Builder builder) {
         this.enabled = builder.enabled;
@@ -49,6 +54,8 @@ public final class ObservabilityOptions {
         this.debug = builder.debug;
         this.manualStart = builder.manualStart;
         this.shutdownHook = builder.shutdownHook;
+        this.spanProcessors = Collections.unmodifiableList(new ArrayList<>(builder.spanProcessors));
+        this.logProcessors = Collections.unmodifiableList(new ArrayList<>(builder.logProcessors));
     }
 
     /** Whether the plugin exports telemetry at all. See {@link Builder#enabled(boolean)}. */
@@ -70,6 +77,10 @@ public final class ObservabilityOptions {
     public boolean isManualStart() { return manualStart; }
     /** Whether the plugin flushes and stops on JVM exit by itself. See {@link Builder#shutdownHook(boolean)}. */
     public boolean isShutdownHook() { return shutdownHook; }
+    /** Span processors run on every span before export, in order. See {@link Builder#spanProcessors(List)}. Never null. */
+    public List<SpanProcessor> getSpanProcessors() { return spanProcessors; }
+    /** Log record processors run on every record before export, in order. See {@link Builder#logProcessors(List)}. Never null. */
+    public List<LogRecordProcessor> getLogProcessors() { return logProcessors; }
 
     /**
      * Minimum severity for exported log records. Mirrors the OpenTelemetry
@@ -121,6 +132,8 @@ public final class ObservabilityOptions {
         private boolean debug = false;
         private boolean manualStart = false;
         private boolean shutdownHook = true;
+        private List<SpanProcessor> spanProcessors = new ArrayList<>();
+        private List<LogRecordProcessor> logProcessors = new ArrayList<>();
 
         public Builder() {}
 
@@ -265,6 +278,68 @@ public final class ObservabilityOptions {
          */
         public Builder shutdownHook(boolean shutdownHook) {
             this.shutdownHook = shutdownHook;
+            return this;
+        }
+
+        /**
+         * Sets span processors that run on every span the plugin's tracer
+         * provider records, before it is sampled and exported. Replaces any
+         * previously set span processors.
+         *
+         * <p>They run in list order, after the plugin has added the
+         * {@linkplain LDObserve#setAttributes global attributes}, so changes
+         * they make in {@code onStart} are exported and the LaunchDarkly
+         * sampling rules still apply. An exception a processor throws is
+         * logged and does not stop the span from being exported.
+         * {@code forceFlush} and {@code shutdown} are forwarded when the
+         * plugin flushes or shuts down.</p>
+         *
+         * <p>Read when the providers start; later changes have no effect.</p>
+         */
+        public Builder spanProcessors(List<SpanProcessor> spanProcessors) {
+            List<SpanProcessor> copy = new ArrayList<>(Objects.requireNonNull(spanProcessors, "spanProcessors"));
+            copy.forEach(processor -> Objects.requireNonNull(processor, "spanProcessors element"));
+            this.spanProcessors = copy;
+            return this;
+        }
+
+        /**
+         * Adds one span processor after any already set. See
+         * {@link #spanProcessors(List)}.
+         */
+        public Builder spanProcessor(SpanProcessor spanProcessor) {
+            this.spanProcessors.add(Objects.requireNonNull(spanProcessor, "spanProcessor"));
+            return this;
+        }
+
+        /**
+         * Sets log record processors that run on every log record the
+         * plugin's logger provider receives, before the
+         * {@link #logsApiLevel(LogLevel) level filter}, sampling and export.
+         * Replaces any previously set log processors.
+         *
+         * <p>They run in list order, after the plugin has added the
+         * {@linkplain LDObserve#setAttributes global attributes}, so changes
+         * they make are exported. An exception a processor throws is logged
+         * and does not stop the record from being exported.
+         * {@code forceFlush} and {@code shutdown} are forwarded when the
+         * plugin flushes or shuts down.</p>
+         *
+         * <p>Read when the providers start; later changes have no effect.</p>
+         */
+        public Builder logProcessors(List<LogRecordProcessor> logProcessors) {
+            List<LogRecordProcessor> copy = new ArrayList<>(Objects.requireNonNull(logProcessors, "logProcessors"));
+            copy.forEach(processor -> Objects.requireNonNull(processor, "logProcessors element"));
+            this.logProcessors = copy;
+            return this;
+        }
+
+        /**
+         * Adds one log record processor after any already set. See
+         * {@link #logProcessors(List)}.
+         */
+        public Builder logProcessor(LogRecordProcessor logProcessor) {
+            this.logProcessors.add(Objects.requireNonNull(logProcessor, "logProcessor"));
             return this;
         }
 
