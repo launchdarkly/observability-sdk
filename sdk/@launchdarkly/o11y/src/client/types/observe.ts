@@ -110,6 +110,34 @@ export type ObserveOptions = CommonOptions & {
 	 * @default 2000
 	 */
 	flagExposureDedupeMaxSize?: number
+	/**
+	 * Query parameters to read from the URL the page loaded with and add as
+	 * attributes to all telemetry, as if passed to `LDObserve.setAttributes`.
+	 *
+	 * The URL's `location.search` is read once, when the SDK initializes.
+	 * Each listed parameter that is present becomes an attribute named after
+	 * the parameter (e.g. `utm_campaign`) on every span (including document
+	 * load, page view and fetch/XHR spans), log, error and metric for the rest
+	 * of the page load, including after SPA navigation drops it from the URL.
+	 * Values are kept in memory only; nothing is written to storage or
+	 * cookies, so a later full page load captures again from its own URL.
+	 *
+	 * Only the listed keys are captured, so other query parameters (which may
+	 * hold personal data such as emails or tokens) are never recorded this
+	 * way. The default list contains UTM parameters only. A name ending in `*`
+	 * matches every parameter with that prefix (e.g. `'utm_*'`).
+	 *
+	 * Values set with `setAttributes` win over captured ones, and
+	 * `removeAttributes` removes a captured value. Keys in the namespaces the
+	 * SDK sets itself (`highlight.*`, `launchdarkly.*`, `session.*`,
+	 * `context.contextKeys.*`) are ignored.
+	 *
+	 * A custom list replaces the default. Set to `false` or `[]` to turn
+	 * capture off.
+	 * @default ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+	 * @example captureQueryParams: ['utm_source', 'utm_campaign', 'gclid']
+	 */
+	captureQueryParams?: string[] | false
 }
 
 export type ProductAnalyticsEvents = {

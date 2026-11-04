@@ -89,6 +89,10 @@ import {
 	sanitizeUrl,
 } from '../client/listeners/network-listener/utils/network-sanitizer'
 import { setSdkDebugLogging } from '../client/utils/sdkLogger'
+import {
+	capturedQueryParamNames,
+	pickQueryParams,
+} from '../client/utils/queryParams'
 
 // Attribute namespaces the SDK sets itself; `setAttributes` ignores them.
 const RESERVED_ATTRIBUTE_PREFIXES = [
@@ -163,6 +167,27 @@ export class ObserveSDK implements Observe {
 		this.organizationID = options.projectId
 		if (options.debug) {
 			setSdkDebugLogging(true)
+		}
+		this._captureQueryParams()
+	}
+
+	/**
+	 * Adds the `captureQueryParams` parameters of the URL the page loaded
+	 * with as global attributes. Runs once, before buffered and later
+	 * `setAttributes` calls, so those win.
+	 */
+	private _captureQueryParams() {
+		const names = capturedQueryParamNames(this._options.captureQueryParams)
+		if (!names.length || typeof location === 'undefined') {
+			return
+		}
+		try {
+			const captured = pickQueryParams(location.search, names)
+			if (Object.keys(captured).length) {
+				this.setAttributes(captured)
+			}
+		} catch (error) {
+			internalLog('captureQueryParams', 'warn', error)
 		}
 	}
 
