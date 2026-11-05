@@ -4,6 +4,8 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
+ext['tomcat.version'] = '10.1.59'
+
 def useMavenLocal = project.hasProperty('useMavenLocal')
 
 repositories {
@@ -39,7 +41,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
     // Agent release that ships the OpenTelemetry SDK version the plugin uses.
-    javaagent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.17.0'
+    javaagent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.26.1'
 }
 
 // Copies the OpenTelemetry Java agent to build/agent/opentelemetry-javaagent.jar
