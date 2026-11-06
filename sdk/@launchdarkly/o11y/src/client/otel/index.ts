@@ -251,7 +251,9 @@ export const setupBrowserTracing = (
 		'highlight.project_id': config.projectId,
 		[SemanticAttributes.ATTR_USER_AGENT_ORIGINAL]: navigator.userAgent,
 		'browser.language': navigator.language,
-		'telemetry.distro.name': '@highlight-run/observability',
+		// Must differ from highlight.run's legacy '@highlight-run/observability':
+		// the backend gates LD event forwarding on that name plus its version.
+		'telemetry.distro.name': '@launchdarkly/o11y',
 		'telemetry.distro.version': version,
 	})
 
