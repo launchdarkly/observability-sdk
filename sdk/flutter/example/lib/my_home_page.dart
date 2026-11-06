@@ -14,6 +14,7 @@ import 'getx_app.dart' show useGetX;
 import 'getx_scenarios.dart';
 import 'main.dart';
 import 'nested_masking_propagation_page.dart';
+import 'repro.dart';
 import 'smoothie_list_page.dart';
 import 'web_view_page.dart';
 
@@ -242,9 +243,11 @@ class _MyHomePageState extends State<MyHomePage> {
         'test-integer': 42,
         'test-double': 3.14,
         'test-array': <double>[3.14, 6.28],
+        'utm_source': 'per_call',
       },
     );
     debugPrint('Log triggered');
+    printLogExpectation();
   }
 
   // The MAUI sample captures the span context inside a span and passes it to
@@ -325,6 +328,7 @@ class _MyHomePageState extends State<MyHomePage> {
     span.addEvent('download.completed');
     span.end();
     debugPrint('Custom span sent: $spanName');
+    printSpanExpectation();
   }
 
   void _onStartPolling() {
