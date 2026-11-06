@@ -1,5 +1,19 @@
 # @launchdarkly/observability
 
+## [1.5.0](https://github.com/launchdarkly/observability-sdk/compare/observability-1.4.0...observability-1.5.0) (2026-11-06)
+
+
+### Features
+
+* **o11y:** capture UTM query parameters and landing referrer as attributes ([#877](https://github.com/launchdarkly/observability-sdk/issues/877)) ([f32637b](https://github.com/launchdarkly/observability-sdk/commit/f32637baafaf0da635c5bb50696164d548169515))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/o11y bumped to 1.6.0
+
 ## [1.4.0](https://github.com/launchdarkly/observability-sdk/compare/observability-1.3.1...observability-1.4.0) (2026-11-03)
 
 
