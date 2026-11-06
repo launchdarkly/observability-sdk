@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Python Observability will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.4.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.3.4...launchdarkly-observability-python-1.4.0) (2026-11-06)
+
+
+### Features
+
+* **python:** add set_attributes and custom span/log processors ([#859](https://github.com/launchdarkly/observability-sdk/issues/859)) ([3f04a85](https://github.com/launchdarkly/observability-sdk/commit/3f04a856ede2b6f362fdebafc20061a01a276870))
+
 ## [1.3.4](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.3.3...launchdarkly-observability-python-1.3.4) (2026-10-20)
 
 

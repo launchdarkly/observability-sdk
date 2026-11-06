@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.0](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.5.0...o11y-1.6.0) (2026-11-06)
+
+
+### Features
+
+* **o11y:** capture UTM query parameters and landing referrer as attributes ([#877](https://github.com/launchdarkly/observability-sdk/issues/877)) ([f32637b](https://github.com/launchdarkly/observability-sdk/commit/f32637baafaf0da635c5bb50696164d548169515))
+
+
+### Bug Fixes
+
+* **o11y:** report @launchdarkly/o11y as telemetry.distro.name ([#879](https://github.com/launchdarkly/observability-sdk/issues/879)) ([7f339e1](https://github.com/launchdarkly/observability-sdk/commit/7f339e18bf8db720cb9ee4fe2d271f45c65d2a7a))
+
 ## [1.5.0](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.4.1...o11y-1.5.0) (2026-11-03)
 
 
