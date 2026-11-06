@@ -49,6 +49,19 @@ public class ObservabilityBridge(
         LDObserve.recordUpDownCounter(Metric(name = name, value = value))
     }
 
+    /**
+     * Merges [attributes] into the process-wide global attributes. Values are converted with the
+     * same rules as log/span attributes from C#. Safe to call before [start].
+     */
+    public fun setAttributes(attributes: Map<String, Any?>) {
+        LDObserve.setAttributes(AttributeConverter.convert(attributes))
+    }
+
+    /** Removes the global attributes with the given [keys]. Safe to call before [start]. */
+    public fun removeAttributes(keys: List<String>) {
+        LDObserve.removeAttributes(keys)
+    }
+
     public fun start(
         app: Application,
         mobileKey: String,

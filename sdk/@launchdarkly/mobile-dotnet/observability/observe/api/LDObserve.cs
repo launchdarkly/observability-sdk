@@ -9,11 +9,15 @@ namespace LaunchDarkly.Observability;
 /// <summary>
 /// Static facade over the <see cref="ObservabilityService"/>.
 /// All methods are safe to call before initialization — they are no-ops
-/// until <see cref="Initialize"/> is called.
+/// until <see cref="Initialize"/> is called, except <see cref="SetAttributes"/>
+/// and <see cref="RemoveAttributes"/>, which are buffered and applied once the
+/// native stack starts.
 /// </summary>
 public static partial class LDObserve
 {
     private static readonly ActivitySource NoopActivitySource = new("noop");
+
+    private static readonly GlobalAttributesBuffer GlobalAttributes = new();
 
     private static volatile ObservabilityService? _service;
 
@@ -56,7 +60,31 @@ public static partial class LDObserve
     /// </summary>
     public static string NativeVersion => LDNative.CurrentNativeVersion;
 
+    internal static void OnNativeStarted(IGlobalAttributesSink sink) => GlobalAttributes.Bind(sink);
+
     // -------- Public API --------
+
+    /// <summary>
+    /// Merges <paramref name="attributes"/> by key into the process-wide global attributes.
+    /// They are added to every span, log and metric recorded after this call, including the
+    /// native SDK's automatic telemetry. Globals only fill keys a signal doesn't already carry:
+    /// attributes passed to an individual call (or set on a span) always win.
+    /// Values are kept in memory only and survive session rotation. <c>null</c> values are
+    /// ignored (use <see cref="RemoveAttributes"/>), as are the SDK-managed <c>session.id</c>
+    /// and <c>highlight.session_id</c> keys.
+    /// Unlike the other methods, calls made before initialization are not dropped: they are
+    /// buffered and applied as soon as the native stack starts.
+    /// MAUI does not support custom span/log processors, because telemetry is produced natively.
+    /// </summary>
+    public static void SetAttributes(IDictionary<string, object?> attributes)
+        => GlobalAttributes.Set(attributes);
+
+    /// <summary>
+    /// Removes the global attributes with the given <paramref name="keys"/>. Unknown keys are ignored.
+    /// Safe to call before initialization; see <see cref="SetAttributes"/>.
+    /// </summary>
+    public static void RemoveAttributes(IEnumerable<string> keys)
+        => GlobalAttributes.Remove(keys);
 
     /// <summary>
     /// Record a log with typed severity, routed through the native logger instance.
