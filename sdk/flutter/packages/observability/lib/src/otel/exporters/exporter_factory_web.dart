@@ -13,6 +13,7 @@ import '../../api/log_severity.dart';
 import '../../plugin/observability_config.dart';
 import '../click_convention.dart';
 import '../conversions.dart';
+import '../global_attributes.dart';
 import '../log_convention.dart';
 import '../screen_view_convention.dart';
 import '../track_convention.dart';
@@ -208,7 +209,9 @@ class _SpanEventLogRecorder implements LogRecorder {
     final span = tracer.startSpan(LogConvention.spanName);
     span.addEvent(
       LogConvention.eventName,
-      attributes: convertAttributes(combinedAttributes),
+      attributes: convertAttributes(
+        GlobalAttributes.fillAttributes(combinedAttributes)!,
+      ),
     );
     span.end();
   }
