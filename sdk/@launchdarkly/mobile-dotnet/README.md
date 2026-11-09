@@ -191,6 +191,10 @@ LDObserve.RecordError(exception);
 
 // Or record errors from a message string
 LDObserve.RecordError("Something went wrong", "The underlying cause of the error.");
+
+// Attach attributes to everything recorded from now on (see Global Attributes below)
+LDObserve.SetAttributes(new Dictionary<string, object?> { { "utm_campaign", "spring_promo" } });
+LDObserve.RemoveAttributes(new[] { "utm_campaign" });
 ```
 
 #### Metrics
@@ -254,6 +258,29 @@ LDObserve.RecordError(exception);
 // From a message string with optional cause
 LDObserve.RecordError("Payment failed", "Timeout connecting to payment gateway.");
 ```
+
+#### Global Attributes
+
+Use `SetAttributes` to attach attributes to every span, log and metric recorded afterwards, including the native SDK's automatic telemetry:
+
+```csharp
+LDObserve.SetAttributes(new Dictionary<string, object?>
+{
+    { "tenant.id", "acme" },
+    { "app.build", 1234 }
+});
+
+// Later, stop sending some of them
+LDObserve.RemoveAttributes(new[] { "app.build" });
+```
+
+*   Calls merge by key into one process-wide map; `RemoveAttributes` deletes keys, and unknown keys are ignored.
+*   Globals only fill keys a signal doesn't already carry: attributes passed to `RecordLog` or set on a span always win.
+*   Values use the same types as `RecordLog` attributes. `null` values are ignored, as are the SDK-managed `session.id` and `highlight.session_id` keys.
+*   The map is kept in memory only. It is not persisted and survives session rotation.
+*   Unlike the other `LDObserve` methods, these are not dropped before initialization: calls are buffered and applied as soon as the native SDK starts.
+
+Custom span and log processors are not available in the MAUI SDK, because telemetry is produced and exported by the native Android and iOS SDKs.
 
 #### Traces
 
