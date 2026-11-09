@@ -2,14 +2,11 @@ import {
 	InstrumentationBase,
 	InstrumentationConfig,
 } from '@opentelemetry/instrumentation'
-import { Attributes } from '@opentelemetry/api'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 import { LD_PAGE_VIEW_SPAN_NAME } from '../../integrations/launchdarkly'
 import { PathListener } from '../listeners/path-listener'
 
-export type LocationChangeConfig = InstrumentationConfig & {
-	getLDContextKeyAttributes?: () => Attributes | undefined
-}
+export type LocationChangeConfig = InstrumentationConfig
 
 /**
  * Instrumentation that fires a span whenever the URL changes.
@@ -19,9 +16,6 @@ export class LocationChangeInstrumentation extends InstrumentationBase {
 	static readonly version = '0.1.0'
 	static readonly moduleName = 'location-change'
 
-	private _getLDContextKeyAttributes:
-		| (() => Attributes | undefined)
-		| undefined
 	private _unlisten: (() => void) | undefined
 	private _lastUrl: string = ''
 
@@ -31,7 +25,6 @@ export class LocationChangeInstrumentation extends InstrumentationBase {
 			LocationChangeInstrumentation.version,
 			config,
 		)
-		this._getLDContextKeyAttributes = config.getLDContextKeyAttributes
 	}
 
 	init() {}
@@ -53,10 +46,6 @@ export class LocationChangeInstrumentation extends InstrumentationBase {
 						'page_view.url': currentUrl,
 					},
 				})
-				const contextKeys = this._getLDContextKeyAttributes?.()
-				if (contextKeys) {
-					span.setAttributes(contextKeys)
-				}
 				span.end()
 			} catch (e) {
 				this._diag.error('failed to create page view span', e)

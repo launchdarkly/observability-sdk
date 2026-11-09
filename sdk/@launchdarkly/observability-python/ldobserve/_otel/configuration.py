@@ -3,6 +3,7 @@ import logging
 import typing
 from grpc import Compression
 from ldobserve._otel._sampling.custom_sampler import CustomSampler
+from ldobserve._otel.processors import add_log_processors, add_span_processors
 from ldobserve._otel.sampling_log_exporter import SamplingLogExporter
 from ldobserve._otel.sampling_trace_exporter import SamplingTraceExporter
 from ldobserve._graph.get_sampling_config import get_sampling_config
@@ -107,30 +108,38 @@ class _OTELConfiguration:
         )
 
         self._tracer_provider = TracerProvider(resource=resource)
-        self._tracer_provider.add_span_processor(
-            BatchSpanProcessor(
-                SamplingTraceExporter(
-                    sampler=sampler,
-                    endpoint=f"{self._config.otlp_endpoint}/v1/traces",
-                    compression=Compression.Gzip,
-                    timeout=_SCHEDULE_DELAY_MILLIS,
+        add_span_processors(
+            self._tracer_provider,
+            self._config.span_processors,
+            [
+                BatchSpanProcessor(
+                    SamplingTraceExporter(
+                        sampler=sampler,
+                        endpoint=f"{self._config.otlp_endpoint}/v1/traces",
+                        compression=Compression.Gzip,
+                        timeout=_SCHEDULE_DELAY_MILLIS,
+                    )
                 )
-            )
+            ],
         )
         otel_trace.set_tracer_provider(self._tracer_provider)
         self._tracer = self._tracer_provider.get_tracer(__name__)
 
         self._logger_provider = LoggerProvider(resource=resource)
 
-        self._logger_provider.add_log_record_processor(
-            BatchLogRecordProcessor(
-                SamplingLogExporter(
-                    sampler=sampler,
-                    endpoint=f"{self._config.otlp_endpoint}/v1/logs",
-                    compression=Compression.Gzip,
-                    timeout=_SCHEDULE_DELAY_MILLIS,
+        add_log_processors(
+            self._logger_provider,
+            self._config.log_processors,
+            [
+                BatchLogRecordProcessor(
+                    SamplingLogExporter(
+                        sampler=sampler,
+                        endpoint=f"{self._config.otlp_endpoint}/v1/logs",
+                        compression=Compression.Gzip,
+                        timeout=_SCHEDULE_DELAY_MILLIS,
+                    )
                 )
-            )
+            ],
         )
         _logs.set_logger_provider(self._logger_provider)
 

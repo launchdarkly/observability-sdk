@@ -42,9 +42,9 @@ The plugin does not bring the LaunchDarkly SDK with it, so you choose its versio
 
 ### Dependencies you get
 
-- `io.opentelemetry:opentelemetry-api` is a compile-scoped (`api`) dependency, because `LDObserve` and `ObservabilityOptions` take OpenTelemetry API types such as `Attributes` and `Severity`. You do not need to declare it yourself.
+- `io.opentelemetry:opentelemetry-api` is a compile-scoped (`api`) dependency, because `LDObserve` and `ObservabilityOptions` take OpenTelemetry API types such as `Attributes` and `Severity`. You do not need to declare it yourself. `io.opentelemetry:opentelemetry-sdk` is compile-scoped too, because `ObservabilityOptions` accepts SDK `SpanProcessor` and `LogRecordProcessor` instances.
 - OTLP is sent over HTTP with OpenTelemetry's JDK sender, which uses `java.net.http.HttpClient`. The plugin does **not** pull OkHttp, Okio or the Kotlin standard library onto your classpath. The build fails if any of those leak in.
-- The OpenTelemetry SDK and exporters are runtime dependencies, and they are the only ones: JSON is handled with the LaunchDarkly SDK's own `LDValue`, so no Gson or other JSON library is added. The plugin records flag evaluations with its own hook and does not depend on `launchdarkly-java-server-sdk-otel` or on the LaunchDarkly SDK itself. The build fails if the POM names anything outside `io.opentelemetry`.
+- The OpenTelemetry exporters are runtime dependencies, and together with the OpenTelemetry API and SDK they are the only ones: JSON is handled with the LaunchDarkly SDK's own `LDValue`, so no Gson or other JSON library is added. The plugin records flag evaluations with its own hook and does not depend on `launchdarkly-java-server-sdk-otel` or on the LaunchDarkly SDK itself. The build fails if the POM names anything outside `io.opentelemetry`.
 
 ### OpenTelemetry versions
 
@@ -259,6 +259,73 @@ LDObserve.shutdown();
 
 Every `LDObserve` method is safe to call before the plugin is initialized; such calls are local no-ops and do not install the OpenTelemetry no-op global.
 
+### Global attributes
+
+`LDObserve.setAttributes` adds attributes to everything recorded after the call: every span and log record the plugin exports (flag-evaluation spans, error spans, and spans or records from instrumentation wired to `LDObserve.getOpenTelemetry()` included) and every metric recorded through `LDObserve`. Calling it again merges by key, and `LDObserve.removeAttributes` drops keys.
+
+```java
+import com.launchdarkly.observability.LDObserve;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
+
+import java.util.List;
+
+LDObserve.setAttributes(Attributes.of(
+    AttributeKey.stringKey("tenant.id"), "acme",
+    AttributeKey.stringKey("deployment.region"), "us-east-1"));
+
+// Later: replace one value and drop another
+LDObserve.setAttributes(Attributes.of(AttributeKey.stringKey("deployment.region"), "eu-west-1"));
+LDObserve.removeAttributes(List.of("tenant.id"));
+```
+
+- Attributes passed to an `LDObserve` call, or set on a span builder, win over global attributes of the same key; global attributes only fill keys that are missing. Resource attributes are separate and unchanged.
+- A span gets the global attributes current when it starts.
+- Keys are matched by name, whatever the attribute type.
+- The attributes are held in memory for the life of the process (they survive `LDObserve.shutdown()`), are shared by every thread, and can be set before the plugin starts.
+- Metrics recorded directly on a meter from `LDObserve.getOpenTelemetry()` do not get them; record through `LDObserve` instead.
+
+### Custom span and log processors
+
+`spanProcessors` and `logProcessors` add your own OpenTelemetry `SpanProcessor` and `LogRecordProcessor` instances to the plugin's pipeline, for example to enrich or redact telemetry before it is exported. `spanProcessor` and `logProcessor` add one at a time.
+
+```java
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.sdk.logs.LogRecordProcessor;
+import io.opentelemetry.sdk.trace.ReadWriteSpan;
+import io.opentelemetry.sdk.trace.ReadableSpan;
+import io.opentelemetry.sdk.trace.SpanProcessor;
+
+AttributeKey<String> email = AttributeKey.stringKey("user.email");
+
+SpanProcessor addPool = new SpanProcessor() {
+    @Override
+    public void onStart(Context parentContext, ReadWriteSpan span) {
+        span.setAttribute("host.pool", "blue");
+    }
+    @Override public boolean isStartRequired() { return true; }
+    @Override public void onEnd(ReadableSpan span) {}
+    @Override public boolean isEndRequired() { return false; }
+};
+LogRecordProcessor redactEmail = (context, logRecord) -> {
+    if (logRecord.toLogRecordData().getAttributes().get(email) != null) {
+        logRecord.setAttribute(email, "[redacted]");
+    }
+};
+
+ObservabilityOptions options = new ObservabilityOptions.Builder()
+    .serviceName("my-service")
+    .spanProcessors(List.of(addPool))
+    .logProcessors(List.of(redactEmail))
+    .build();
+```
+
+- Processors run in list order, after the plugin adds the global attributes and before its own processing: the `logsApiLevel` filter, the LaunchDarkly sampling rules and export. Changes a processor makes (in `onStart` for spans) are exported, and sampling still applies.
+- A processor that throws is logged and skipped for that call; the span or record is still exported. `forceFlush` and `shutdown` are forwarded when the plugin flushes or shuts down.
+- They are read when the providers start. A second `LDClient` with another SDK key does not add its processors (see [Lifecycle and multiple clients](#lifecycle-and-multiple-clients)).
+- The interfaces come from the OpenTelemetry SDK (`opentelemetry-sdk`), which the plugin exposes as a compile-scoped dependency for this reason.
+
 ## Configuration Options
 
 | Option | Default | Description |
@@ -275,6 +342,8 @@ Every `LDObserve` method is safe to call before the plugin is initialized; such 
 | `logsApiLevel` | `INFO` | Minimum severity for exported logs. `NONE` disables log export. |
 | `debug` | `false` | Enable debug logging |
 | `manualStart` | `false` | Delay OTLP provider startup until `LDObserve.start(sdkKey, options)` |
+| `spanProcessors` / `spanProcessor` | none | Your own span processors, run in order before sampling and export. See [Custom span and log processors](#custom-span-and-log-processors) |
+| `logProcessors` / `logProcessor` | none | Your own log record processors, run in order before the level filter, sampling and export |
 | `shutdownHook` | `true` | Flush and stop the providers from a JVM shutdown hook. Set `false` under Spring Boot or another framework that owns shutdown, and call `LDObserve.shutdown()` from its close callback, so telemetry from requests drained during graceful shutdown is not dropped |
 
 ### Proxies and custom headers
@@ -307,7 +376,7 @@ Levels are `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` and `NONE`, matchi
 ./gradlew :lib:publishToMavenLocal   # then see ../../e2e/java-plugin for consumer and server examples
 ```
 
-`:lib:build` fails if OkHttp, Okio or Kotlin appear on the runtime classpath, if the generated POM does not expose `opentelemetry-api` at compile scope, or if it names anything outside `io.opentelemetry`. `./gradlew :lib:test -PldServerSdkVersion=7.10.1` runs the tests against the oldest supported SDK.
+`:lib:build` fails if OkHttp, Okio or Kotlin appear on the runtime classpath, if the generated POM does not expose `opentelemetry-api` and `opentelemetry-sdk` at compile scope, or if it names anything outside `io.opentelemetry`. `./gradlew :lib:test -PldServerSdkVersion=7.10.1` runs the tests against the oldest supported SDK.
 
 The unit tests run the sampling scenarios shared with the Go, .NET, Python and Node SDKs (`lib/src/test/resources/sampling`, copied from `go/internal/otel`). `:lib:build` also fails if those copies drift from Go's; copy the files over when the scenarios change.
 

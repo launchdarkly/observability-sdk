@@ -17,7 +17,7 @@ public final class Constants {
      * in unit tests, shaded jars and classloaders that hide non-class files.
      */
     // x-release-please-start-version
-    public static final String INSTRUMENTATION_VERSION = "0.1.0";
+    public static final String INSTRUMENTATION_VERSION = "0.2.0";
     // x-release-please-end
 
     /**

@@ -85,6 +85,11 @@ open class BaseApplication : Application() {
             options = testUrl?.let { observabilityOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: observabilityOptions
         )
 
+        if (testUrl == null) {
+            // Runs before LDClient.init below initializes observability (set-before-init).
+            GlobalAttributesRepro.applyGlobalAttributes()
+        }
+
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly mobile key found on the LaunchDarkly
         // dashboard in the start guide.
         // If you want to disable the Auto EnvironmentAttributes functionality.

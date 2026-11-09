@@ -111,6 +111,11 @@ class LDObserveClass
 		return this._bufferCall('removeAttributes', [keys])
 	}
 
+	// Internal: sets the LaunchDarkly context keys stamped on all telemetry.
+	_setContextKeys(contextKeys: Attributes): void {
+		return this._bufferCall('setContextKeys', [contextKeys])
+	}
+
 	track(
 		key: string,
 		properties?: TrackProperties,

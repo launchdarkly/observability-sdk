@@ -15,11 +15,13 @@ import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xm
 import { Resource } from '@opentelemetry/resources'
 import {
 	BatchSpanProcessor,
+	type BufferConfig,
 	ConsoleSpanExporter,
 	PropagateTraceHeaderCorsUrls,
 	ReadableSpan,
 	SimpleSpanProcessor,
 	Span as SDKSpan,
+	type SpanExporter,
 	StackContextManager,
 	WebTracerProvider,
 } from '@opentelemetry/sdk-trace-web'
@@ -43,8 +45,10 @@ import {
 	getBodyThatShouldBeRecorded,
 } from '../listeners/network-listener/utils/xhr-listener'
 import {
+	HttpSpanRequest,
 	NetworkRecordingOptions,
 	OtelInstrumentatonOptions,
+	OtelOptions,
 } from '../types/client'
 import { AggregationTemporalityPreference } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
@@ -95,6 +99,8 @@ export type BrowserTracingConfig = {
 	getIntegrations?: () => IntegrationClient[]
 	productAnalyticsEvents?: ProductAnalyticsEvents
 	getLDContextKeyAttributes?: () => Attributes | undefined
+	getGlobalAttributes?: () => Attributes
+	onHttpRequestSpan?: OtelOptions['onHttpRequestSpan']
 }
 
 let providers: {
@@ -119,6 +125,39 @@ const pendingResponseAttributes = new Map<string, Promise<void>>()
 const spanKey = (span: {
 	spanContext(): { traceId: string; spanId: string }
 }) => `${span.spanContext().traceId}:${span.spanContext().spanId}`
+// Runs the app-supplied span hook. Request details come from the attributes
+// the OTel instrumentations set at span start: the fetch callback only gets a
+// `Request | RequestInit` (no url), and the XHR callback only the XHR.
+export const applyHttpRequestSpanHook = (
+	hook: OtelOptions['onHttpRequestSpan'],
+	type: HttpSpanRequest['type'],
+	span: Span,
+	fallback?: { method?: string; url?: string },
+) => {
+	if (!hook) {
+		return
+	}
+	try {
+		const attributes =
+			(span as unknown as Partial<ReadableSpan>).attributes ?? {}
+		const method =
+			attributes[SemanticAttributes.SEMATTRS_HTTP_METHOD] ??
+			fallback?.method ??
+			''
+		const url =
+			attributes[SemanticAttributes.SEMATTRS_HTTP_URL] ??
+			fallback?.url ??
+			''
+		hook(span, {
+			type,
+			method: String(method).toUpperCase(),
+			url: String(url),
+		})
+	} catch (e) {
+		console.warn('onHttpRequestSpan threw an error', e)
+	}
+}
+
 export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
 export const ATTR_EXCEPTION_ID = 'launchdarkly.exception.id'
@@ -190,12 +229,19 @@ export const setupBrowserTracing = (
 	)
 
 	// https://opentelemetry.io/docs/specs/otel/logs/sdk/
-	const spanProcessor = new CustomBatchSpanProcessor(exporter, {
-		maxExportBatchSize: 1024, // Default value from SDK is 512
-		maxQueueSize: 2048, // Default value from SDK is 2048
-		exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value from SDK is 30_000
-		scheduledDelayMillis: 5_000, // OTEL default; shorter window reduces data lost to page unload
-	})
+	const spanProcessor = new CustomBatchSpanProcessor(
+		exporter,
+		{
+			maxExportBatchSize: 1024, // Default value from SDK is 512
+			maxQueueSize: 2048, // Default value from SDK is 2048
+			exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value from SDK is 30_000
+			scheduledDelayMillis: 5_000, // OTEL default; shorter window reduces data lost to page unload
+		},
+		() => [
+			config.getLDContextKeyAttributes?.(),
+			config.getGlobalAttributes?.(),
+		],
+	)
 
 	const resource = new Resource({
 		[SemanticAttributes.ATTR_SERVICE_NAME]:
@@ -205,7 +251,9 @@ export const setupBrowserTracing = (
 		'highlight.project_id': config.projectId,
 		[SemanticAttributes.ATTR_USER_AGENT_ORIGINAL]: navigator.userAgent,
 		'browser.language': navigator.language,
-		'telemetry.distro.name': '@highlight-run/observability',
+		// Must differ from highlight.run's legacy '@highlight-run/observability':
+		// the backend gates LD event forwarding on that name plus its version.
+		'telemetry.distro.name': '@launchdarkly/o11y',
 		'telemetry.distro.version': version,
 	})
 
@@ -261,17 +309,12 @@ export const setupBrowserTracing = (
 		instrumentations.push(
 			new UserInteractionInstrumentation({
 				productAnalyticsEvents: config.productAnalyticsEvents,
-				getLDContextKeyAttributes: config.getLDContextKeyAttributes,
 			}),
 		)
 	}
 
 	if (config.productAnalyticsEvents?.pageViews !== false) {
-		instrumentations.push(
-			new LocationChangeInstrumentation({
-				getLDContextKeyAttributes: config.getLDContextKeyAttributes,
-			}),
-		)
+		instrumentations.push(new LocationChangeInstrumentation())
 	}
 
 	if (config.networkRecordingOptions?.enabled) {
@@ -283,6 +326,15 @@ export const setupBrowserTracing = (
 					config.tracingOrigins,
 				),
 				applyCustomAttributesOnSpan: (span, request, response) => {
+					// Runs first so the app can rename the span even when
+					// recording is skipped for it below. The span has not
+					// ended yet, so updateName still applies.
+					applyHttpRequestSpanHook(
+						config.onHttpRequestSpan,
+						'fetch',
+						span,
+						{ method: (request as RequestInit).method },
+					)
 					if (!(span as any).attributes) {
 						return
 					}
@@ -441,6 +493,15 @@ export const setupBrowserTracing = (
 					),
 					applyCustomAttributesOnSpan: (span, xhr) => {
 						const browserXhr = xhr as BrowserXHR
+						applyHttpRequestSpanHook(
+							config.onHttpRequestSpan,
+							'xhr',
+							span,
+							{
+								method: browserXhr._method,
+								url: browserXhr._url,
+							},
+						)
 						if (!(span as any).attributes) {
 							return
 						}
@@ -665,7 +726,7 @@ export const setSessionSpanAttributes = (span: api.Span): void => {
 	}
 }
 
-class CustomBatchSpanProcessor extends BatchSpanProcessor {
+export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private _pendingSpans = new Set<Promise<void>>()
 	// When set, forceFlush/shutdown return immediately without waiting for
 	// in-flight response-body reads. Used on page unload where waiting risks
@@ -676,8 +737,32 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 		this._skipPendingOnFlush = skip
 	}
 
+	constructor(
+		exporter: SpanExporter,
+		config?: BufferConfig,
+		// Attribute sets stamped on every span as it starts (LD context keys,
+		// attributes from `setAttributes`), highest precedence first.
+		private readonly _getDefaultAttributes?: () => (
+			| Attributes
+			| undefined
+		)[],
+	) {
+		super(exporter, config)
+	}
+
 	onStart(span: SDKSpan, parentContext: Context): void {
 		setSessionSpanAttributes(span)
+		// Applied at start so they reach every span, including the
+		// auto-instrumented ones (document load, fetch/XHR, clicks, page
+		// views). Only keys not yet set are written, so attributes the span
+		// was started with win, and an earlier set wins over a later one.
+		for (const attributes of this._getDefaultAttributes?.() ?? []) {
+			for (const key in attributes) {
+				if (span.attributes[key] === undefined) {
+					span.setAttribute(key, attributes[key])
+				}
+			}
+		}
 		super.onStart(span, parentContext)
 	}
 

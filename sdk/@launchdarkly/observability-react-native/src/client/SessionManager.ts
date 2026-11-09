@@ -61,6 +61,9 @@ export class SessionManager {
 		reloadCount: 0,
 	}
 	private lastPersistAt = 0
+	// The persisted session this JS load replaced (stale or cold start), so
+	// the new session's telemetry can link back to it as `session.previous_id`.
+	private previousSessionId?: string
 
 	constructor(options?: Options, store?: SessionStore) {
 		this.options = {
@@ -110,6 +113,7 @@ export class SessionManager {
 				startTime: Date.now(),
 			}
 			this.resumeInfo = { reloaded: false, elapsedMs: 0, reloadCount: 0 }
+			this.previousSessionId = undefined
 		}
 	}
 
@@ -161,6 +165,9 @@ export class SessionManager {
 			// completes.
 			this.reloadCount = 0
 			this.resumeInfo = { reloaded: false, elapsedMs: 0, reloadCount: 0 }
+			if (previous && previous.sessionId !== this.sessionInfo.sessionId) {
+				this.previousSessionId = previous.sessionId
+			}
 
 			if (this.options.debug && isColdStart) {
 				console.log(
@@ -271,10 +278,22 @@ export class SessionManager {
 		return { ...this.sessionInfo }
 	}
 
+	/**
+	 * The ID of the persisted session this JS load replaced with a new one
+	 * (the previous session timed out, or the app cold started). Undefined
+	 * when the session was resumed or nothing was persisted.
+	 */
+	public getPreviousSessionId(): string | undefined {
+		return this.previousSessionId
+	}
+
 	public getSessionAttributes(): Record<string, string> {
 		return {
 			'session.id': this.sessionInfo.sessionId,
 			'session.start_time': this.sessionInfo.startTime.toString(),
+			...(this.previousSessionId
+				? { 'session.previous_id': this.previousSessionId }
+				: {}),
 		}
 	}
 

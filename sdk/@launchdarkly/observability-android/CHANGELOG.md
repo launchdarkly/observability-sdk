@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.70.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.69.1...launchdarkly-observability-android-0.70.0) (2026-11-06)
+
+
+### Features
+
+* **android:** add setAttributes and removeAttributes ([#860](https://github.com/launchdarkly/observability-sdk/issues/860)) ([a1c02b2](https://github.com/launchdarkly/observability-sdk/commit/a1c02b2b246bd6c27ad8d4f11324968d91271c47))
+
 ## [0.69.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.69.0...launchdarkly-observability-android-0.69.1) (2026-10-21)
 
 

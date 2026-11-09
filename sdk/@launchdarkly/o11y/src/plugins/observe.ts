@@ -81,6 +81,9 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 				projectId: ldCredential,
 				sessionSecureId: this.sessionSecureID,
 			})
+			// Apply pre-init `setAttributes` calls before starting, so they
+			// reach spans recorded during start (e.g. the document load span).
+			LDObserve.applyBufferedAttributes(this.observe)
 			// Without `manualStart` the plugin starts the SDK itself; that start
 			// is handed to `load` so stops and starts queue behind it.
 			const started = options?.manualStart

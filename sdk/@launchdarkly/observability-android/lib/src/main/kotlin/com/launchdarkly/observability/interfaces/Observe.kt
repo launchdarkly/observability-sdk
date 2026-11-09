@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.interfaces
 
 import com.launchdarkly.observability.bridge.toOtelAttributes
+import com.launchdarkly.observability.client.GlobalAttributesStore
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -96,6 +97,42 @@ interface TracesApi {
  * Provides methods for recording various types of information.
  */
 interface Observe : MetricsApi, LogsApi, TracesApi {
+    /**
+     * Merges [attributes] by key into the process-wide global attributes.
+     *
+     * Global attributes are added to every span (manual and automatic, captured at span start),
+     * log record, and metric data point recorded after this call. They only fill keys that are not
+     * already present: attributes passed to an individual call (e.g. [startSpan], [recordLog],
+     * [recordMetric]) always win over globals, and globals win over resource attributes.
+     *
+     * Globals are kept in memory only: they are not persisted and are not cleared when the session
+     * rotates. Calls made before the SDK is initialized take effect once it is. SDK-managed session
+     * keys (`session.id`, `highlight.session_id`) are ignored.
+     *
+     * @param attributes The attributes to add or replace.
+     */
+    fun setAttributes(attributes: Attributes) {
+        GlobalAttributesStore.set(attributes)
+    }
+
+    /**
+     * Merges [properties] into the process-wide global attributes. Same as the [Attributes]
+     * overload, but values are supplied as a plain map and converted with the same rules as a
+     * `track` event's `properties`.
+     */
+    fun setAttributes(properties: Map<String, Any?>) {
+        setAttributes(properties.toOtelAttributes())
+    }
+
+    /**
+     * Removes the global attributes with the given [keys]. Unknown keys are ignored.
+     *
+     * @param keys The attribute key names to remove.
+     */
+    fun removeAttributes(keys: Collection<String>) {
+        GlobalAttributesStore.remove(keys)
+    }
+
     /**
      * Requests a flush of all pending telemetry data (traces, logs, metrics).
      *

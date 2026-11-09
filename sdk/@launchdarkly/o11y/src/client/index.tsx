@@ -1,5 +1,9 @@
 import { getRecordSequentialIdPlugin } from '@highlight-run/rrweb-rrweb-plugin-sequential-id-record'
-import { eventWithTime, listenerHandler } from '@highlight-run/rrweb-types'
+import {
+	EventType,
+	eventWithTime,
+	listenerHandler,
+} from '@highlight-run/rrweb-types'
 import { print } from 'graphql'
 import { GraphQLClient } from 'graphql-request'
 import stringify from 'json-stringify-safe'
@@ -241,6 +245,7 @@ export class Highlight {
 	_isCrossOriginIframe!: boolean
 	_eventBytesSinceSnapshot!: number
 	_lastSnapshotTime!: number
+	_snapshotPayloadIds!: Set<number>
 	_lastVisibilityChangeTime!: number
 	pushPayloadTimerId!: ReturnType<typeof setTimeout> | undefined
 	hasSessionUnloaded!: boolean
@@ -298,7 +303,12 @@ export class Highlight {
 			new HighlightClientWorker() as HighlightClientRequestWorker
 		this._worker.onmessage = (e) => {
 			if (e.data.response?.type === MessageType.AsyncEvents) {
-				this._eventBytesSinceSnapshot += e.data.response.eventsSize
+				// A full snapshot's own bytes don't count toward the next one;
+				// otherwise a page whose snapshot clears the threshold
+				// re-snapshots every time the time threshold passes.
+				if (!this._snapshotPayloadIds.delete(e.data.response.id)) {
+					this._eventBytesSinceSnapshot += e.data.response.eventsSize
+				}
 				this.logger.log(
 					`Web worker sent payloadID ${e.data.response.id} size ${
 						e.data.response.eventsSize
@@ -491,6 +501,7 @@ export class Highlight {
 
 		this._eventBytesSinceSnapshot = 0
 		this._lastSnapshotTime = new Date().getTime()
+		this._snapshotPayloadIds = new Set()
 		this._lastVisibilityChangeTime = new Date().getTime()
 	}
 
@@ -661,6 +672,7 @@ export class Highlight {
 					serviceName:
 						this.options?.serviceName ?? 'highlight-browser',
 					instrumentations: this.options?.otel?.instrumentations,
+					onHttpRequestSpan: this.options?.otel?.onHttpRequestSpan,
 					getIntegrations: () => [...this._integrations],
 					productAnalyticsEvents: this._productAnalyticsEvents(),
 				},
@@ -1668,6 +1680,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				data: compressedBase64,
 			})
 		} else {
+			if (events.some((e) => e.type === EventType.FullSnapshot)) {
+				this._snapshotPayloadIds.add(payloadId)
+			}
 			this._worker.postMessage({
 				message: {
 					type: MessageType.AsyncEvents,

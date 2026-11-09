@@ -3,7 +3,6 @@
 import { InstrumentationBase, isWrapped } from '@opentelemetry/instrumentation'
 
 import * as api from '@opentelemetry/api'
-import { Attributes } from '@opentelemetry/api'
 import { hrTime } from '@opentelemetry/core'
 import {
 	EventName,
@@ -20,7 +19,6 @@ const EVENT_NAVIGATION_NAME = 'Navigation:'
 
 export type UserInteractionConfig = UserInteractionInstrumentationConfig & {
 	productAnalyticsEvents?: ProductAnalyticsEvents
-	getLDContextKeyAttributes?: () => Attributes | undefined
 }
 
 function defaultShouldPreventSpanCreation() {
@@ -49,9 +47,6 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 	>()
 	private _eventNames: Set<EventName>
 	private _shouldPreventSpanCreation: ShouldPreventSpanCreation
-	private _getLDContextKeyAttributes:
-		| (() => Attributes | undefined)
-		| undefined
 
 	constructor(config: UserInteractionConfig = {}) {
 		super(
@@ -60,7 +55,6 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 			config,
 		)
 
-		this._getLDContextKeyAttributes = config.getLDContextKeyAttributes
 		this._eventNames = new Set((config?.eventNames ?? []) as EventName[])
 		if (config.productAnalyticsEvents?.clicks !== false) {
 			this._eventNames.add('click')
@@ -168,11 +162,6 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 					span.setAttribute('event.scrollX', window.scrollX)
 					span.setAttribute('event.scrollY', window.scrollY)
 				}
-			}
-
-			const contextKeys = this._getLDContextKeyAttributes?.()
-			if (contextKeys) {
-				span.setAttributes(contextKeys)
 			}
 
 			if (

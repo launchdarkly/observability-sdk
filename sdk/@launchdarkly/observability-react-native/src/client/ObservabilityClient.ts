@@ -316,6 +316,10 @@ export class ObservabilityClient {
 		this.instrumentationManager.removeAttributes(keys)
 	}
 
+	public setContextKeys(contextKeys: Attributes): void {
+		this.instrumentationManager.setContextKeyAttributes(contextKeys)
+	}
+
 	public track(
 		key: string,
 		properties?: TrackProperties,
