@@ -5,7 +5,7 @@ go 1.25.0
 toolchain go1.26.10
 
 require (
-	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/highlight/highlight/sdk/highlight-go v0.10.2
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/trace v1.44.0
