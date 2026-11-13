@@ -15,6 +15,19 @@ buildscript {
     classpath "com.android.tools.build:gradle:8.7.2"
     // noinspection DifferentKotlinGradleVersion
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${getExtOrDefault('kotlinVersion')}"
+    // Patched versions of vulnerable AGP 8.7.2 buildscript transitives.
+    constraints {
+      classpath "org.bouncycastle:bcprov-jdk18on:1.86"
+      classpath "org.bouncycastle:bcpkix-jdk18on:1.86"
+      classpath "org.bouncycastle:bcutil-jdk18on:1.86"
+      classpath "com.fasterxml.jackson.core:jackson-core:2.18.11"
+      classpath "com.fasterxml.jackson.core:jackson-databind:2.18.11"
+      classpath "com.google.protobuf:protobuf-java:3.25.5"
+      classpath "commons-io:commons-io:2.14.0"
+      classpath "org.apache.commons:commons-compress:1.26.0"
+      classpath "org.bitbucket.b_c:jose4j:0.9.6"
+      classpath "org.jdom:jdom2:2.0.6.1"
+    }
   }
 }
 

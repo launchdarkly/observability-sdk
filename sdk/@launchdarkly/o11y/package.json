@@ -134,7 +134,7 @@
 		"tslib": "^2.6.2",
 		"typedoc": "^0.28.4",
 		"typescript": "^5.0.4",
-		"vite": "^6.4.3",
+		"vite": "^6.4.4",
 		"vite-plugin-dts": "^4.5.3",
 		"vite5": "npm:vite@^5.4.21",
 		"vitest": "^4.1.0",
