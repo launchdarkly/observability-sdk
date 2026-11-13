@@ -179,7 +179,7 @@ GEM
     jbuilder (2.15.1)
       actionview (>= 7.0.0)
       activesupport (>= 7.0.0)
-    json (3.1.0)
+    json (2.19.9)
     launchdarkly-server-sdk (8.20.0)
       benchmark (~> 0.1, >= 0.1.1)
       concurrent-ruby (~> 1.1)
@@ -469,6 +469,7 @@ DEPENDENCIES
   debug
   importmap-rails
   jbuilder
+  json (~> 2.19.9)
   launchdarkly-observability!
   launchdarkly-server-sdk (~> 8.0)
   minitest (~> 5.0)
