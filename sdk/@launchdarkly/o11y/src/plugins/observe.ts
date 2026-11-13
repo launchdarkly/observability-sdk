@@ -181,6 +181,10 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						hook.afterEvaluation?.(hookContext, data, detail)
 					}
 
+					if (this.options?.enableFlagEvaluationSpans === false) {
+						return data
+					}
+
 					const eventAttributes: Attributes = {
 						[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
 						[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
