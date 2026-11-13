@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.7](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.3.6...observability-next-0.3.7) (2026-11-13)
+
+
+### Bug Fixes
+
+* remediate next, react-server-dom-webpack, bouncycastle, anyio, handlebars and dependency advisories ([#757](https://github.com/launchdarkly/observability-sdk/issues/757)) ([08b8067](https://github.com/launchdarkly/observability-sdk/commit/08b8067e323012d3db934be5ddda2345aeb22d37))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.5.1
+    * @launchdarkly/session-replay bumped to 1.2.7
+
 ## [0.3.6](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.3.5...observability-next-0.3.6) (2026-11-06)
 
 

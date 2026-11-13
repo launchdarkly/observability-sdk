@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.25.1...session-replay-react-native-0.25.2) (2026-11-13)
+
+
+### Bug Fixes
+
+* remediate next, react-server-dom-webpack, bouncycastle, anyio, handlebars and dependency advisories ([#757](https://github.com/launchdarkly/observability-sdk/issues/757)) ([08b8067](https://github.com/launchdarkly/observability-sdk/commit/08b8067e323012d3db934be5ddda2345aeb22d37))
+
 ## [0.25.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.25.0...session-replay-react-native-0.25.1) (2026-11-03)
 
 
