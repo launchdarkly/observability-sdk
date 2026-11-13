@@ -5,10 +5,12 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 ruby '~> 3.3.4'
 
-# Keep the legacy Rails-family instrumentation coverage on the oldest safe
-# Rails release line. 7.1 no longer receives security patches (see
-# GHSA-xr9x-r78c-5hrm, fixed in 7.2.3.2 with no 7.1 backport).
-gem 'rails', '~> 7.2.3', '>= 7.2.3.2'
+# This app used to pin the oldest patched Rails line (7.2) to keep legacy
+# Rails-family instrumentation coverage. It now runs on 8.0.5.2 because that is
+# the first release patched for the critical activestorage arbitrary file
+# write/read advisory (GHSA-f3w6-w445-fwh9 / CVE-2026-122006); no 7.2 backport
+# exists, so staying on 7.2 would leave the e2e app vulnerable.
+gem 'rails', '~> 8.0.5.2'
 
 # The Rails test runner is incompatible with minitest 6.x (`run` arity changed).
 gem 'minitest', '~> 5.0'
