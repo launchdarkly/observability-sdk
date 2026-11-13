@@ -13,11 +13,16 @@ gem 'rails', '~> 7.2.3', '>= 7.2.3.2'
 # The Rails test runner is incompatible with minitest 6.x (`run` arity changed).
 gem 'minitest', '~> 5.0'
 
+# Rails 7.2 still calls JSON.parse/generate with `quirks_mode: true`, which
+# json 3.x rejects with an ArgumentError. launchdarkly-server-sdk allows
+# json >= 2.3, < 4, so pin the 2.19 line this Rails release can use.
+gem 'json', '~> 2.19.9'
+
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
 gem 'sprockets-rails'
 
 # Use sqlite3 as the database for Active Record
-gem 'sqlite3', '~> 1.4'
+gem 'sqlite3', '~> 2.10'
 
 # Use the Puma web server [https://github.com/puma/puma]
 gem 'puma', '~> 7.2', '>= 7.2.1'
