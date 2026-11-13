@@ -4,7 +4,9 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby '~> 3.3.4'
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 7.2.3.1"
+# 8.0.5.2 is the first release patched for the critical activestorage
+# arbitrary file write/read advisory (GHSA-f3w6-w445-fwh9 / CVE-2026-122006).
+gem "rails", "~> 8.0.5.2"
 
 # Use sqlite3 as the database for Active Record
 gem "sqlite3", "~> 2.10"

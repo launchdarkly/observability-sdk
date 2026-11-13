@@ -2,21 +2,26 @@
 
 A legacy Rails application that pins the LaunchDarkly observability plugin to a
 known-broken scenario and guards against it regressing. The historical directory
-name is retained to avoid path churn, while Rails is constrained to the oldest
-release line that still receives security patches (7.2), and the app keeps
-`config.load_defaults 7.0`.
+name is retained to avoid path churn. Rails is pinned to **8.0.5.2**, the first
+release patched for the critical activestorage arbitrary file write/read
+advisory (GHSA-f3w6-w445-fwh9 / CVE-2026-122006); no 7.2 backport exists, so the
+app can no longer stay on the older line. It keeps `config.load_defaults 7.0`.
 
 ## Why this exists
 
 The plugin used to depend on `opentelemetry-instrumentation-all`, whose
 Rails-family members could fail their runtime `compatible?` checks and never
 attach. This app keeps dedicated coverage for the individually pinned
-Rails-family instrumentations on an older supported Rails release.
+Rails-family instrumentations.
 
-Ruby stays at **3.3.4** on purpose: on a current Ruby, Bundler still resolves the
-*latest* instrumentation gems, faithfully matching a real Rails 7.0 customer. (On
+Ruby stays at **3.3.4** on purpose: on a current Ruby, Bundler resolves the
+*latest* instrumentation gems, matching real customer dependency resolution. (On
 Ruby < 3.2, Bundler would self-heal to an older instrumentation set via
 `required_ruby_version` and the bug would not reproduce.)
+
+> Note: because of the activestorage CVE above this app no longer runs Rails 7.0,
+> so it no longer provides Rails 7.0 regression coverage. The CI job name is
+> retained for path stability.
 
 ## How the telemetry assertion works
 
