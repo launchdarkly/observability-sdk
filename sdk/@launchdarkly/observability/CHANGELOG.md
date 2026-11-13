@@ -1,5 +1,14 @@
 # @launchdarkly/observability
 
+## [1.5.1](https://github.com/launchdarkly/observability-sdk/compare/observability-1.5.0...observability-1.5.1) (2026-11-13)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/o11y bumped to 1.6.1
+
 ## [1.5.0](https://github.com/launchdarkly/observability-sdk/compare/observability-1.4.0...observability-1.5.0) (2026-11-06)
 
 

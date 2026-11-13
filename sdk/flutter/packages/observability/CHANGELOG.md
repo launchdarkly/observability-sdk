@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [1.0.3](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-1.0.2...launchdarkly_flutter_observability-1.0.3) (2026-11-13)
+
+
+### Bug Fixes
+
+* remediate next, react-server-dom-webpack, bouncycastle, anyio, handlebars and dependency advisories ([#757](https://github.com/launchdarkly/observability-sdk/issues/757)) ([08b8067](https://github.com/launchdarkly/observability-sdk/commit/08b8067e323012d3db934be5ddda2345aeb22d37))
+
 ## [1.0.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-1.0.1...launchdarkly_flutter_observability-1.0.2) (2026-10-07)
 
 

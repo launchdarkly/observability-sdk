@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.6.0...o11y-1.6.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* remediate next, react-server-dom-webpack, bouncycastle, anyio, handlebars and dependency advisories ([#757](https://github.com/launchdarkly/observability-sdk/issues/757)) ([08b8067](https://github.com/launchdarkly/observability-sdk/commit/08b8067e323012d3db934be5ddda2345aeb22d37))
+
 ## [1.6.0](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.5.0...o11y-1.6.0) (2026-11-06)
 
 
