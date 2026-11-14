@@ -58,6 +58,7 @@
 	},
 	"overrides": {
 		"image-size": "^1.2.1",
+		"decode-uri-component": "^0.5.1",
 		"tar": "^7.5.19",
 		"minimatch": "^3.1.5",
 		"serialize-javascript": "^7.0.5",
