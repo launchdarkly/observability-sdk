@@ -183,9 +183,6 @@
     <Reference Include="OpenTelemetry.Resources.Azure, Version=1.0.0.52, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
       <HintPath>..\packages\OpenTelemetry.Resources.Azure.1.0.0-beta.8\lib\netstandard2.0\OpenTelemetry.Resources.Azure.dll</HintPath>
     </Reference>
-    <Reference Include="OpenTelemetry.Resources.Host, Version=0.1.0.53, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
-      <HintPath>..\packages\OpenTelemetry.Resources.Host.0.1.0-beta.2\lib\net462\OpenTelemetry.Resources.Host.dll</HintPath>
-    </Reference>
     <Reference Include="OpenTelemetry.Resources.Process, Version=0.1.0.55, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
       <HintPath>..\packages\OpenTelemetry.Resources.Process.0.1.0-beta.2\lib\net462\OpenTelemetry.Resources.Process.dll</HintPath>
     </Reference>
