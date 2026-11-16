@@ -9610,7 +9610,7 @@ __metadata:
     encoding: "npm:^0.1.13"
     pg: "npm:^8.13.3"
     reflect-metadata: "npm:^0.2.2"
-    require-in-the-middle: "npm:^7.4.0"
+    require-in-the-middle: "npm:^8.0.1"
     rollup: "npm:^4.34.8"
     rxjs: "npm:^7.8.1"
     typedoc: "npm:^0.28.7"
@@ -44205,7 +44205,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"require-in-the-middle@npm:^8.0.0":
+"require-in-the-middle@npm:^8.0.0, require-in-the-middle@npm:^8.0.1":
   version: 8.0.1
   resolution: "require-in-the-middle@npm:8.0.1"
   dependencies:
