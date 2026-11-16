@@ -79,17 +79,16 @@ export function applyInstrumentationConfig(
 		registered.add(name)
 		const sdk = sdkConfig[name]
 		const user = userConfig[name]
-		if (!sdk && !user) {
-			// Restore the load-time config in case an earlier client changed it.
-			const original = snapshot.get(name)
-			if (original) instrumentation.setConfig({ ...original })
-			continue
-		}
-		const merged = mergeInstrumentationConfig(snapshot.get(name), sdk, user)
-		instrumentation.setConfig(merged)
-		if (user?.enabled === false) {
+		// With no config for it, this restores the load-time config in case
+		// an earlier client changed it.
+		instrumentation.setConfig(
+			mergeInstrumentationConfig(snapshot.get(name), sdk, user),
+		)
+		// Bring the patch state in line with the config. Both calls are no-ops
+		// when the instrumentation is already in that state.
+		if (instrumentation.getConfig().enabled === false) {
 			instrumentation.disable()
-		} else if (user?.enabled === true) {
+		} else {
 			instrumentation.enable()
 		}
 	}

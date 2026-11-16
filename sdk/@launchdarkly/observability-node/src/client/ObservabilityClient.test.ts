@@ -144,6 +144,34 @@ describe('client', () => {
 			).toBeUndefined()
 		})
 
+		it('keeps an instrumentation set to enabled: false disabled after start', () => {
+			const registered = (
+				new ObservabilityClient('abc123').otel[
+					'_instrumentations'
+				] as any[]
+			).find(
+				(i) =>
+					i.instrumentationName ===
+					'@opentelemetry/instrumentation-dns',
+			)
+			expect(registered['_enabled']).toBe(true)
+
+			const client = new ObservabilityClient('abc123', {
+				instrumentationConfig: {
+					'@opentelemetry/instrumentation-dns': { enabled: false },
+				},
+			})
+
+			expect(registered['_enabled']).toBe(false)
+			expect(
+				instrumentation(client, '@opentelemetry/instrumentation-dns'),
+			).toBeUndefined()
+
+			// A later client without the option turns it back on.
+			new ObservabilityClient('abc123')
+			expect(registered['_enabled']).toBe(true)
+		})
+
 		it('warns about names that match no registered instrumentation', () => {
 			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 			new ObservabilityClient('abc123', {

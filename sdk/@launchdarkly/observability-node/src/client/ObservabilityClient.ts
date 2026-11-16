@@ -211,6 +211,11 @@ export class ObservabilityClient {
 				`@launchdarkly/observability-node: instrumentationConfig names instrumentations that are not registered: ${unknownInstrumentations.join(', ')}`,
 			)
 		}
+		// NodeSDK.start() calls enable() on every instrumentation it is given
+		// whose config has `enabled: false`, so leave disabled ones out.
+		const enabledInstrumentations = instrumentations.filter(
+			(i) => i.getConfig().enabled !== false,
+		)
 
 		const config = {
 			url: options.otlpEndpoint ?? OTLP_HTTP,
@@ -294,7 +299,7 @@ export class ObservabilityClient {
 			traceExporter: exporter,
 			contextManager: new AsyncLocalStorageContextManager(),
 			sampler: new AlwaysOnSampler(),
-			instrumentations,
+			instrumentations: enabledInstrumentations,
 			textMapPropagator: new CompositePropagator({
 				propagators: [
 					new W3CBaggagePropagator(),
