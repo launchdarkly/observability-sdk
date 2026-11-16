@@ -27,10 +27,7 @@ import {
 	W3CTraceContextPropagator,
 } from '@opentelemetry/core'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
-import {
-	type Instrumentation,
-	registerInstrumentations,
-} from '@opentelemetry/instrumentation'
+import { registerInstrumentations } from '@opentelemetry/instrumentation'
 import { CompressionAlgorithm } from '@opentelemetry/otlp-exporter-base'
 import {
 	processDetector,
@@ -58,7 +55,7 @@ import {
 	SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
 } from '@opentelemetry/semantic-conventions'
 import { OTLPExporterNodeConfigBase } from '@opentelemetry/otlp-exporter-base/build/src/configuration/legacy-node-configuration'
-import { NodeOptions } from '../api/Options.js'
+import { InstrumentationConfigMap, NodeOptions } from '../api/Options.js'
 import { Metric } from '../api/Metric.js'
 import { RequestContext } from '../api/RequestContext.js'
 import { Headers, IncomingHttpHeaders } from '../api/headers.js'
@@ -66,6 +63,11 @@ import { getSamplingConfig } from '../graph/getSamplingConfig.js'
 import { SamplingTraceExporter } from '../otel/SamplingTraceExporter.js'
 import { SamplingLogExporter } from '../otel/SamplingLogExporter.js'
 import { CustomSampler } from '../otel/sampling/CustomSampler.js'
+import { ShouldExportSpanProcessor } from '../otel/ShouldExportSpanProcessor.js'
+import {
+	applyInstrumentationConfig,
+	snapshotInstrumentationConfig,
+} from '../otel/instrumentationConfig.js'
 
 const OTLP_HTTP = 'https://otel.observability.app.launchdarkly.com:4318'
 const BACKEND_URL = 'https://pub.observability.app.launchdarkly.com'
@@ -101,6 +103,31 @@ const instrumentations = getNodeAutoInstrumentations({
 
 instrumentations.push(new PrismaInstrumentation())
 registerInstrumentations({ instrumentations })
+const loadTimeInstrumentationConfig =
+	snapshotInstrumentationConfig(instrumentations)
+
+const PG_INSTRUMENTATION = '@opentelemetry/instrumentation-pg'
+
+function sdkInstrumentationConfig(
+	options: NodeOptions,
+): InstrumentationConfigMap {
+	const pg: PgInstrumentationConfig =
+		options.disablePgInstrumentationAttributes
+			? {
+					enhancedDatabaseReporting: false,
+					responseHook: (span, response) => {
+						span.setAttribute('db.connection_string', `[REDACTED]`)
+						span.setAttribute('db.name', `[REDACTED]`)
+						span.setAttribute('db.statement', `[REDACTED]`)
+						span.setAttribute('db.system', `[REDACTED]`)
+						span.setAttribute('db.user', `[REDACTED]`)
+					},
+				}
+			: {
+					enhancedDatabaseReporting: true,
+				}
+	return { [PG_INSTRUMENTATION]: pg }
+}
 
 const OTEL_TO_OPTIONS = {
 	[ATTR_SERVICE_NAME]: 'serviceName',
@@ -173,27 +200,16 @@ export class ObservabilityClient {
 			})
 		}
 
-		const pg: Instrumentation<PgInstrumentationConfig> | undefined =
-			instrumentations.find(
-				(i) =>
-					i.instrumentationName ===
-					'@opentelemetry/instrumentation-pg',
+		const unknownInstrumentations = applyInstrumentationConfig(
+			instrumentations,
+			loadTimeInstrumentationConfig,
+			sdkInstrumentationConfig(options),
+			options.instrumentationConfig,
+		)
+		if (unknownInstrumentations.length) {
+			console.warn(
+				`@launchdarkly/observability-node: instrumentationConfig names instrumentations that are not registered: ${unknownInstrumentations.join(', ')}`,
 			)
-		if (options.disablePgInstrumentationAttributes) {
-			pg?.setConfig({
-				enhancedDatabaseReporting: false,
-				responseHook: (span, response) => {
-					span.setAttribute('db.connection_string', `[REDACTED]`)
-					span.setAttribute('db.name', `[REDACTED]`)
-					span.setAttribute('db.statement', `[REDACTED]`)
-					span.setAttribute('db.system', `[REDACTED]`)
-					span.setAttribute('db.user', `[REDACTED]`)
-				},
-			})
-		} else {
-			pg?.setConfig({
-				enhancedDatabaseReporting: true,
-			})
 		}
 
 		const config = {
@@ -265,7 +281,14 @@ export class ObservabilityClient {
 			autoDetectResources: true,
 			resourceDetectors: [processDetector],
 			resource,
-			spanProcessors: [this.processor],
+			spanProcessors: [
+				options.shouldExportSpan
+					? new ShouldExportSpanProcessor(
+							this.processor,
+							options.shouldExportSpan,
+						)
+					: this.processor,
+			],
 			logRecordProcessors: [logsProcessor],
 			metricReader: this.metricsReader,
 			traceExporter: exporter,

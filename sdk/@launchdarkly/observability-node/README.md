@@ -58,6 +58,42 @@ app.get('/order', (req, res) => {
 })
 ```
 
+## Filtering spans
+
+Health checks, liveness and readiness probes, and metrics scrapes can produce many spans of little value. There are two ways to drop them.
+
+### Configure the instrumentations
+
+`instrumentationConfig` passes options through to the OpenTelemetry instrumentations the plugin registers, keyed by package name. Use it to reach options such as `ignoreIncomingRequestHook` and `ignoreOutgoingRequestHook` on `@opentelemetry/instrumentation-http`. An ignored request never creates a span, so this is the cheapest filter.
+
+```TypeScript
+new Observability({
+  instrumentationConfig: {
+    '@opentelemetry/instrumentation-http': {
+      // Vercel's runtime supervisor probes each function instance here.
+      ignoreIncomingRequestHook: (req) => req.url === '/_vercel/ping',
+    },
+  },
+})
+```
+
+Your config is merged over the plugin's defaults for each instrumentation. Plain options you set replace the plugin's. A hook the plugin also sets, such as the pino `logHook` or the pg `responseHook` used by `disablePgInstrumentationAttributes`, is chained: the plugin's runs first, then yours.
+
+The instrumentations are registered when the package is loaded, so a few things can't be changed this way:
+
+- `enabled: false` turns an instrumentation off, but `enabled: true` can't turn on one that wasn't registered at load. Use `LAUNCHDARKLY_OTEL_NODE_ENABLE_FILESYSTEM_INSTRUMENTATION` for `instrumentation-fs`, and `OTEL_NODE_ENABLED_INSTRUMENTATIONS` / `OTEL_NODE_DISABLED_INSTRUMENTATIONS` for the rest.
+- Options an instrumentation reads only when it patches a module, such as `disableOutgoingRequestInstrumentation`, may not apply to modules that were already loaded. Hooks are read on every call and always apply.
+
+### Drop finished spans
+
+`shouldExportSpan` is called for every finished span. Return `false` to drop it. It works for any instrumentation, but the span has already been recorded, and dropping a span doesn't drop its children.
+
+```TypeScript
+new Observability({
+  shouldExportSpan: (span) => span.attributes['http.target'] !== '/healthz',
+})
+```
+
 ## Getting started
 
 Refer to the [SDK documentation](https://launchdarkly.com/docs/sdk/server-side/node-js#get-started) for instructions on getting started with using the SDK.

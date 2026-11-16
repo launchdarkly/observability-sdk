@@ -1,6 +1,7 @@
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 import { ObservabilityClient } from './ObservabilityClient.js'
-import { describe, expect, it } from 'vitest'
+import { ShouldExportSpanProcessor } from '../otel/ShouldExportSpanProcessor.js'
+import { describe, expect, it, vi } from 'vitest'
 
 describe('client', () => {
 	it('includes process information in the resource', () => {
@@ -41,5 +42,128 @@ describe('client', () => {
 		expect(
 			resource.attributes[SemanticResourceAttributes.SERVICE_VERSION],
 		).toEqual('abc123')
+	})
+
+	describe('instrumentationConfig', () => {
+		const instrumentation = (client: ObservabilityClient, name: string) =>
+			(client.otel['_instrumentations'] as any[]).find(
+				(i) => i.instrumentationName === name,
+			)
+
+		it('applies user config to the registered http instrumentation', () => {
+			const ignoreIncomingRequestHook = vi.fn(() => true)
+			const client = new ObservabilityClient('abc123', {
+				instrumentationConfig: {
+					'@opentelemetry/instrumentation-http': {
+						ignoreIncomingRequestHook,
+					},
+				},
+			})
+
+			const config = instrumentation(
+				client,
+				'@opentelemetry/instrumentation-http',
+			).getConfig()
+			expect(config.ignoreIncomingRequestHook).toBe(
+				ignoreIncomingRequestHook,
+			)
+		})
+
+		it('keeps the SDK pino logHook and runs it before the user hook', () => {
+			const userLogHook = vi.fn((_span: any, record: any) => {
+				expect(record.fromSpan).toBe('yes')
+			})
+			const client = new ObservabilityClient('abc123', {
+				instrumentationConfig: {
+					'@opentelemetry/instrumentation-pino': {
+						logHook: userLogHook,
+					},
+				},
+			})
+
+			const record: Record<string, unknown> = {}
+			instrumentation(client, '@opentelemetry/instrumentation-pino')
+				.getConfig()
+				.logHook({ attributes: { fromSpan: 'yes' } }, record, 30)
+			expect(record.fromSpan).toBe('yes')
+			expect(userLogHook).toHaveBeenCalledTimes(1)
+		})
+
+		it('runs the pg redaction hook before the user responseHook', () => {
+			const seen: Record<string, unknown> = {}
+			const span = {
+				setAttribute: (k: string, v: unknown) => {
+					seen[k] = v
+				},
+			}
+			const userResponseHook = vi.fn(() => {
+				expect(seen['db.statement']).toBe('[REDACTED]')
+			})
+			const client = new ObservabilityClient('abc123', {
+				disablePgInstrumentationAttributes: true,
+				instrumentationConfig: {
+					'@opentelemetry/instrumentation-pg': {
+						responseHook: userResponseHook,
+					},
+				},
+			})
+
+			const config = instrumentation(
+				client,
+				'@opentelemetry/instrumentation-pg',
+			).getConfig()
+			expect(config.enhancedDatabaseReporting).toBe(false)
+			config.responseHook(span, { data: {} })
+			expect(userResponseHook).toHaveBeenCalledTimes(1)
+		})
+
+		it('enables enhanced pg reporting by default', () => {
+			const client = new ObservabilityClient('abc123')
+			const config = instrumentation(
+				client,
+				'@opentelemetry/instrumentation-pg',
+			).getConfig()
+			expect(config.enhancedDatabaseReporting).toBe(true)
+			expect(config.responseHook).toBeUndefined()
+		})
+
+		it("does not carry one client's config into the next", () => {
+			new ObservabilityClient('abc123', {
+				instrumentationConfig: {
+					'@opentelemetry/instrumentation-http': {
+						ignoreIncomingRequestHook: () => true,
+					},
+				},
+			})
+			const client = new ObservabilityClient('abc123')
+			expect(
+				instrumentation(
+					client,
+					'@opentelemetry/instrumentation-http',
+				).getConfig().ignoreIncomingRequestHook,
+			).toBeUndefined()
+		})
+
+		it('warns about names that match no registered instrumentation', () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+			new ObservabilityClient('abc123', {
+				instrumentationConfig: { 'not-an-instrumentation': {} },
+			})
+			expect(warn).toHaveBeenCalledWith(
+				expect.stringContaining('not-an-instrumentation'),
+			)
+			warn.mockRestore()
+		})
+	})
+
+	describe('shouldExportSpan', () => {
+		it('wraps the span processor when set', () => {
+			const client = new ObservabilityClient('abc123', {
+				shouldExportSpan: () => true,
+			})
+			const processors = client.otel['_tracerProviderConfig']
+				?.spanProcessors as unknown[]
+			expect(processors?.[0]).toBeInstanceOf(ShouldExportSpanProcessor)
+		})
 	})
 })
