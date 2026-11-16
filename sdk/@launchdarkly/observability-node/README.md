@@ -34,6 +34,24 @@ const client = init(
 )
 ```
 
+## Instrumenting libraries loaded with `import`
+
+The plugin instruments libraries such as `pg`, `ioredis` and `express` by patching them as they load. Libraries loaded with `require()` are patched automatically. Libraries loaded with `import` can only be patched by a Node.js loader hook, which has to be registered before your application starts. Register it when:
+
+- your application is an ES module (for example, a NestJS 12 project, which uses ES modules by default), or
+- a dependency loads an instrumented library with `import` (for example, MikroORM 7 loads `pg` this way), even if your application is CommonJS.
+
+Start Node.js with the `register` entry point:
+
+```shell
+node --import @launchdarkly/observability-node/register dist/main.js
+
+# or, when you can't change the command line
+NODE_OPTIONS="--import @launchdarkly/observability-node/register" node dist/main.js
+```
+
+Keep the `Observability` plugin in your LaunchDarkly client configuration; the entry point only installs the hooks. It also loads the instrumentations before your application code, so libraries are patched even when they are imported before the LaunchDarkly client is initialized. This requires Node.js 18.19, 20.6 or later.
+
 ## Manual instrumentation with LDObserve
 
 The `Observability` plugin automatically captures flag evaluations, logs, and traces. Use the `LDObserve` singleton when you want to record custom metrics, logs, errors, or spans so they are correlated with your LaunchDarkly data.
