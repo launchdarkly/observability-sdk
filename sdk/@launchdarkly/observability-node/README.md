@@ -34,6 +34,25 @@ const client = init(
 )
 ```
 
+## Filtering spans at the source
+
+Use `instrumentationConfig` to configure the OpenTelemetry auto-instrumentations the plugin registers. It takes the same map as `getNodeAutoInstrumentations()` from `@opentelemetry/auto-instrumentations-node`, keyed by instrumentation name, and each entry is merged over the plugin's defaults for that instrumentation. For example, this drops spans for health checks and Vercel's `GET /_vercel/ping` probes but keeps every other inbound request span:
+
+```TypeScript
+new Observability({
+  instrumentationConfig: {
+    '@opentelemetry/instrumentation-http': {
+      ignoreIncomingRequestHook: (req) =>
+        req.url === '/_vercel/ping' || req.url === '/healthz',
+    },
+    // `enabled: false` turns an instrumentation off completely.
+    '@opentelemetry/instrumentation-dns': { enabled: false },
+  },
+})
+```
+
+Request-time options (`ignoreIncomingRequestHook`, `ignoreOutgoingRequestHook`, `requestHook`, `responseHook` and similar) always apply. Options read when a module is patched (such as `disableIncomingRequestInstrumentation`) only affect modules loaded after the plugin is initialized. Instrumentations that are off by default (such as `fs`) or turned off with `OTEL_NODE_DISABLED_INSTRUMENTATIONS` cannot be turned on here.
+
 ## Manual instrumentation with LDObserve
 
 The `Observability` plugin automatically captures flag evaluations, logs, and traces. Use the `LDObserve` singleton when you want to record custom metrics, logs, errors, or spans so they are correlated with your LaunchDarkly data.

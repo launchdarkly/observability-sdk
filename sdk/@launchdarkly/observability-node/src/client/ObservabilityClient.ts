@@ -48,6 +48,7 @@ import {
 } from '@opentelemetry/sdk-logs'
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics'
 import { hookConsole } from './hooks.js'
+import { applyInstrumentationConfig } from './instrumentationConfig.js'
 import log from './log.js'
 
 import * as packageJson from '../../package.json'
@@ -196,6 +197,14 @@ export class ObservabilityClient {
 			})
 		}
 
+		// Instrumentations are registered at module load (above) so that they
+		// patch modules required later; user config is applied to those same
+		// instances here, after the plugin's own defaults.
+		const activeInstrumentations = applyInstrumentationConfig(
+			instrumentations,
+			options.instrumentationConfig,
+		)
+
 		const config = {
 			url: options.otlpEndpoint ?? OTLP_HTTP,
 			keepAlive: true,
@@ -271,7 +280,7 @@ export class ObservabilityClient {
 			traceExporter: exporter,
 			contextManager: new AsyncLocalStorageContextManager(),
 			sampler: new AlwaysOnSampler(),
-			instrumentations,
+			instrumentations: activeInstrumentations,
 			textMapPropagator: new CompositePropagator({
 				propagators: [
 					new W3CBaggagePropagator(),

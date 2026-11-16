@@ -1,4 +1,5 @@
 import { Attributes } from '@opentelemetry/api'
+import type { InstrumentationConfigMap } from '@opentelemetry/auto-instrumentations-node'
 
 export const ALL_CONSOLE_METHODS = [
 	'assert',
@@ -104,4 +105,40 @@ export interface NodeOptions {
 	 * @example consoleMethodsToRecord: ['log', 'info', 'error']
 	 */
 	consoleMethodsToRecord?: ConsoleMethods[]
+
+	/**
+	 * Configuration for the OpenTelemetry auto-instrumentations registered by
+	 * the plugin, keyed by instrumentation name. This is the same shape that
+	 * `getNodeAutoInstrumentations()` from
+	 * `@opentelemetry/auto-instrumentations-node` accepts, and each entry is
+	 * merged over the plugin's defaults for that instrumentation.
+	 *
+	 * Use it to filter spans at the source, for example to drop health checks
+	 * or platform probes such as Vercel's `GET /_vercel/ping`, while keeping
+	 * every other inbound request span.
+	 *
+	 * Setting `enabled: false` disables that instrumentation. Instrumentations
+	 * that are disabled by default (such as `@opentelemetry/instrumentation-fs`)
+	 * or by `OTEL_NODE_DISABLED_INSTRUMENTATIONS` cannot be enabled here, and
+	 * options read when a module is patched (such as the http
+	 * `disableIncomingRequestInstrumentation` and
+	 * `disableOutgoingRequestInstrumentation` flags) only take effect for
+	 * modules loaded after the plugin is initialized. Request-time options
+	 * such as `ignoreIncomingRequestHook`, `ignoreOutgoingRequestHook`,
+	 * `requestHook` and `responseHook` always apply.
+	 *
+	 * @example
+	 * ```typescript
+	 * new Observability({
+	 *   instrumentationConfig: {
+	 *     '@opentelemetry/instrumentation-http': {
+	 *       ignoreIncomingRequestHook: (req) =>
+	 *         req.url === '/_vercel/ping' || req.url === '/healthz',
+	 *     },
+	 *     '@opentelemetry/instrumentation-dns': { enabled: false },
+	 *   },
+	 * })
+	 * ```
+	 */
+	instrumentationConfig?: InstrumentationConfigMap
 }
