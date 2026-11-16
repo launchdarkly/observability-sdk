@@ -80,9 +80,14 @@ export interface NodeOptions {
 	attributes?: Attributes
 
 	/**
-	 * Turn off enhanced attribute reporting for pg instrumentation.
+	 * Redact query text, bound values and connection details from pg
+	 * instrumentation. When set, `enhancedDatabaseReporting` is turned off and
+	 * the attributes that can carry query or connection data (for example
+	 * `db.query.text`, `db.namespace`, `server.address`, and their legacy
+	 * equivalents such as `db.statement` and `db.name`) are replaced with
+	 * `[REDACTED]` on pg spans and dropped from pg metrics.
 	 * See the following for additional details.
-	 * https://github.com/open-telemetry/opentelemetry-js-contrib/blob/64fcbf3b70e7293e143266838ff94b94cf2c30da/plugins/node/opentelemetry-instrumentation-pg/src/types.ts#L52
+	 * https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/packages/instrumentation-pg/src/types.ts
 	 */
 	disablePgInstrumentationAttributes?: boolean
 

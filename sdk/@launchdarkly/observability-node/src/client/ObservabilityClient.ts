@@ -48,6 +48,11 @@ import {
 } from '@opentelemetry/sdk-logs'
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics'
 import { hookConsole } from './hooks.js'
+import {
+	getRedactedPgConfig,
+	getRedactedPgMetricViews,
+	PG_INSTRUMENTATION_NAME,
+} from './pg.js'
 import log from './log.js'
 
 import * as packageJson from '../../package.json'
@@ -175,21 +180,10 @@ export class ObservabilityClient {
 
 		const pg: Instrumentation<PgInstrumentationConfig> | undefined =
 			instrumentations.find(
-				(i) =>
-					i.instrumentationName ===
-					'@opentelemetry/instrumentation-pg',
+				(i) => i.instrumentationName === PG_INSTRUMENTATION_NAME,
 			)
 		if (options.disablePgInstrumentationAttributes) {
-			pg?.setConfig({
-				enhancedDatabaseReporting: false,
-				responseHook: (span, response) => {
-					span.setAttribute('db.connection_string', `[REDACTED]`)
-					span.setAttribute('db.name', `[REDACTED]`)
-					span.setAttribute('db.statement', `[REDACTED]`)
-					span.setAttribute('db.system', `[REDACTED]`)
-					span.setAttribute('db.user', `[REDACTED]`)
-				},
-			})
+			pg?.setConfig(getRedactedPgConfig())
 		} else {
 			pg?.setConfig({
 				enhancedDatabaseReporting: true,
@@ -271,6 +265,9 @@ export class ObservabilityClient {
 			spanProcessors: [this.processor],
 			logRecordProcessors: [logsProcessor],
 			metricReader: this.metricsReader,
+			views: options.disablePgInstrumentationAttributes
+				? getRedactedPgMetricViews()
+				: [],
 			traceExporter: exporter,
 			contextManager: new AsyncLocalStorageContextManager(),
 			sampler: new AlwaysOnSampler(),
