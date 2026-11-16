@@ -245,7 +245,10 @@ export class ObservabilityClient {
 			sampler,
 		)
 
-		const logsProcessor = new BatchLogRecordProcessor(logsExporter, opts)
+		const logsProcessor = new BatchLogRecordProcessor({
+			...opts,
+			exporter: logsExporter,
+		})
 		this.loggerProvider = new LoggerProvider({
 			resource,
 			processors: [logsProcessor],
@@ -285,12 +288,11 @@ export class ObservabilityClient {
 			'@highlight-run/node',
 			packageJson.version,
 		)
+		// Log records pick up the active span context on emit; the old
+		// `includeTraceContext` logger option was removed from the API.
 		this.logger = this.loggerProvider.getLogger(
 			'@highlight-run/node',
 			packageJson.version,
-			{
-				includeTraceContext: true,
-			},
 		)
 		this.meter = metrics.getMeter(
 			'@highlight-run/node',
