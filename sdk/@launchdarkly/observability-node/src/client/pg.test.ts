@@ -1,10 +1,13 @@
-import http from 'node:http'
 import net from 'node:net'
-import zlib from 'node:zlib'
 import { createRequire } from 'node:module'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import {
+	type Collector,
+	type OtlpSpan,
+	startCollector,
+} from '../testing/collector.js'
 import { ObservabilityClient } from './ObservabilityClient.js'
-import { PG_REDACTED_VALUE } from './pg.js'
+import { PG_INSTRUMENTATION_NAME, PG_REDACTED_VALUE } from './pg.js'
 
 // Values that must never leave the process when
 // `disablePgInstrumentationAttributes` is set.
@@ -13,9 +16,6 @@ const SECRET_USER = 'secret_user_8f3a'
 const SECRET_TABLE = 'secret_customers_8f3a'
 const SECRET_VALUE = 'hunter2_8f3a'
 const FAILING_TABLE = 'secret_missing_8f3a'
-
-type OtlpAttribute = { key: string; value: Record<string, unknown> }
-type OtlpSpan = { name: string; attributes?: OtlpAttribute[] }
 
 // A minimal PostgreSQL server: accepts any startup message, answers simple and
 // extended-protocol queries with an empty result, and fails any query that
@@ -107,53 +107,25 @@ function startFakePostgres(): Promise<net.Server> {
 	)
 }
 
-// A minimal OTLP/HTTP JSON collector that also answers the sampling config
-// GraphQL request.
-function startCollector(received: Map<string, string[]>) {
-	const server = http.createServer((req, res) => {
-		const body =
-			req.headers['content-encoding'] === 'gzip'
-				? req.pipe(zlib.createGunzip())
-				: req
-		let text = ''
-		body.setEncoding('utf8')
-		body.on('data', (chunk: string) => (text += chunk))
-		body.on('end', () => {
-			const path = req.url ?? ''
-			received.set(path, [...(received.get(path) ?? []), text])
-			res.setHeader('content-type', 'application/json')
-			res.end(
-				path.startsWith('/v1/') ? '{}' : '{"data":{"sampling":null}}',
-			)
-		})
-	})
-	return new Promise<http.Server>((resolve) =>
-		server.listen(0, '127.0.0.1', () => resolve(server)),
-	)
-}
-
-const urlOf = (server: net.Server) => {
-	const { port } = server.address() as net.AddressInfo
-	return { port, url: `http://127.0.0.1:${port}` }
-}
+const portOf = (server: net.Server) =>
+	(server.address() as net.AddressInfo).port
 
 const attribute = (span: OtlpSpan, key: string) =>
 	span.attributes?.find((a) => a.key === key)?.value
 
 describe('disablePgInstrumentationAttributes', () => {
-	const received = new Map<string, string[]>()
 	let postgres: net.Server
-	let collector: http.Server
+	let collector: Collector
 	let client: ObservabilityClient
 	let pgSpans: OtlpSpan[] = []
+	const received = () => collector.received
 
 	beforeAll(async () => {
 		postgres = await startFakePostgres()
-		collector = await startCollector(received)
-		const { url } = urlOf(collector)
+		collector = await startCollector()
 		client = new ObservabilityClient('pg-redaction-test', {
-			otlpEndpoint: url,
-			backendUrl: url,
+			otlpEndpoint: collector.url,
+			backendUrl: collector.url,
 			disableConsoleRecording: true,
 			disablePgInstrumentationAttributes: true,
 		})
@@ -162,7 +134,7 @@ describe('disablePgInstrumentationAttributes', () => {
 		const pg = createRequire(import.meta.url)('pg')
 		const connection = {
 			host: 'localhost',
-			port: urlOf(postgres).port,
+			port: portOf(postgres),
 			database: SECRET_DATABASE,
 			user: SECRET_USER,
 			password: 'unused',
@@ -187,23 +159,15 @@ describe('disablePgInstrumentationAttributes', () => {
 
 		await client.flush()
 
-		for (const body of received.get('/v1/traces') ?? []) {
-			for (const rs of JSON.parse(body).resourceSpans ?? []) {
-				for (const ss of rs.scopeSpans ?? []) {
-					if (
-						ss.scope?.name === '@opentelemetry/instrumentation-pg'
-					) {
-						pgSpans.push(...ss.spans)
-					}
-				}
-			}
-		}
+		pgSpans = collector
+			.spans()
+			.filter((span) => span.scope === PG_INSTRUMENTATION_NAME)
 	}, 30_000)
 
 	afterAll(async () => {
 		await client?.stop()
 		postgres?.close()
-		collector?.close()
+		await collector?.close()
 	})
 
 	it('exports pg spans', () => {
@@ -215,9 +179,9 @@ describe('disablePgInstrumentationAttributes', () => {
 
 	it('does not export query text, values or connection details', () => {
 		const exported = [
-			...(received.get('/v1/traces') ?? []),
-			...(received.get('/v1/metrics') ?? []),
-			...(received.get('/v1/logs') ?? []),
+			...(received().get('/v1/traces') ?? []),
+			...(received().get('/v1/metrics') ?? []),
+			...(received().get('/v1/logs') ?? []),
 		].join('\n')
 		expect(exported.length).toBeGreaterThan(0)
 		for (const secret of [
@@ -232,7 +196,7 @@ describe('disablePgInstrumentationAttributes', () => {
 	})
 
 	it('redacts stable and connection attributes on every pg span', () => {
-		const { port } = urlOf(postgres)
+		const port = portOf(postgres)
 		for (const span of pgSpans) {
 			expect(span.name).not.toContain(SECRET_DATABASE)
 			for (const key of [
@@ -257,7 +221,7 @@ describe('disablePgInstrumentationAttributes', () => {
 	})
 
 	it('drops connection details from pg metrics', () => {
-		const metrics = (received.get('/v1/metrics') ?? []).join('\n')
+		const metrics = (received().get('/v1/metrics') ?? []).join('\n')
 		expect(metrics).toContain('db.client.operation.duration')
 		expect(metrics).not.toContain('"db.namespace"')
 		expect(metrics).not.toContain('"server.address"')
