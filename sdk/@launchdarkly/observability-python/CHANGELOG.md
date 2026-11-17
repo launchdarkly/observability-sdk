@@ -2,6 +2,14 @@
 
 All notable changes to the LaunchDarkly Python Observability will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.4.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.4.0...launchdarkly-observability-python-1.4.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* **deps:** remediate all open high severity dependabot advisories ([#885](https://github.com/launchdarkly/observability-sdk/issues/885)) ([55eeab2](https://github.com/launchdarkly/observability-sdk/commit/55eeab2fa2711c21dde815249223476edc65ae11))
+* remediate next, react-server-dom-webpack, bouncycastle, anyio, handlebars and dependency advisories ([#757](https://github.com/launchdarkly/observability-sdk/issues/757)) ([08b8067](https://github.com/launchdarkly/observability-sdk/commit/08b8067e323012d3db934be5ddda2345aeb22d37))
+
 ## [1.4.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.3.4...launchdarkly-observability-python-1.4.0) (2026-11-06)
 
 

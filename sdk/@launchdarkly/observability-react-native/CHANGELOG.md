@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.1](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.21.0...observability-react-native-0.21.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* **deps:** move the React Native e2e apps to Expo SDK 58 (Metro 0.87) ([#890](https://github.com/launchdarkly/observability-sdk/issues/890)) ([6913230](https://github.com/launchdarkly/observability-sdk/commit/691323060fa117b50a8dfb311bdaf8df412b54fd))
+
 ## [0.21.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.20.0...observability-react-native-0.21.0) (2026-11-03)
 
 

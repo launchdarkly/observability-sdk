@@ -19,6 +19,13 @@ permissions:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+env:
+    # Pinned so a new Flutter stable can't break CI on its own. 3.50.0 needs
+    # Gradle >= 9.3.1 for the example and deprecates package:flutter/material.dart
+    # and cupertino.dart in favour of material_ui / cupertino_ui, which
+    # `flutter analyze` reports. Bump this together with that migration.
+    FLUTTER_VERSION: '3.47.9'
+
 jobs:
     test:
         name: Analyze & Unit Tests
@@ -33,6 +40,7 @@ jobs:
               uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295 # v2
               with:
                   channel: 'stable'
+                  flutter-version: ${{ env.FLUTTER_VERSION }}
                   cache: true
 
             - name: Install dependencies
@@ -102,6 +110,7 @@ jobs:
               uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295 # v2
               with:
                   channel: 'stable'
+                  flutter-version: ${{ env.FLUTTER_VERSION }}
                   cache: true
 
             - name: Install dependencies
@@ -123,6 +132,7 @@ jobs:
               uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295 # v2
               with:
                   channel: 'stable'
+                  flutter-version: ${{ env.FLUTTER_VERSION }}
                   cache: true
 
             # The example has migrated off CocoaPods, so its native dependencies

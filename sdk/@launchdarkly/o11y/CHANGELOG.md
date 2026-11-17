@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.7.0](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.6.0...o11y-1.7.0) (2026-11-17)
+
+
+### Features
+
+* **o11y:** add enableFlagEvaluationSpans option to disable flag evaluation spans ([#886](https://github.com/launchdarkly/observability-sdk/issues/886)) ([ad375b8](https://github.com/launchdarkly/observability-sdk/commit/ad375b81487d5b0999c9b9666d23233bc254e10b))
+
+
+### Bug Fixes
+
+* **deps:** remediate all open high severity dependabot advisories ([#885](https://github.com/launchdarkly/observability-sdk/issues/885)) ([55eeab2](https://github.com/launchdarkly/observability-sdk/commit/55eeab2fa2711c21dde815249223476edc65ae11))
+* remediate next, react-server-dom-webpack, bouncycastle, anyio, handlebars and dependency advisories ([#757](https://github.com/launchdarkly/observability-sdk/issues/757)) ([08b8067](https://github.com/launchdarkly/observability-sdk/commit/08b8067e323012d3db934be5ddda2345aeb22d37))
+
 ## [1.6.0](https://github.com/launchdarkly/observability-sdk/compare/o11y-1.5.0...o11y-1.6.0) (2026-11-06)
 
 
