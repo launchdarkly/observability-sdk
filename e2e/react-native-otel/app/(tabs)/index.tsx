@@ -10,17 +10,15 @@ import { LDObserve } from '@launchdarkly/observability-react-native'
 import { ldClient } from '../../lib/launchdarkly'
 
 export default function HomeScreen() {
-	const [context, setContext] = useState<any>(null)
+	// The client is a module singleton, so its current values are readable on
+	// the first render; no mount effect (and no setState inside one) is needed.
+	const [context, setContext] = useState<any>(() =>
+		ldClient ? ldClient.getContext() : null,
+	)
 	const [sessionInfo, setSessionInfo] = useState<any>(null)
-	const [flagEnabled, setFlagEnabled] = useState<boolean>(false)
-
-	useEffect(() => {
-		if (ldClient) {
-			const flagEnabled = ldClient.variation('test-flag', false)
-			setFlagEnabled(flagEnabled)
-			setContext(ldClient.getContext())
-		}
-	}, [])
+	const [flagEnabled] = useState<boolean>(() =>
+		ldClient ? ldClient.variation('test-flag', false) : false,
+	)
 
 	useEffect(() => {
 		const getSessionInfo = () => {
