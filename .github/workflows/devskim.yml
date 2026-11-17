@@ -14,10 +14,18 @@ on:
     schedule:
         - cron: '26 19 * * 1'
 
+permissions:
+    contents: read
+
 jobs:
     lint:
         name: DevSkim
         runs-on: ubuntu-22.04-8core-32gb
+        permissions:
+            contents: read
+            # upload-sarif needs these; the repo default GITHUB_TOKEN is read-only
+            security-events: write
+            actions: read
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -30,6 +38,6 @@ jobs:
                   ignore-globs: '**/otel/samples/**'
 
             - name: Upload DevSkim scan results to GitHub Security tab
-              uses: github/codeql-action/upload-sarif@v2
+              uses: github/codeql-action/upload-sarif@v4
               with:
                   sarif_file: devskim-results.sarif
