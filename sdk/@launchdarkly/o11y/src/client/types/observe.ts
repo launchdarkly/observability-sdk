@@ -88,6 +88,22 @@ export type ObserveOptions = CommonOptions & {
 	 */
 	productAnalytics?: boolean | ProductAnalyticsEvents
 	/**
+	 * Specifies whether to emit a `feature_flag` exposure span for each
+	 * feature flag evaluation made by the LaunchDarkly client.
+	 *
+	 * Each evaluation span is ingested as a trace, so evaluation-heavy pages
+	 * can produce a large trace volume. Set to `false` to stop emitting
+	 * evaluation spans while keeping the rest of the plugin's telemetry (for
+	 * example web vitals, errors and logs). Other plugins' evaluation hooks
+	 * still run.
+	 *
+	 * When enabled, `flagExposureDedupeWindowMillis` can be used instead to
+	 * reduce the volume without turning the spans off entirely.
+	 *
+	 * @default true
+	 */
+	enableFlagEvaluationSpans?: boolean
+	/**
 	 * The time window, in milliseconds, during which repeated feature flag
 	 * evaluations that resolve to the same result are deduplicated, so that only
 	 * a single `feature_flag` exposure span is emitted per unique
