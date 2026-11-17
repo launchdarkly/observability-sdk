@@ -34,6 +34,23 @@ const client = init(
 )
 ```
 
+## ES modules
+
+The plugin instruments libraries (such as `pg`, `ioredis`, `express` or `@nestjs/core`) by patching them when they load. Without extra setup, it can only patch libraries that are loaded with `require()` after the plugin's module has loaded. Libraries are missed when:
+
+- they are ES modules loaded with `import` (for example NestJS 12, which ships as ES modules only);
+- your application is an ES module, and its imports load the library before the module that initializes the plugin runs, for example an ES-module-only ORM such as MikroORM 7 that imports `pg`.
+
+To instrument these libraries, preload `@launchdarkly/observability-node/register` with `node --import` (Node.js 18.19, 20.6 or later). It registers OpenTelemetry's ES module loader hook (`import-in-the-middle`) and enables the plugin's instrumentations before your application loads:
+
+```shell
+node --import @launchdarkly/observability-node/register dist/main.js
+# or
+NODE_OPTIONS="--import @launchdarkly/observability-node/register" node dist/main.js
+```
+
+This works for both ES module and CommonJS applications. Still initialize the plugin in your application as shown above: the preload only installs the hooks, and the plugin's options (such as `serviceName`) are applied when the LaunchDarkly client registers it.
+
 ## Manual instrumentation with LDObserve
 
 The `Observability` plugin automatically captures flag evaluations, logs, and traces. Use the `LDObserve` singleton when you want to record custom metrics, logs, errors, or spans so they are correlated with your LaunchDarkly data.

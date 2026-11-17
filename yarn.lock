@@ -9758,6 +9758,8 @@ __metadata:
     "@types/lru-cache": "npm:^7.10.10"
     "@types/node": "npm:^14.18.63"
     encoding: "npm:^0.1.13"
+    import-in-the-middle: "npm:^3.0.0"
+    pg: "npm:^8.13.3"
     require-in-the-middle: "npm:^7.4.0"
     rollup: "npm:^4.34.8"
     typedoc: "npm:^0.28.7"
