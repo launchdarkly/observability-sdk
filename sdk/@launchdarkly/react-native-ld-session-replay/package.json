@@ -87,7 +87,7 @@
     "lefthook": "^2.0.3",
     "prettier": "^3.0.0",
     "react": "19.2.0",
-    "react-native": "0.83.0",
+    "react-native": "0.88.1",
     "react-native-builder-bob": "^0.40.17",
     "release-it": "^19.0.4",
     "turbo": "^2.5.6",
