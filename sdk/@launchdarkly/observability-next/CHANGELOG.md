@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.7](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.3.6...observability-next-0.3.7) (2026-11-17)
+
+
+### Bug Fixes
+
+* **deps:** move the React Native e2e apps to Expo SDK 58 (Metro 0.87) ([#890](https://github.com/launchdarkly/observability-sdk/issues/890)) ([6913230](https://github.com/launchdarkly/observability-sdk/commit/691323060fa117b50a8dfb311bdaf8df412b54fd))
+* remediate next, react-server-dom-webpack, bouncycastle, anyio, handlebars and dependency advisories ([#757](https://github.com/launchdarkly/observability-sdk/issues/757)) ([08b8067](https://github.com/launchdarkly/observability-sdk/commit/08b8067e323012d3db934be5ddda2345aeb22d37))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.5.1
+    * @launchdarkly/observability-node bumped to 1.5.0
+    * @launchdarkly/session-replay bumped to 1.2.7
+
 ## [0.3.6](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.3.5...observability-next-0.3.6) (2026-11-06)
 
 

@@ -1,5 +1,18 @@
 # @launchdarkly/observability-node
 
+## [1.5.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.4.0...observability-node-1.5.0) (2026-11-17)
+
+
+### Features
+
+* **observability-node:** add a register entry point that instruments ES modules ([#891](https://github.com/launchdarkly/observability-sdk/issues/891)) ([46513dc](https://github.com/launchdarkly/observability-sdk/commit/46513dc2537d7ec9fa88be4cb5ad22923d095ede))
+* **observability-node:** add instrumentationConfig option to NodeOptions ([#887](https://github.com/launchdarkly/observability-sdk/issues/887)) ([66840b4](https://github.com/launchdarkly/observability-sdk/commit/66840b44538d06e888fb1441c74591156c448a20))
+
+
+### Bug Fixes
+
+* **observability-node:** report success when sampling drops a whole batch ([#889](https://github.com/launchdarkly/observability-sdk/issues/889)) ([76b1adb](https://github.com/launchdarkly/observability-sdk/commit/76b1adb62afc40b6b75f78d32e5dfad47bf8968e))
+
 ## [1.4.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.3.0...observability-node-1.4.0) (2026-10-10)
 
 

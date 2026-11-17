@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.25.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.25.1...session-replay-react-native-0.25.2) (2026-11-17)
+
+
+### Bug Fixes
+
+* **deps:** move the React Native e2e apps to Expo SDK 58 (Metro 0.87) ([#890](https://github.com/launchdarkly/observability-sdk/issues/890)) ([6913230](https://github.com/launchdarkly/observability-sdk/commit/691323060fa117b50a8dfb311bdaf8df412b54fd))
+* remediate next, react-server-dom-webpack, bouncycastle, anyio, handlebars and dependency advisories ([#757](https://github.com/launchdarkly/observability-sdk/issues/757)) ([08b8067](https://github.com/launchdarkly/observability-sdk/commit/08b8067e323012d3db934be5ddda2345aeb22d37))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.21.1
+
 ## [0.25.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.25.0...session-replay-react-native-0.25.1) (2026-11-03)
 
 
