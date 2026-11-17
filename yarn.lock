@@ -9714,6 +9714,7 @@ __metadata:
     js-cookie: "npm:^3.0.5"
     next: "npm:^16.4.1"
     react: "npm:^19.0.0"
+    react-dom: "npm:^19.0.0"
     rollup: "npm:^4.4.1"
     typescript: "npm:^5.0.4"
   peerDependencies:
