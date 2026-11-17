@@ -29,6 +29,15 @@ const OTEL_DEDUPE = [
 export default defineConfig({
 	envPrefix: ['REACT_APP_'],
 	resolve: {
+		alias: [
+			{
+				// cross-fetch's browser ponyfill reassigns `exports` before
+				// setting its properties, so Vite cannot detect its named
+				// exports. Route it through a CJS shim instead.
+				find: /^cross-fetch$/,
+				replacement: resolvePath(__dirname, 'shims/cross-fetch.cjs'),
+			},
+		],
 		dedupe: OTEL_DEDUPE,
 	},
 	server: {
@@ -38,6 +47,14 @@ export default defineConfig({
 		hmr: {
 			clientPort: 8877,
 		},
+	},
+	worker: {
+		// Deliberately left at Vite's default 'iife' worker format: the worker is
+		// inlined as a blob: URL, and module workers are unsupported in the
+		// older browsers this build's es6 target still covers.
+		plugins: () => [
+			commonjs({ strictRequires: 'auto', transformMixedEsModules: true }),
+		],
 	},
 	plugins: [
 		dts({
@@ -70,6 +87,10 @@ export default defineConfig({
 	],
 	build: {
 		target: 'es6',
+		commonjsOptions: {
+			strictRequires: 'auto',
+			transformMixedEsModules: true,
+		},
 		lib: {
 			formats: process.env.FORMAT === 'umd' ? ['umd'] : ['es'],
 			entry:
@@ -107,6 +128,7 @@ export default defineConfig({
 			treeshake: 'smallest',
 			plugins: [
 				commonjs({
+					strictRequires: 'auto',
 					transformMixedEsModules: true,
 				}),
 				resolve({

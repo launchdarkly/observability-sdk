@@ -25,9 +25,9 @@
 		"url": "https://github.com/launchdarkly/observability-sdk.git"
 	},
 	"scripts": {
-		"build": "yarn build:umd && node ./node_modules/vite5/bin/vite.js build",
-		"build:umd": "FORMAT=umd node ./node_modules/vite5/bin/vite.js build",
-		"build:watch": "node ./node_modules/vite5/bin/vite.js build --watch",
+		"build": "yarn build:umd && node ./node_modules/vite6/bin/vite.js build",
+		"build:umd": "FORMAT=umd node ./node_modules/vite6/bin/vite.js build",
+		"build:watch": "node ./node_modules/vite6/bin/vite.js build --watch",
 		"codegen": "graphql-codegen --config codegen.yml",
 		"dev": "run-p dev:server dev:watch",
 		"dev:server": "vite dev",
@@ -35,7 +35,7 @@
 		"enforce-size": "size-limit",
 		"test": "vitest --run",
 		"test:watch": "vitest",
-		"typegen": "yarn typegen:check && FORMAT=d.ts node ./node_modules/vite5/bin/vite.js build",
+		"typegen": "yarn typegen:check && FORMAT=d.ts node ./node_modules/vite6/bin/vite.js build",
 		"typegen:check": "tsc --noEmit",
 		"docs": "typedoc"
 	},
@@ -136,7 +136,7 @@
 		"typescript": "^5.0.4",
 		"vite": "^6.4.4",
 		"vite-plugin-dts": "^4.5.3",
-		"vite5": "npm:vite@^5.4.21",
+		"vite6": "npm:vite@^6.4.5",
 		"vitest": "^4.1.0",
 		"vitest-canvas-mock": "^0.3.3",
 		"web-vitals": "^3.5.0",
