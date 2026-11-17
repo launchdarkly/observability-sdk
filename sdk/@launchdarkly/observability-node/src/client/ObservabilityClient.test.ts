@@ -1,5 +1,6 @@
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 import { ObservabilityClient } from './ObservabilityClient.js'
+import type { Instrumentation } from '@opentelemetry/instrumentation'
 import { describe, expect, it } from 'vitest'
 
 describe('client', () => {
@@ -41,5 +42,30 @@ describe('client', () => {
 		expect(
 			resource.attributes[SemanticResourceAttributes.SERVICE_VERSION],
 		).toEqual('abc123')
+	})
+
+	it('applies instrumentationConfig to the registered instrumentations', () => {
+		const ignoreIncomingRequestHook = () => true
+		const client = new ObservabilityClient('abc123', {
+			instrumentationConfig: {
+				'@opentelemetry/instrumentation-http': {
+					ignoreIncomingRequestHook,
+				},
+				'@opentelemetry/instrumentation-dns': { enabled: false },
+			},
+		})
+
+		const instrumentations: Instrumentation[] =
+			client.otel['_instrumentations']
+		const names = instrumentations.map((i) => i.instrumentationName)
+		expect(names).not.toContain('@opentelemetry/instrumentation-dns')
+		const http = instrumentations.find(
+			(i) =>
+				i.instrumentationName === '@opentelemetry/instrumentation-http',
+		)
+		expect(http?.getConfig()).toMatchObject({
+			enabled: true,
+			ignoreIncomingRequestHook,
+		})
 	})
 })
