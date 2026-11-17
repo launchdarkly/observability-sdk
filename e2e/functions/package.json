@@ -15,7 +15,7 @@
 	"main": "lib/index.js",
 	"dependencies": {
 		"@highlight-run/node": "workspace:*",
-		"firebase-admin": "^11.5.0",
+		"firebase-admin": "^12.7.0",
 		"firebase-functions": "^4.2.0"
 	},
 	"devDependencies": {
