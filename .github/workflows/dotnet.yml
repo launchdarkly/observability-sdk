@@ -15,6 +15,10 @@ jobs:
     build-dotnet:
         name: ASP.NET Core SDK
         runs-on: ubuntu-22.04-8core-32gb
+        permissions:
+            contents: read
+            # NuGet trusted publishing: GitHub OIDC token -> short-lived nuget.org API key
+            id-token: write
         defaults:
             run:
                 working-directory: ./sdk/highlight-dotnet
@@ -32,15 +36,32 @@ jobs:
             - name: Build solution and generate NuGet package
               run: dotnet pack -c Release -o out
 
+            - name: Check whether the package version is already on NuGet
+              id: nuget
+              shell: bash
+              run: bash ../../.github/scripts/nuget-needs-publish.sh out
+
+            - name: NuGet login (OIDC -> temporary API key)
+              if: github.ref == 'refs/heads/main' && steps.nuget.outputs.publish == 'true'
+              id: login
+              uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+              with:
+                  # nuget.org profile name (not email) that owns the trusted publishing policy
+                  user: ${{ secrets.NUGET_USER }}
+
             - name: Push generated package to NuGet registry
-              if: github.ref == 'refs/heads/main'
-              run: dotnet nuget push out/*.nupkg --skip-duplicate -k $NUGET_AUTH_TOKEN -s https://api.nuget.org/v3/index.json
+              if: github.ref == 'refs/heads/main' && steps.nuget.outputs.publish == 'true'
+              run: dotnet nuget push out/*.nupkg --skip-duplicate --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
               env:
-                  NUGET_AUTH_TOKEN: ${{ secrets.NUGET_API_KEY }}
+                  NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
 
     build-dotnet4:
         name: ASP.NET4 SDK
         runs-on: windows-latest
+        permissions:
+            contents: read
+            # NuGet trusted publishing: GitHub OIDC token -> short-lived nuget.org API key
+            id-token: write
         defaults:
             run:
                 working-directory: ./sdk/highlight-dotnet4
@@ -64,7 +85,21 @@ jobs:
             - name: msbuild pack
               run: msbuild -t:Pack -property:Configuration=Release
 
+            - name: Check whether the package version is already on NuGet
+              id: nuget
+              shell: bash
+              run: bash ../../.github/scripts/nuget-needs-publish.sh bin
+
+            - name: NuGet login (OIDC -> temporary API key)
+              if: github.ref == 'refs/heads/main' && steps.nuget.outputs.publish == 'true'
+              id: login
+              uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+              with:
+                  # nuget.org profile name (not email) that owns the trusted publishing policy
+                  user: ${{ secrets.NUGET_USER }}
+
             - name: Push generated package to NuGet registry
-              if: github.ref == 'refs/heads/main'
-              run: |
-                  nuget push bin\**\*.nupkg -Source https://api.nuget.org/v3/index.json -ApiKey ${{ secrets.NUGET_API_KEY }} -SymbolApiKey ${{ secrets.NUGET_API_KEY }} -SkipDuplicate
+              if: github.ref == 'refs/heads/main' && steps.nuget.outputs.publish == 'true'
+              run: nuget push bin\**\*.nupkg -Source https://api.nuget.org/v3/index.json -ApiKey $env:NUGET_API_KEY -SkipDuplicate
+              env:
+                  NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
