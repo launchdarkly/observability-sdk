@@ -10,6 +10,7 @@ import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
 import com.launchdarkly.sdk.android.integrations.RegistrationCompleteResult
 import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Logger
 
 /**
@@ -29,7 +30,13 @@ class SessionReplay(
 ) : Plugin() {
 
     private val impl = SessionReplayPluginImpl(options)
-    private val sessionReplayHook = SessionReplayHook()
+
+    // One hook per environment, keyed by mobile key. Only the primary environment's hook is given
+    // a delegate, so the hooks of secondaryMobileKeys clients record nothing.
+    private val sessionReplayHooks = ConcurrentHashMap<String, SessionReplayHook>()
+
+    @Volatile
+    private var primaryCredential: String? = null
 
     val sessionReplayService get() = impl.sessionReplayService
 
@@ -41,6 +48,11 @@ class SessionReplay(
     }
 
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
+        // The SDK registers plugins with every environment's client, but only after publishing all
+        // of them, so the primary environment's client is the one LDClient.get() returns.
+        if (client !== runCatching { LDClient.get() }.getOrNull()) return
+        primaryCredential = metadata?.credential
+
         val obsContext = LDObserve.context ?: run {
             logger.warning(
                 "Observability is not initialized; skipping SessionReplay registration. " +
@@ -49,7 +61,7 @@ class SessionReplay(
             return
         }
         impl.register(obsContext)
-        sessionReplayHook.delegate = impl.sessionReplayService
+        sessionReplayHooks[metadata?.credential.orEmpty()]?.delegate = impl.sessionReplayService
     }
 
     // Note: this hook is intentionally not wrapped in DedupingHook. Deduplication only
@@ -57,10 +69,13 @@ class SessionReplay(
     // DedupingHook always forwards. Evaluation spans come from ObservabilityHook, which is
     // wrapped there instead.
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
-        return Collections.singletonList(sessionReplayHook)
+        val hook = SessionReplayHook()
+        sessionReplayHooks[metadata?.credential.orEmpty()] = hook
+        return Collections.singletonList(hook)
     }
 
     override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
+        if (metadata?.credential != primaryCredential) return
         impl.initialize()
     }
 
