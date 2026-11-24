@@ -174,10 +174,13 @@ public partial class MainPage : ContentPage
 					{ "nested-integer", 420 },
 					{ "nested-double", 3.14159 },
 					{ "nested-array", new double[] { 3.14159, 6.28318 } }}
-				}
+				},
+				{ "utm_source", "per_call" }
 			}
 		);
 		Console.WriteLine("Log triggered");
+		Console.WriteLine(GlobalAttributesRepro.ExpectGlobal);
+		Console.WriteLine(GlobalAttributesRepro.ExpectPerCallWins);
 	}
 
 	private async void OnTriggerLogWithContextClicked(object? sender, EventArgs e)
@@ -252,6 +255,7 @@ public partial class MainPage : ContentPage
 		}
 
 		Console.WriteLine("Sequential independent spans triggered");
+		Console.WriteLine(GlobalAttributesRepro.ExpectGlobal);
 	}
 
 	private void OnSendCustomSpanClicked(object? sender, EventArgs e)
@@ -265,6 +269,7 @@ public partial class MainPage : ContentPage
 			span.AddEvent("retry.started");
 			span.AddEvent("download.completed");
 			Console.WriteLine($"Custom span sent: {spanName}");
+			Console.WriteLine(GlobalAttributesRepro.ExpectGlobal);
 		}
 	}
 

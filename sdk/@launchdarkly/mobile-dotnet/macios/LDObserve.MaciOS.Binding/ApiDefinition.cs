@@ -90,6 +90,12 @@ namespace LDObserveMaciOS
         [Export("getSessionReplayHookProxy")]
         [NullAllowed]
         SessionReplayHookProxy GetSessionReplayHookProxy();
+
+        [Static, Export("setAttributes:")]
+        void SetAttributes(NSDictionary attributes);
+
+        [Static, Export("removeAttributes:")]
+        void RemoveAttributes(string[] keys);
     }
 
     [BaseType(typeof(NSObject))]
