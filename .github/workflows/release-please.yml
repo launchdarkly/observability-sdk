@@ -26,6 +26,8 @@ jobs:
             flutter-plugin-tag-name: ${{ steps.release.outputs['sdk/flutter/packages/observability--tag_name'] }}
             java-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-java--release_created'] }}
             java-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-java--tag_name'] }}
+            java-client-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-client-java/plugin--release_created'] }}
+            java-client-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-client-java/plugin--tag_name'] }}
         steps:
             # Normally a workflow cannot trigger another workflow. For this workflow we need to run required checks.
             # Github determines that something is created by a workflow/bot based on the token.
@@ -164,6 +166,52 @@ jobs:
               env:
                   GH_TOKEN: ${{ github.token }}
                   TAG_NAME: ${{ needs.release-package.outputs.java-plugin-tag-name }}
+              run: gh release edit "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
+
+    release-java-client-plugin:
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write # Used for publishing secrets.
+            contents: read
+        needs: ['release-package']
+        if: ${{ needs.release-package.outputs.java-client-plugin-released == 'true' }}
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Publish Java client-side plugin
+              id: publish
+              uses: ./.github/actions/publish-java-client-sdk
+              with:
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+
+    release-java-client-provenance:
+        needs: ['release-package', 'release-java-client-plugin']
+        if: ${{ needs.release-package.outputs.java-client-plugin-released == 'true' }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.release-java-client-plugin.outputs.package-hashes }}'
+            upload-assets: true
+            draft-release: true
+            upload-tag-name: ${{ needs.release-package.outputs.java-client-plugin-tag-name }}
+
+    release-java-client-publish-release:
+        needs: ['release-package', 'release-java-client-provenance']
+        if: ${{ needs.release-package.outputs.java-client-plugin-released == 'true' }}
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Publish the GitHub release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG_NAME: ${{ needs.release-package.outputs.java-client-plugin-tag-name }}
               run: gh release edit "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
 
     release-dotnet-plugin:

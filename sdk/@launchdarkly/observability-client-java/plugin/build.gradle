@@ -1,0 +1,406 @@
+plugins {
+    id 'java-library'
+    id 'jacoco'
+    id 'maven-publish'
+    id 'signing'
+    id 'io.github.gradle-nexus.publish-plugin' version '2.0.0'
+}
+
+group = 'com.launchdarkly'
+
+// Maven Central, through Sonatype's Central Portal, as for the LaunchDarkly Java and Android SDKs.
+// The release workflow passes sonatypeUsername and sonatypePassword.
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri('https://ossrh-staging-api.central.sonatype.com/service/local/'))
+            snapshotRepositoryUrl.set(uri('https://central.sonatype.com/repository/maven-snapshots/'))
+        }
+    }
+}
+
+base {
+    archivesName = 'launchdarkly-java-client-sdk-observability'
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+repositories {
+    // The client-side Java SDK is not published yet. Install it from a checkout of
+    // java-client-sdk with ./gradlew :launchdarkly-java-client-sdk:publishToMavenLocal.
+    mavenLocal()
+    mavenCentral()
+}
+
+ext.versions = [
+    // The SDK the plugin compiles and tests against. The application brings its own.
+    ldClientSdk: project.findProperty('ldClientSdkVersion') ?: '0.1.0',
+    // 1.51.0 is the last OpenTelemetry release whose OkHttp sender is built on OkHttp 4,
+    // the version the SDK ships. 1.52 moved to OkHttp 5, which would put a second,
+    // incompatible OkHttp on the application's classpath.
+    otel       : '1.51.0',
+    okhttp     : '4.12.0',
+    junit      : '4.13.2',
+    hamcrest   : '2.2',
+    // Apache Pivot's last release, 2017. The project was retired in 2025.
+    pivot      : '2.0.5',
+    // JavaFX is the application's, when it has it. The plugin compiles against the oldest
+    // version it supports, so it cannot call anything newer, and tests on 17, the last line
+    // that still runs on Java 11.
+    javafxApi  : '11.0.2',
+    // Compose for Desktop is the application's, when it has it. The plugin compiles against the
+    // oldest version it supports, so it cannot call anything newer; the tests, in the compose
+    // project, run on a current one.
+    composeApi : '1.6.11',
+    // SWT is the application's, when it has it. The plugin compiles against 3.116, the last SWT
+    // that runs on Java 8; each later line needs a newer Java (3.117 Java 11, 3.124 Java 17,
+    // 3.133 Java 21), so the SWT tests run each JDK on the newest SWT it can.
+    swtApi     : '3.116.100',
+    javafxTest : '17.0.21',
+]
+
+// JavaFX jars carry their native code, so they are published per platform. The compile-time
+// API is the same on every platform; the tests need the one they run on.
+def javafxPlatform = {
+    def os = System.getProperty('os.name').toLowerCase()
+    def arm = System.getProperty('os.arch') in ['aarch64', 'arm64']
+    if (os.contains('mac')) return arm ? 'mac-aarch64' : 'mac'
+    if (os.contains('win')) return 'win'
+    return arm ? 'linux-aarch64' : 'linux'
+}()
+def javafxModules = ['base', 'graphics', 'controls']
+
+// SWT's jar for the platform the SWT tests run on, which carries its natives.
+def swtPlatform = {
+    def os = System.getProperty('os.name').toLowerCase()
+    def arch = System.getProperty('os.arch') in ['aarch64', 'arm64'] ? 'aarch64' : 'x86_64'
+    if (os.contains('mac')) return "cocoa.macosx.${arch}"
+    if (os.contains('win')) return 'win32.win32.x86_64'
+    return "gtk.linux.${arch}"
+}()
+
+dependencies {
+    // The application provides the SDK, and with it launchdarkly-java-sdk-common (LDValue,
+    // LDContext), launchdarkly-logging and Gson, which the plugin uses too.
+    compileOnly "com.launchdarkly:launchdarkly-java-client-sdk:${versions.ldClientSdk}"
+
+    // The public API (LDObserve, ObservabilityOptions, Metric) takes and returns
+    // OpenTelemetry API types such as Attributes, Severity and Span.
+    api "io.opentelemetry:opentelemetry-api:${versions.otel}"
+    implementation "io.opentelemetry:opentelemetry-sdk:${versions.otel}"
+    // OTLP over HTTP. Its default sender is the OkHttp one, which shares the SDK's OkHttp.
+    implementation "io.opentelemetry:opentelemetry-exporter-otlp:${versions.otel}"
+    // The sampling configuration request.
+    implementation "com.squareup.okhttp3:okhttp:${versions.okhttp}"
+
+    testImplementation "com.launchdarkly:launchdarkly-java-client-sdk:${versions.ldClientSdk}"
+    testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${versions.otel}"
+    testImplementation "junit:junit:${versions.junit}"
+    testImplementation "org.hamcrest:hamcrest:${versions.hamcrest}"
+    testImplementation "com.squareup.okhttp3:mockwebserver:${versions.okhttp}"
+    // Apache Pivot is the application's, when it has it: the plugin only looks inside its host.
+    compileOnly "org.apache.pivot:pivot-core:${versions.pivot}"
+    compileOnly "org.apache.pivot:pivot-wtk:${versions.pivot}"
+    testImplementation "org.apache.pivot:pivot-core:${versions.pivot}"
+    testImplementation "org.apache.pivot:pivot-wtk:${versions.pivot}"
+    // Pivot's components take their skins from a theme, Terra its own.
+    testImplementation "org.apache.pivot:pivot-wtk-terra:${versions.pivot}"
+
+    // Compose for Desktop's UI, and with it skiko, which draws it. Only looked into when the
+    // application has it, so never a dependency of its own.
+    compileOnly "org.jetbrains.compose.ui:ui-desktop:${versions.composeApi}"
+
+    // SWT, the same on every platform for compiling. Its POMs name their natives through a variable
+    // Maven cannot resolve, so only the jar is taken.
+    compileOnly("org.eclipse.platform:org.eclipse.swt.gtk.linux.x86_64:${versions.swtApi}") { transitive = false }
+
+    // Instrumented only when the application has JavaFX, so never a dependency of its own.
+    javafxModules.each { m ->
+        compileOnly "org.openjfx:javafx-${m}:${versions.javafxApi}:linux"
+        testImplementation "org.openjfx:javafx-${m}:${versions.javafxTest}:${javafxPlatform}"
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    // Java 8 bytecode, and Java 9+ APIs fail to compile, as in the SDK.
+    options.release = 8
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xlint:all,-options,-serial,-processing', '-Werror']
+}
+
+// JavaFX's classes use @Deprecated(since=...), which Java 8's annotation lacks. The warning is about
+// reading those class files, not about this code.
+compileJava {
+    options.compilerArgs += ['-Xlint:-classfile']
+}
+
+// Tests make spans current with try (Scope ignored = span.makeCurrent()), which -Xlint:try flags.
+compileTestJava {
+    options.compilerArgs += ['-Xlint:-try', '-Xlint:-classfile']
+}
+
+javadoc {
+    // The internal packages are not part of the public API, so they are left out of the docs.
+    exclude 'com/launchdarkly/observability/internal/**'
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+    options.encoding = 'UTF-8'
+}
+
+// Generated so the plugin can report its own version in its metadata and resource.
+def generatedVersionDir = layout.buildDirectory.dir('generated/sources/version/java')
+tasks.register('generateVersionClass') {
+    def v = project.version.toString()
+    inputs.property('version', v)
+    outputs.dir(generatedVersionDir)
+    doLast {
+        def f = generatedVersionDir.get().file('com/launchdarkly/observability/internal/Version.java').asFile
+        f.parentFile.mkdirs()
+        f.text = """package com.launchdarkly.observability.internal;
+
+/** The plugin version, generated from gradle.properties. */
+public final class Version {
+  private Version() {}
+
+  /** The plugin version. */
+  public static final String VERSION = "${v}";
+}
+"""
+    }
+}
+sourceSets.main.java.srcDir(generatedVersionDir)
+compileJava.dependsOn generateVersionClass
+sourcesJar.dependsOn generateVersionClass
+
+// Run tests on a different JDK than the one running Gradle, e.g. `-PtestJavaVersion=8`.
+def testJavaVersion = project.findProperty('testJavaVersion')
+
+// The SWT tests. On macOS SWT runs only on the JVM's main thread, which Gradle's test workers are
+// not, so they run in a JVM of their own, JUnit on its main thread. They compile against the SWT the
+// plugin does, and run on the newest SWT the test JDK can.
+def swtJava = (testJavaVersion ?: JavaVersion.current().majorVersion) as int
+def swtTestVersion = swtJava >= 21 ? '3.135.0' : swtJava >= 17 ? '3.132.0' : swtJava >= 11 ? '3.123.0' : '3.116.100'
+sourceSets {
+    swtTest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations {
+    swtTestImplementation.extendsFrom testImplementation
+    swtTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+dependencies {
+    swtTestCompileOnly("org.eclipse.platform:org.eclipse.swt.gtk.linux.x86_64:${versions.swtApi}") { transitive = false }
+    swtTestRuntimeOnly("org.eclipse.platform:org.eclipse.swt.${swtPlatform}:${swtTestVersion}") { transitive = false }
+}
+compileSwtTestJava {
+    options.compilerArgs += ['-Xlint:-try', '-Xlint:-classfile']
+}
+tasks.register('swtTest', JavaExec) {
+    group = 'verification'
+    description = "Runs the SWT tests on SWT ${swtTestVersion}, on the JVM's main thread."
+    dependsOn 'swtTestClasses'
+    classpath = sourceSets.swtTest.runtimeClasspath
+    mainClass = 'org.junit.runner.JUnitCore'
+    if (testJavaVersion) {
+        javaLauncher = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(testJavaVersion as int)
+        }
+    }
+    if (System.getProperty('os.name').toLowerCase().contains('mac')) {
+        jvmArgs '-XstartOnFirstThread'
+    }
+    def classDirs = sourceSets.swtTest.output.classesDirs
+    argumentProviders.add({
+        classDirs.files.collectMany { dir ->
+            fileTree(dir).matching { include '**/*Test.class' }.files.collect { f ->
+                dir.toPath().relativize(f.toPath()).toString().replace(File.separator, '.') - '.class'
+            }
+        }.sort()
+    } as CommandLineArgumentProvider)
+}
+jacoco.applyTo(tasks.named('swtTest').get())
+if (testJavaVersion) {
+    test.javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(testJavaVersion as int)
+    }
+}
+
+test {
+    // The desktop tests build windows, which needs AWT; this keeps macOS from showing a dock icon
+    // for the test JVM. On a machine without a display they skip themselves.
+    systemProperty 'apple.awt.UIElement', 'true'
+    // JavaFX's software renderer, which needs no GPU, so the JavaFX tests run under xvfb too.
+    systemProperty 'prism.order', 'sw'
+    // JavaFX's classes cannot even load on Java 8, so the JavaFX tests are left out there.
+    if (testJavaVersion == '8') {
+        exclude '**/FxTest*', '**/FxCaptureTest*'
+    }
+    testLogging {
+        events 'failed'
+        exceptionFormat = 'full'
+    }
+    finalizedBy jacocoTestReport
+}
+
+jacoco {
+    toolVersion = '0.8.13'
+}
+
+// The Compose for Desktop classes are tested in the compose project, on real Compose windows: its
+// tests' coverage counts here.
+def composeCoverage = file('compose/build/jacoco/test.exec')
+def swtCoverage = layout.buildDirectory.file('jacoco/swtTest.exec')
+
+jacocoTestReport {
+    dependsOn test, ':compose:test', 'swtTest'
+    executionData composeCoverage, swtCoverage
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn test, ':compose:test', 'swtTest'
+    executionData composeCoverage, swtCoverage
+    afterEvaluate {
+        // The generated version constant has no code to cover. JavaFX does not run on Java 8, so
+        // there the JavaFX classes go untested; the other JDKs cover them.
+        def excluded = ['com/launchdarkly/observability/internal/Version.class']
+        if (testJavaVersion == '8') {
+            excluded += ['com/launchdarkly/observability/internal/Fx*.class',
+                         'com/launchdarkly/observability/internal/replay/Fx*.class']
+        }
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, excludes: excluded)
+        }))
+    }
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                minimum = 0.99
+            }
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.98
+            }
+        }
+    }
+}
+
+// What an application inherits from the plugin. The SDK is the application's own choice,
+// so a LaunchDarkly artifact in the POM could win dependency resolution with a version the
+// application never asked for. OkHttp must stay on 4.x, the line the SDK ships.
+tasks.register('checkPublishedPom') {
+    group = 'verification'
+    description = 'Checks the published POM depends only on OpenTelemetry and OkHttp 4.'
+    dependsOn 'generatePomFileForMavenJavaPublication'
+    def pomFile = layout.buildDirectory.file('publications/mavenJava/pom-default.xml')
+    doLast {
+        def deps = new groovy.xml.XmlSlurper(false, false).parse(pomFile.get().asFile).dependencies.dependency
+        def ld = deps.findAll { it.groupId.text() == 'com.launchdarkly' }
+        if (ld.size() != 0) {
+            throw new GradleException('The POM must not depend on LaunchDarkly artifacts, found: '
+                    + ld.collect { it.artifactId.text() }.join(', '))
+        }
+        def foreign = deps.findAll { !(it.groupId.text() in ['io.opentelemetry', 'com.squareup.okhttp3']) }
+        if (foreign.size() != 0) {
+            throw new GradleException('The POM may only depend on OpenTelemetry and OkHttp, found: '
+                    + foreign.collect { "${it.groupId.text()}:${it.artifactId.text()}" }.join(', '))
+        }
+        def api = deps.find { it.artifactId.text() == 'opentelemetry-api' }
+        if (api.size() == 0 || api.scope.text() != 'compile') {
+            throw new GradleException('opentelemetry-api must be a compile-scoped dependency in the POM')
+        }
+    }
+}
+
+// Fails when anything on the runtime classpath would bring OkHttp 5.
+tasks.register('checkRuntimeClasspath') {
+    group = 'verification'
+    description = 'Fails when OkHttp 5 reaches the runtime classpath.'
+    def runtime = configurations.runtimeClasspath
+    doLast {
+        def okhttp = runtime.resolvedConfiguration.resolvedArtifacts
+                .collect { it.moduleVersion.id }
+                .findAll { it.group == 'com.squareup.okhttp3' && !it.version.startsWith('4.') }
+                .collect { "${it.group}:${it.name}:${it.version}" }
+        if (!okhttp.isEmpty()) {
+            throw new GradleException("OkHttp other than 4.x on the runtime classpath: ${okhttp.join(', ')}")
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn jacocoTestCoverageVerification, 'checkPublishedPom', 'checkRuntimeClasspath'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifactId = 'launchdarkly-java-client-sdk-observability'
+            pom {
+                name = 'LaunchDarkly Observability plugin for the client-side Java SDK'
+                description = 'LaunchDarkly Observability plugin for the LaunchDarkly client-side Java SDK'
+                url = 'https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/observability-client-java'
+                organization {
+                    name = 'LaunchDarkly'
+                    url = 'https://launchdarkly.com/'
+                }
+                developers {
+                    developer {
+                        id = 'sdks'
+                        name = 'LaunchDarkly SDK Team'
+                        email = 'sdks@launchdarkly.com'
+                    }
+                }
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/launchdarkly/observability-sdk.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/launchdarkly/observability-sdk.git'
+                    url = 'https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/observability-client-java'
+                }
+            }
+        }
+    }
+}
+
+signing {
+    // Only a Sonatype publish needs a signature; publishToMavenLocal works without signing keys.
+    // The release workflow passes signing.keyId, signing.password and signing.secretKeyRingFile.
+    required = { gradle.taskGraph.allTasks.any { it.name.toLowerCase().contains('sonatype') } }
+    sign publishing.publications.mavenJava
+}
+
+// Central rejects a POM without these; fail the build instead of the upload.
+tasks.register('checkPomMetadata') {
+    group = 'verification'
+    description = 'Checks the published POM has the metadata Maven Central requires.'
+    dependsOn 'generatePomFileForMavenJavaPublication'
+    def pomFile = layout.buildDirectory.file('publications/mavenJava/pom-default.xml')
+    doLast {
+        def pom = new groovy.xml.XmlSlurper(false, false).parse(pomFile.get().asFile)
+        def missing = []
+        ['name', 'description', 'url'].each { if (pom."${it}".text().isEmpty()) missing << it }
+        if (pom.licenses.license.size() == 0) missing << 'licenses'
+        if (pom.developers.developer.size() == 0) missing << 'developers'
+        if (pom.scm.url.text().isEmpty()) missing << 'scm'
+        if (!missing.isEmpty()) {
+            throw new GradleException("The POM lacks what Maven Central requires: ${missing.join(', ')}")
+        }
+    }
+}
+tasks.named('check') {
+    dependsOn 'checkPomMetadata'
+}

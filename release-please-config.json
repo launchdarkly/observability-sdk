@@ -37,6 +37,17 @@
 				"lib/src/main/java/com/launchdarkly/observability/internal/Constants.java"
 			]
 		},
+		"sdk/@launchdarkly/observability-client-java/plugin": {
+			"draft": true,
+			"force-tag-creation": true,
+			"package-name": "launchdarkly-java-client-sdk-observability",
+			"release-type": "simple",
+			"versioning": "default",
+			"bump-minor-pre-major": true,
+			"include-v-in-tag": false,
+			"include-component-in-tag": true,
+			"extra-files": ["gradle.properties"]
+		},
 		"sdk/flutter/packages/observability": {
 			"package-name": "launchdarkly_flutter_observability",
 			"release-type": "dart",

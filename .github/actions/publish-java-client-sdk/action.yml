@@ -1,0 +1,65 @@
+name: 'Publish Java Client SDK observability'
+description: 'Verify and publish the client-side Java observability plugin and its Compose library to Maven Central, and hash the jars for provenance'
+
+inputs:
+    workspace-path:
+        description: 'Path to the plugin build'
+        required: false
+        default: 'sdk/@launchdarkly/observability-client-java/plugin'
+    aws-role-arn:
+        description: 'AWS role ARN for accessing secrets'
+        required: true
+    dry-run:
+        description: 'Build, verify and sign, but do not publish'
+        required: false
+        default: 'false'
+    prerelease:
+        description: 'Publish without releasing the staging repository'
+        required: false
+        default: 'false'
+
+outputs:
+    package-hashes:
+        description: 'Base64 encoded SHA256 hashes of published packages'
+        value: ${{ steps.package-hashes.outputs.package-hashes }}
+
+runs:
+    using: 'composite'
+    steps:
+        - name: Setup Java
+          uses: actions/setup-java@v4
+          with:
+              distribution: 'temurin'
+              java-version: '17'
+
+        # Same Sonatype Central account and code-signing key as the Android
+        # and Java server plugins; all publish under the com.launchdarkly namespace.
+        - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+          name: Get secrets
+          with:
+              aws_assume_role: ${{ inputs.aws-role-arn }}
+              ssm_parameter_pairs: |
+                  /production/common/releasing/sonatype/central/username = SONATYPE_USER_NAME,
+                  /production/common/releasing/sonatype/central/password = SONATYPE_PASSWORD,
+                  /production/common/releasing/android_code_signing/private_key_id = SIGNING_KEY_ID,
+                  /production/common/releasing/android_code_signing/private_key_passphrase = SIGNING_KEY_PASSPHRASE
+              s3_path_pairs: 'launchdarkly-releaser/android/code-signing-keyring.gpg = code-signing-keyring.gpg'
+
+        - name: Publish
+          shell: bash
+          working-directory: ${{ inputs.workspace-path }}
+          env:
+              LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
+              LD_RELEASE_DRY_RUN: ${{ inputs.dry-run }}
+              SIGNING_SECRET_KEY_RING_FILE: ${{ github.workspace }}/code-signing-keyring.gpg
+          run: source $GITHUB_ACTION_PATH/publish.sh
+
+        # The plugin's jars, and the Compose library's.
+        - name: Hash build files for provenance
+          id: package-hashes
+          shell: bash
+          working-directory: ${{ inputs.workspace-path }}
+          run: >
+              echo "package-hashes=$({ (cd build/libs && sha256sum launchdarkly-java-client-sdk-observability-*.jar);
+              (cd compose/build/libs && sha256sum launchdarkly-java-client-sdk-observability-compose-*.jar); } | base64 -w0)"
+              >> "$GITHUB_OUTPUT"
