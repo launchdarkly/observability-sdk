@@ -16,6 +16,7 @@ import '../../api/log_severity.dart';
 import '../../plugin/observability_config.dart';
 import '../../platform/io/messages.g.dart' as wire;
 import '../conversions.dart';
+import '../global_attributes.dart';
 import 'exporter_factory.dart';
 
 /// Creates the native (iOS/Android) implementation of [ObservabilityExporters].
@@ -89,7 +90,7 @@ class _NativeClickRecorder implements ClickRecorder {
         x,
         y,
         timestampMillis,
-        properties,
+        GlobalAttributes.fillProperties(properties),
       ),
     );
   }
@@ -118,7 +119,13 @@ class _NativeScreenViewRecorder implements ScreenViewRecorder {
     Map<String, Object?>? properties,
   }) {
     unawaited(
-      _api.trackScreenView(name, screenClass, screenId, category, properties),
+      _api.trackScreenView(
+        name,
+        screenClass,
+        screenId,
+        category,
+        GlobalAttributes.fillProperties(properties),
+      ),
     );
   }
 }
@@ -172,7 +179,9 @@ class _NativeTrackRecorder implements TrackRecorder {
     unawaited(
       _api.track(
         eventName,
-        json is Map ? Map<String, Object?>.from(json) : null,
+        GlobalAttributes.fillProperties(
+          json is Map ? Map<String, Object?>.from(json) : null,
+        ),
         metricValue?.toDouble(),
         contextKeys,
       ),
@@ -274,7 +283,7 @@ class _NativeLogRecorder implements LogRecorder {
     Map<String, Attribute>? attributes,
   }) {
     final attrs = <String, Object?>{};
-    attributes?.forEach((key, attribute) {
+    GlobalAttributes.fillAttributes(attributes)?.forEach((key, attribute) {
       final converted = convertAttribute(key, attribute);
       if (converted != null) {
         attrs[key] = converted.value;

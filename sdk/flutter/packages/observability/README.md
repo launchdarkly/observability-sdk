@@ -456,6 +456,8 @@ Limitations worth knowing:
 | `LDObserve.trackScreenView(name, {screenClass, screenId, category, properties})` | Record a screen view (navigation) as a `screen_view` span and a Session Replay `Navigate` event. Prefer `LDNavigatorObserver` for ordinary route changes. |
 | `LDObserve.trackClick({id, tag, text, x, y, properties})` | Record a click as a `click` span and a Session Replay `Click` event, for interactions automatic capture cannot observe. `x`/`y` are `double` logical pixels. |
 | `LDObserve.shutdown()` | Returns a `Future<void>`. Flush buffered spans, remove the Dart instrumentations, stop session replay, and turn every recording API into a no-op. Terminal: a later `init` does nothing. On Android and iOS the native SDK's automatic instrumentation (crashes, network, launch times) keeps running, because it has no teardown. |
+| `LDObserve.setAttributes(map)` | Merge [global attributes](#global-attributes) attached to every span, log, and event recorded afterwards. |
+| `LDObserve.removeAttributes(keys)` | Remove global attributes by key. |
 | `LDObserve.zoneSpecification()` | A zone spec that forwards `print`/`debugPrint` output as logs. |
 | `LDNavigatorObserver({screenNameExtractor, category})` | A `NavigatorObserver` that reports each route change as a screen view. |
 | `LDRoutePatterns.extractor(patterns, {skipUnmatched})` | A `screenNameExtractor` that reports the route pattern a navigation matched, so `/orders/42` becomes `/orders/:id`. |
@@ -486,6 +488,28 @@ span.setAttributes(<String, Object?>{
 ```
 
 Methods that accept `properties` (`recordLog`, `recordException`, `startSpan`, `track`, `trackScreenView`, `trackClick`) take a `Map<String, Object?>` of these same plain values.
+
+### Global attributes
+
+`LDObserve.setAttributes` attaches attributes to everything recorded from then on: spans (manual and automatic, including flag evaluations, errors, and app lifecycle), logs, screen views, clicks, and track events. Calls merge by key, so a later call replaces only the keys it names. `LDObserve.removeAttributes` removes keys.
+
+```dart
+LDObserve.setAttributes(<String, Object?>{
+  'tenant.id': 'acme',
+  'app.flavor': 'beta',
+});
+
+// Later, for example on sign-out:
+LDObserve.removeAttributes(['tenant.id']);
+```
+
+- **Per-call values win.** A key passed in `properties`, or set on a span with `setAttribute`, keeps its own value; a global attribute only fills keys that are not already set. Global attributes in turn take precedence over the `ObservabilityOptions.attributes` resource attributes.
+- **A span gets the global attributes current when it starts.**
+- **Safe before init.** Attributes set before `LDObserve.init` completes apply once observability is running.
+- **In memory only.** They last for the life of the process, are kept across session changes, and are never persisted.
+- **Session keys are reserved.** `session.id` and `highlight.session_id` are managed by the SDK and ignored here, as are values that cannot be attributes.
+
+On iOS and Android, telemetry the native SDK records on its own (crash reports, launch times, native lifecycle spans, and metrics) does not carry global attributes. The Flutter SDK has no Dart metrics API, so there are no Dart metrics for them to apply to.
 
 ## Session replay
 

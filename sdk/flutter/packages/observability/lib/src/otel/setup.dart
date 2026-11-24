@@ -3,6 +3,7 @@ import 'package:launchdarkly_flutter_observability/src/api/attribute.dart'
     show StringAttribute;
 import 'package:launchdarkly_flutter_observability/src/otel/conversions.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_factory.dart';
+import 'package:launchdarkly_flutter_observability/src/otel/global_attributes.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/service_convention.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/symbols_id.dart';
 import 'package:launchdarkly_flutter_observability/src/plugin/observability_config.dart';
@@ -123,7 +124,10 @@ class Otel {
     ObservabilityExporters exporters,
   ) {
     final tracerProvider = TracerProviderBase(
-      processors: exporters.createSpanProcessors(config),
+      processors: [
+        GlobalAttributesSpanProcessor(),
+        ...exporters.createSpanProcessors(config),
+      ],
       resource: Resource(
         resourceAttributes(sdkKey, config, symbolsId: readSymbolsId()),
       ),

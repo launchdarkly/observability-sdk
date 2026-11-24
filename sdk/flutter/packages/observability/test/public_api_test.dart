@@ -74,6 +74,10 @@ void main() {
         Map<String, Object?>? properties,
       })
       recordLog = LDObserve.recordLog;
+      final void Function(Map<String, Object?>) setAttributes =
+          LDObserve.setAttributes;
+      final void Function(List<String>) removeAttributes =
+          LDObserve.removeAttributes;
       final ZoneSpecification Function() zoneSpecification =
           LDObserve.zoneSpecification;
       final Future<void> Function() shutdown = LDObserve.shutdown;
@@ -88,6 +92,8 @@ void main() {
         trackClick,
         recordException,
         recordLog,
+        setAttributes,
+        removeAttributes,
         zoneSpecification,
         shutdown,
       ], everyElement(isNotNull));
