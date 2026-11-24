@@ -56,6 +56,9 @@ configurations {
 }
 
 dependencies {
+    implementation(platform("com.fasterxml.jackson:jackson-bom:2.21.8"))
+    "copyDependencies"(platform("com.fasterxml.jackson:jackson-bom:2.21.8"))
+
     implementation("androidx.core:core-ktx:1.15.0")
     "copyDependencies"("androidx.core:core-ktx:1.15.0")
 
