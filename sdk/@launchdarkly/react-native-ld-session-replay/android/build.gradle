@@ -22,7 +22,6 @@ buildscript {
       classpath "org.bouncycastle:bcutil-jdk18on:1.86"
       classpath "com.fasterxml.jackson.core:jackson-core:2.18.12"
       classpath "com.fasterxml.jackson.core:jackson-databind:2.18.12"
-      classpath "com.google.guava:guava:33.7.2-jre"
       classpath "org.apache.commons:commons-lang3:3.18.0"
       classpath "com.google.protobuf:protobuf-java:3.25.5"
       classpath "commons-io:commons-io:2.14.0"
