@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.70.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.70.0...launchdarkly-observability-android-0.70.1) (2026-11-25)
+
+
+### Bug Fixes
+
+* **android:** run Session Replay on the primary environment only ([#895](https://github.com/launchdarkly/observability-sdk/issues/895)) ([742a98c](https://github.com/launchdarkly/observability-sdk/commit/742a98c2b88dc93d7f5e56805b6898c0934cfd3d))
+
 ## [0.70.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.69.1...launchdarkly-observability-android-0.70.0) (2026-11-06)
 
 
