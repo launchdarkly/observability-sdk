@@ -35,7 +35,7 @@ public class ExporterTest {
     final java.util.Map<String, ArrayList<ReplayApi.Failure>> failures = new java.util.HashMap<>();
 
     FakeApi() {
-      super("http://unused", Collections.emptyMap(), new okhttp3.OkHttpClient());
+      super("http://unused", Collections.emptyMap(), new okhttp3.OkHttpClient()); // DevSkim: ignore DS137138
     }
 
     void failNext(String operation, boolean recoverable) {
@@ -352,7 +352,7 @@ public class ExporterTest {
         throw new ReplayApi.Failure("down", true, null);
       }
       sent.add(items.size());
-    }, LDLogger.none(), executor, clock::get, new Random(1));
+    }, LDLogger.none(), executor, clock::get, new Random(1)); // DevSkim: ignore DS148264
     for (int i = 0; i < 150; i++) { // 300 each, so 100 fit the budget exactly
       queue.offer(new ReplayItem.Pointer(ReplayItem.Pointer.Action.DOWN,
           Collections.singletonList(new ReplayItem.Position(0, 0, i)), "s"));
@@ -384,7 +384,7 @@ public class ExporterTest {
     AtomicLong clock = new AtomicLong(0);
     BatchWorker worker = new BatchWorker(queue, items -> {
       throw new IllegalStateException("bug");
-    }, LDLogger.none(), Executors.newSingleThreadScheduledExecutor(), clock::get, new Random(1));
+    }, LDLogger.none(), Executors.newSingleThreadScheduledExecutor(), clock::get, new Random(1)); // DevSkim: ignore DS148264
     worker.send();
     assertEquals(1, queue.size());
     worker.stop(1000);

@@ -92,7 +92,7 @@ public class DesktopTest {
   @Test
   public void aSessionEndsAfterTheBackgroundTimeoutWithoutSignals() {
     AtomicLong clock = new AtomicLong(1000);
-    SessionManager sessions = new SessionManager(1_000_000, 100, clock::get, new Random(3));
+    SessionManager sessions = new SessionManager(1_000_000, 100, clock::get, new Random(3)); // DevSkim: ignore DS148264
     String first = sessions.getSessionId();
     clock.addAndGet(500);
     assertEquals("the foreground never times out", first, sessions.getSessionId());
@@ -119,7 +119,7 @@ public class DesktopTest {
   @Test
   public void aBackwardClockEndsABackgroundSession() {
     AtomicLong clock = new AtomicLong(1000);
-    SessionManager sessions = new SessionManager(1_000_000, 100, clock::get, new Random(3));
+    SessionManager sessions = new SessionManager(1_000_000, 100, clock::get, new Random(3)); // DevSkim: ignore DS148264
     String first = sessions.getSessionId();
     sessions.onBackgrounded();
     clock.set(990);

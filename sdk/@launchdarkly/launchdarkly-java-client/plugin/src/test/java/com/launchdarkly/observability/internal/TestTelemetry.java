@@ -49,7 +49,7 @@ final class TestTelemetry {
   final LogCapture logCapture = Logs.capture();
   final LDLogger logger = LDLogger.withAdapter(logCapture, "test");
   final SessionManager sessions = new SessionManager(Constants.SESSION_MAX_LIFETIME_MILLIS, BACKGROUND_TIMEOUT, clock::get,
-      new Random(1));
+      new Random(1)); // DevSkim: ignore DS148264
 
   ObservabilityService service(ObservabilityOptions options) {
     return service(options, null);

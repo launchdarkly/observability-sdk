@@ -6,7 +6,7 @@ import com.launchdarkly.observability.ObservabilityOptions;
 public final class TestRuntime {
   public static final String CREDENTIAL = TestTelemetry.CREDENTIAL;
   /** A backend nothing listens on: replay's requests fail at once, as ones that can be retried. */
-  public static final String UNREACHABLE_BACKEND = "http://127.0.0.1:1";
+  public static final String UNREACHABLE_BACKEND = "http://127.0.0.1:1"; // DevSkim: ignore DS162092
 
   private static TestTelemetry telemetry;
 

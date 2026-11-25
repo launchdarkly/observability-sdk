@@ -50,7 +50,7 @@ public class UnitsTest {
   @Test
   public void aSessionLastsUntilItsMaximumLifetime() {
     AtomicLong clock = new AtomicLong(1000);
-    SessionManager sessions = new SessionManager(100, 1_000_000, clock::get, new Random(7));
+    SessionManager sessions = new SessionManager(100, 1_000_000, clock::get, new Random(7)); // DevSkim: ignore DS148264
     String first = sessions.getSessionId();
     assertTrue(first.matches("[0-9a-f]{32}"));
     clock.set(1099);

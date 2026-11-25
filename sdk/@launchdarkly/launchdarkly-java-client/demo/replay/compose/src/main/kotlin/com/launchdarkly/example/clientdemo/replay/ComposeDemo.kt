@@ -26,6 +26,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.launchdarkly.observability.api.ldId
 import com.launchdarkly.observability.api.ldMask
+import kotlin.system.exitProcess
 
 /**
  * A Compose for Desktop window recorded for session replay. With the default privacy profile the
@@ -34,7 +35,9 @@ import com.launchdarkly.observability.api.ldMask
  */
 fun main() {
     val replay = ReplayDemo.start("launchdarkly-java-client-demo-replay-compose")
-    application {
+    // By default application() calls System.exit when the window closes, so nothing after it would
+    // run. Returning instead lets replay.stop() send what is queued before the process ends.
+    application(exitProcessOnExit = false) {
         Window(
             onCloseRequest = ::exitApplication,
             title = "Session replay demo: Compose for Desktop",
@@ -63,4 +66,5 @@ fun main() {
         }
     }
     replay.stop()
+    exitProcess(0)
 }

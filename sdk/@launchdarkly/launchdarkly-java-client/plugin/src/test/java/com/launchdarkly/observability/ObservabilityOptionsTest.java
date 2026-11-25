@@ -73,8 +73,8 @@ public class ObservabilityOptionsTest {
         .enabled(false)
         .serviceName("svc")
         .serviceVersion("1.0")
-        .otlpEndpoint("http://otlp")
-        .backendUrl("http://backend")
+        .otlpEndpoint("http://otlp") // DevSkim: ignore DS137138
+        .backendUrl("http://backend") // DevSkim: ignore DS137138
         .contextFriendlyName("Pat")
         .resourceAttributes(resource)
         .customHeaders(Collections.singletonMap("X", "1"))
@@ -91,8 +91,8 @@ public class ObservabilityOptionsTest {
     assertFalse(options.isEnabled());
     assertEquals("svc", options.getServiceName());
     assertEquals("1.0", options.getServiceVersion());
-    assertEquals("http://otlp", options.getOtlpEndpoint());
-    assertEquals("http://backend", options.getBackendUrl());
+    assertEquals("http://otlp", options.getOtlpEndpoint()); // DevSkim: ignore DS137138
+    assertEquals("http://backend", options.getBackendUrl()); // DevSkim: ignore DS137138
     assertEquals("Pat", options.getContextFriendlyName());
     assertSame(resource, options.getResourceAttributes());
     assertEquals("1", options.getCustomHeaders().get("X"));
