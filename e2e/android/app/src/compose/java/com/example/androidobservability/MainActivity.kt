@@ -48,10 +48,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.example.androidobservability.masking.ComposeMaskingActivity
+import com.example.androidobservability.masking.ComposeNestedMaskingActivity
 import com.example.androidobservability.masking.ComposeUserFormActivity
 import com.example.androidobservability.masking.ComposeWebActivity
 import com.example.androidobservability.masking.XMLUserFormActivity
 import com.example.androidobservability.masking.XMLMaskingActivity
+import com.example.androidobservability.masking.XMLNestedMaskingActivity
 import com.example.androidobservability.masking.XMLWebActivity
 import com.example.androidobservability.smoothie.SmoothieListActivity
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
@@ -334,6 +336,13 @@ private fun MaskingButtons() {
         ctx = context,
         activity1 = XMLWebActivity::class.java,
         activity2 = ComposeWebActivity::class.java
+    )
+
+    MaskingRow(
+        name = "Nested Masking",
+        ctx = context,
+        activity1 = XMLNestedMaskingActivity::class.java,
+        activity2 = ComposeNestedMaskingActivity::class.java
     )
 }
 

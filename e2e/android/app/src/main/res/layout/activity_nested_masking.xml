@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/purple_500"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ancestor Mask Propagation"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- 1. Baseline -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1. Baseline (no marker)"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:paddingBottom="6dp"
+                android:text="Globally masked by maskTextInputs."
+                android:textColor="@android:color/darker_gray"
+                android:textSize="12sp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp">
+                <EditText
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="type here"
+                    android:inputType="text" />
+            </LinearLayout>
+
+            <!-- 2. Ancestor ldUnmask() -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="2. Ancestor .ldUnmask()"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:paddingBottom="6dp"
+                android:text="Container has .ldUnmask() — child EditText should be visible despite maskTextInputs=true."
+                android:textColor="@android:color/darker_gray"
+                android:textSize="12sp" />
+            <LinearLayout
+                android:id="@+id/section_unmasked_ancestor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#264CAF50"
+                android:orientation="vertical"
+                android:padding="8dp">
+                <EditText
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="visible inside unmasked ancestor"
+                    android:inputType="text" />
+            </LinearLayout>
+
+            <!-- 3. Ancestor ldMask() -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="3. Ancestor .ldMask()"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:paddingBottom="6dp"
+                android:text="Container has .ldMask() — both label and field get covered."
+                android:textColor="@android:color/darker_gray"
+                android:textSize="12sp" />
+            <LinearLayout
+                android:id="@+id/section_masked_ancestor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#26F44336"
+                android:orientation="vertical"
+                android:padding="8dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="plain label that would normally be visible" />
+                <EditText
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="field inside masked ancestor"
+                    android:inputType="text" />
+            </LinearLayout>
+
+            <!-- 4. Deep unmask through nesting -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="4. Deep unmask through nesting"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:paddingBottom="6dp"
+                android:text="Two levels of nesting under .ldUnmask() — should still be visible."
+                android:textColor="@android:color/darker_gray"
+                android:textSize="12sp" />
+            <LinearLayout
+                android:id="@+id/section_deep_unmasked_ancestor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#264CAF50"
+                android:orientation="vertical"
+                android:padding="8dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#0D4CAF50"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+                    <EditText
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="deeply nested, still unmasked"
+                        android:inputType="text" />
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
