@@ -106,7 +106,7 @@ describe('ReportingObserverListener', () => {
 		deliver?.([
 			cspReport({
 				effectiveDirective: 'connect-src',
-				blockedURL: 'https://collector.example.net',
+				blockedURL: 'https://collector.example.net/v1/traces',
 				disposition: 'report',
 			}),
 		])
@@ -115,9 +115,50 @@ describe('ReportingObserverListener', () => {
 			'report.type': 'csp-violation',
 			'report.url': 'https://app.example.com/projects',
 			'report.body.effectiveDirective': 'connect-src',
-			'report.body.blockedURL': 'https://collector.example.net',
+			'report.body.blockedURL': 'https://collector.example.net/v1/traces',
 			'report.body.disposition': 'report',
 		})
+	})
+
+	it('redacts tokens from the URLs a report carries', () => {
+		const { reports } = listen()
+
+		deliver?.([
+			{
+				type: 'csp-violation',
+				url: 'https://app.example.com/callback?code=abc123',
+				body: new FakeCSPViolationReportBody({
+					effectiveDirective: 'script-src-elem',
+					blockedURL: 'https://cdn.example.net/x.js?token=secret',
+					documentURL:
+						'https://app.example.com/callback#access_token=secret',
+					referrer:
+						'https://idp.example.com/authorize?id_token=secret',
+					sourceFile: 'https://app.example.com/app.js?sig=secret',
+				}),
+			},
+		])
+
+		const serialized = JSON.stringify(reports[0])
+		expect(serialized).not.toContain('secret')
+		expect(serialized).not.toContain('abc123')
+		expect(reports[0].url).toContain('code=REDACTED')
+		expect(reports[0].attributes['report.body.blockedURL']).toContain(
+			'token=REDACTED',
+		)
+	})
+
+	it('keeps CSP keywords that stand in for a blocked URL', () => {
+		const { reports } = listen()
+
+		deliver?.([
+			cspReport({
+				effectiveDirective: 'script-src',
+				blockedURL: 'inline',
+			}),
+		])
+
+		expect(reports[0].attributes['report.body.blockedURL']).toBe('inline')
 	})
 
 	it('names a CSP violation after its directive', () => {

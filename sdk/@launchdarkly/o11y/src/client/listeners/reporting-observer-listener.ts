@@ -1,4 +1,5 @@
 import type { ConsoleMethods } from '../types/client'
+import { sanitizeUrl } from './network-listener/utils/network-sanitizer'
 
 export type ReportingObserverReportKind = 'error' | 'log'
 
@@ -21,6 +22,25 @@ const BODY_PRIMITIVE = new Set(['string', 'number', 'boolean'])
 // `originalPolicy` repeats the page's whole CSP on every violation; the
 // directive, disposition and blocked URL identify the violation.
 const BODY_FIELDS_TO_SKIP = new Set(['originalPolicy'])
+
+// Report fields that hold URLs, which can carry tokens in their query or
+// fragment and LaunchDarkly evaluation contexts in their path.
+const BODY_URL_FIELDS = new Set([
+	'blockedURL',
+	'documentURL',
+	'referrer',
+	'sourceFile',
+	'url',
+])
+
+// CSP uses keywords such as `inline` and `eval` in place of a blocked URL.
+const looksLikeUrl = (value: string): boolean =>
+	value.startsWith('/') || /^[a-z][a-z0-9+.-]*:/i.test(value)
+
+const sanitizeReportUrl = <T>(value: T): T =>
+	typeof value === 'string' && looksLikeUrl(value)
+		? (sanitizeUrl(value) as T)
+		: value
 
 const isReportingObserverSupported = (): boolean =>
 	typeof window !== 'undefined' &&
@@ -68,7 +88,9 @@ const flattenBody = (
 		if (value === null || value === undefined) continue
 		if (BODY_FIELDS_TO_SKIP.has(key)) continue
 		if (BODY_PRIMITIVE.has(typeof value)) {
-			attrs[`report.body.${key}`] = value as string | number | boolean
+			attrs[`report.body.${key}`] = (
+				BODY_URL_FIELDS.has(key) ? sanitizeReportUrl(value) : value
+			) as string | number | boolean
 		} else {
 			try {
 				attrs[`report.body.${key}`] = JSON.stringify(value)
@@ -153,9 +175,10 @@ export const ReportingObserverListener = (
 				for (const report of reports) {
 					const type = report.type ?? 'unknown'
 					const body = readBody(report.body)
+					const url = sanitizeReportUrl(report.url)
 					const attributes = {
 						'report.type': type,
-						'report.url': report.url,
+						'report.url': url,
 						...flattenBody(body),
 					}
 					const message = messageFromReport({ type, body })
@@ -169,7 +192,7 @@ export const ReportingObserverListener = (
 							level: 'warn',
 							type,
 							message,
-							url: report.url,
+							url,
 							attributes,
 						})
 					} else {
@@ -177,7 +200,7 @@ export const ReportingObserverListener = (
 							kind: 'error',
 							type,
 							message,
-							url: report.url,
+							url,
 							attributes,
 						})
 					}
