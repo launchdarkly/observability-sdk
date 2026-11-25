@@ -26,8 +26,8 @@ jobs:
             flutter-plugin-tag-name: ${{ steps.release.outputs['sdk/flutter/packages/observability--tag_name'] }}
             java-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-java--release_created'] }}
             java-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-java--tag_name'] }}
-            java-client-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-client-java/plugin--release_created'] }}
-            java-client-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-client-java/plugin--tag_name'] }}
+            java-client-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/launchdarkly-java-client/plugin--release_created'] }}
+            java-client-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/launchdarkly-java-client/plugin--tag_name'] }}
         steps:
             # Normally a workflow cannot trigger another workflow. For this workflow we need to run required checks.
             # Github determines that something is created by a workflow/bot based on the token.

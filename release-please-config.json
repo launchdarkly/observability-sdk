@@ -37,7 +37,7 @@
 				"lib/src/main/java/com/launchdarkly/observability/internal/Constants.java"
 			]
 		},
-		"sdk/@launchdarkly/observability-client-java/plugin": {
+		"sdk/@launchdarkly/launchdarkly-java-client/plugin": {
 			"draft": true,
 			"force-tag-creation": true,
 			"package-name": "launchdarkly-java-client-sdk-observability",

@@ -4,13 +4,13 @@ on:
     push:
         branches: ['main']
         paths:
-            - 'sdk/@launchdarkly/observability-client-java/**'
+            - 'sdk/@launchdarkly/launchdarkly-java-client/**'
             - '.github/workflows/java-client-observability.yml'
             - '.github/actions/publish-java-client-sdk/**'
     pull_request:
         types: [opened, synchronize]
         paths:
-            - 'sdk/@launchdarkly/observability-client-java/**'
+            - 'sdk/@launchdarkly/launchdarkly-java-client/**'
             - '.github/workflows/java-client-observability.yml'
             - '.github/actions/publish-java-client-sdk/**'
 
@@ -31,7 +31,7 @@ jobs:
                 java: [8, 11, 17, 21]
         defaults:
             run:
-                working-directory: ./sdk/@launchdarkly/observability-client-java/plugin
+                working-directory: ./sdk/@launchdarkly/launchdarkly-java-client/plugin
         steps:
             - uses: actions/checkout@v4
 
@@ -63,9 +63,9 @@ jobs:
               with:
                   name: java-client-test-reports
                   path: |
-                      sdk/@launchdarkly/observability-client-java/plugin/build/reports/tests
-                      sdk/@launchdarkly/observability-client-java/plugin/build/reports/jacoco/test/html
-                      sdk/@launchdarkly/observability-client-java/plugin/compose/build/reports/tests
+                      sdk/@launchdarkly/launchdarkly-java-client/plugin/build/reports/tests
+                      sdk/@launchdarkly/launchdarkly-java-client/plugin/build/reports/jacoco/test/html
+                      sdk/@launchdarkly/launchdarkly-java-client/plugin/compose/build/reports/tests
                   retention-days: 7
 
     demo:
@@ -76,7 +76,7 @@ jobs:
         runs-on: ubuntu-22.04-8core-32gb
         defaults:
             run:
-                working-directory: ./sdk/@launchdarkly/observability-client-java/demo
+                working-directory: ./sdk/@launchdarkly/launchdarkly-java-client/demo
         steps:
             - uses: actions/checkout@v4
 

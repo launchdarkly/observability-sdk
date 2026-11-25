@@ -5,7 +5,7 @@ inputs:
     workspace-path:
         description: 'Path to the plugin build'
         required: false
-        default: 'sdk/@launchdarkly/observability-client-java/plugin'
+        default: 'sdk/@launchdarkly/launchdarkly-java-client/plugin'
     aws-role-arn:
         description: 'AWS role ARN for accessing secrets'
         required: true
