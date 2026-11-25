@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.androidobservability.masking.XMLMaskingActivity;
+import com.example.androidobservability.masking.XMLNestedMaskingActivity;
 import com.example.androidobservability.masking.XMLUserFormActivity;
 import com.example.androidobservability.masking.XMLWebActivity;
 import com.example.androidobservability.smoothie.SmoothieListActivity;
@@ -61,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
         bindActivityButton(R.id.btn_smoothies_xml, SmoothieListActivity.class);
         bindActivityButton(R.id.btn_check_xml, XMLMaskingActivity.class);
         bindActivityButton(R.id.btn_webviews_xml, XMLWebActivity.class);
+        bindActivityButton(R.id.btn_nested_masking_xml, XMLNestedMaskingActivity.class);
     }
 
     private void setupSessionReplayToggle() {

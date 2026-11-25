@@ -33,6 +33,10 @@
         <activity
             android:name=".masking.XMLWebActivity"
             android:exported="false" />
+        <activity
+            android:name=".masking.XMLNestedMaskingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AndroidObservability" />
 
         <service
             android:name=".ObservabilityForegroundService"
