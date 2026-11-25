@@ -1051,34 +1051,40 @@ export class ObserveSDK implements Observe {
 			})
 		}
 		if (this._options.enableReportingObserver !== false) {
-			ReportingObserverListener((report) => {
-				const attributes: Attributes = {
-					...report.attributes,
-					[SemanticAttributes.ATTR_URL_PATH]:
-						window.location.pathname,
-				}
-				if (report.kind === 'log') {
-					this._recordLog(
-						report.message,
-						report.level ?? 'warn',
-						attributes,
-					)
-				} else {
-					const err = new Error(report.message)
-					this.recordError(
-						err,
-						undefined,
-						Object.fromEntries(
-							Object.entries(attributes).map(([k, v]) => [
-								k,
-								v === undefined ? '' : String(v),
-							]),
-						),
-						'reporting-observer',
-						'custom',
-					)
-				}
-			})
+			ReportingObserverListener(
+				(report) => {
+					const attributes: Attributes = {
+						...report.attributes,
+						[SemanticAttributes.ATTR_URL_PATH]:
+							window.location.pathname,
+					}
+					if (report.kind === 'log') {
+						this._recordLog(
+							report.message,
+							report.level ?? 'warn',
+							attributes,
+						)
+					} else {
+						const err = new Error(report.message)
+						this.recordError(
+							err,
+							undefined,
+							Object.fromEntries(
+								Object.entries(attributes).map(([k, v]) => [
+									k,
+									v === undefined ? '' : String(v),
+								]),
+							),
+							'reporting-observer',
+							'custom',
+						)
+					}
+				},
+				{
+					cspViolationsAsErrors:
+						this._options.reportCspViolationsAsErrors === true,
+				},
+			)
 		}
 	}
 

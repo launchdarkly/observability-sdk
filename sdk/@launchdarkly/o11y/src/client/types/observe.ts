@@ -56,11 +56,23 @@ export type ObserveOptions = CommonOptions & {
 	 */
 	enableLongtaskRecording?: boolean
 	/**
-	 * Specifies whether to subscribe to the browser Reporting API and emit
-	 * CSP/intervention reports as errors and deprecation reports as warn logs.
+	 * Specifies whether to subscribe to the browser Reporting API. Intervention
+	 * reports are emitted as errors; deprecation and Content Security Policy
+	 * violation reports are emitted as warn logs (see
+	 * `reportCspViolationsAsErrors`).
 	 * @default true
 	 */
 	enableReportingObserver?: boolean
+	/**
+	 * Specifies whether Content Security Policy violation reports from the
+	 * Reporting API are emitted as errors instead of warn logs. A violation
+	 * report describes a policy decision, often for a Report-Only policy that
+	 * blocked nothing, rather than an exception in the app, so by default it is
+	 * recorded as a warn log carrying the directive, disposition and blocked
+	 * URL. Ignored when `enableReportingObserver` is `false`.
+	 * @default false
+	 */
+	reportCspViolationsAsErrors?: boolean
 	/**
 	 * Specifies the environment your application is running in.
 	 * This is useful to distinguish whether your session was recorded on localhost or in production.
