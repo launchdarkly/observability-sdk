@@ -54,6 +54,8 @@ configurations.all {
 }
 
 dependencies {
+    implementation(platform("com.fasterxml.jackson:jackson-bom:2.18.12"))
+
     if (isClientSdkProvidedByHost) {
         compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.14.0")
         testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.14.0")
