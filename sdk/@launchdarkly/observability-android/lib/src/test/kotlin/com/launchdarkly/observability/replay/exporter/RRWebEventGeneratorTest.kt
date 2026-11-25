@@ -351,7 +351,7 @@ class RRWebEventGeneratorTest {
         width: Int,
         height: Int,
     ): ExportFrame.AddImage = ExportFrame.AddImage(
-        imageBase64 = "AQ==",
+        imageBase64 = "AQ==".toByteArray(Charsets.US_ASCII),
         rect = IntRect(left = left, top = top, width = width, height = height),
         imageSignature = imageSignature,
     )
@@ -367,7 +367,7 @@ class RRWebEventGeneratorTest {
         val data = (fullSnapshot.data as EventDataUnion.StandardEventData).data
         val root = data.node ?: error("FULL_SNAPSHOT should include a root node")
         val imageNode = firstNodeWithTag(root, "img") ?: error("FULL_SNAPSHOT should include an image node")
-        return imageNode.attributes?.get("src") ?: error("Image node should include src")
+        return imageNode.attributes?.get("src")?.toString() ?: error("Image node should include src")
     }
 
     private fun firstNodeWithTag(node: EventNode, tagName: String): EventNode? {

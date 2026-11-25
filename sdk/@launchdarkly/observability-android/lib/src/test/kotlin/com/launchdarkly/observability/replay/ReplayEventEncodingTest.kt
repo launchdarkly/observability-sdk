@@ -59,6 +59,34 @@ class ReplayEventEncodingTest {
     }
 
     @Test
+    fun `an image src is written from its base64 bytes`() {
+        val image = EventNode(
+            type = NodeType.ELEMENT,
+            tagName = "img",
+            attributes = linkedMapOf(
+                "src" to Base64DataUrl("image/jpeg", "AQ==".toByteArray(Charsets.US_ASCII)),
+                "width" to "4",
+            ),
+            id = 2,
+        )
+        assertEquals(
+            """{"type":2,"data":{"node":{"type":2,"tagName":"img","attributes":{"src":"data:image/jpeg;base64,AQ==","width":"4"},"childNodes":[],"id":2}},"timestamp":5,"_sid":1}""",
+            encode(Event(EventType.FULL_SNAPSHOT, EventDataUnion.StandardEventData(EventData(node = image)), 5L, 1))
+        )
+    }
+
+    @Test
+    fun `a base64 data URL reads as its text`() {
+        val url = Base64DataUrl("image/png", "AQ==".toByteArray(Charsets.US_ASCII))
+        val text = "data:image/png;base64,AQ=="
+        assertEquals(text, url.toString())
+        assertEquals(text.length, url.length)
+        assertEquals(text, String(CharArray(url.length) { url[it] }))
+        assertEquals("AQ==", url.subSequence(text.length - 4, text.length))
+        assertEquals(Base64DataUrl("image/png", "AQ==".toByteArray(Charsets.US_ASCII)), url)
+    }
+
+    @Test
     fun `removals and additions`() {
         val data = EventData(
             source = IncrementalSource.MUTATION,

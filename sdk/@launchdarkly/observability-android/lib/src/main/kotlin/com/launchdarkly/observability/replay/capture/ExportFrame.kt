@@ -29,7 +29,7 @@ data class ExportFrame(
         keyFrameId = 0,
         addImages = listOf(
             AddImage(
-                imageBase64 = imageBase64,
+                imageBase64 = imageBase64.toByteArray(Charsets.US_ASCII),
                 rect = IntRect(left = 0, top = 0, width = origWidth, height = origHeight),
                 imageSignature = null
             )
@@ -49,11 +49,19 @@ data class ExportFrame(
         val imageSignature: ImageSignature,
     )
 
+    /** [imageBase64] is the encoded image's base64, as the ASCII bytes the encoder produced. */
     data class AddImage(
-        val imageBase64: String,
+        val imageBase64: ByteArray,
         val rect: IntRect,
         val imageSignature: ImageSignature?,
-    )
+    ) {
+        override fun equals(other: Any?): Boolean =
+            this === other || other is AddImage && imageBase64.contentEquals(other.imageBase64) &&
+                rect == other.rect && imageSignature == other.imageSignature
+
+        override fun hashCode(): Int =
+            31 * (31 * imageBase64.contentHashCode() + rect.hashCode()) + (imageSignature?.hashCode() ?: 0)
+    }
 
     sealed class ExportFormat {
         data object Png : ExportFormat()

@@ -3,6 +3,7 @@ package com.launchdarkly.observability.replay.exporter
 import android.view.MotionEvent
 import com.launchdarkly.observability.replay.Event
 import com.launchdarkly.observability.replay.Addition
+import com.launchdarkly.observability.replay.Base64DataUrl
 import com.launchdarkly.observability.replay.EventData
 import com.launchdarkly.observability.replay.EventDataUnion
 import com.launchdarkly.observability.replay.EventNode
@@ -84,7 +85,7 @@ class RRWebEventGenerator(
     private fun tileNode(image: ExportFrame.AddImage): Pair<EventNode, Int> {
         val tileCanvasId = nextNodeId()
         image.imageSignature?.let { nodeIds[it] = tileCanvasId }
-        val dataUrl = "data:${imageMimeType()};base64,${image.imageBase64}"
+        val dataUrl = Base64DataUrl(imageMimeType(), image.imageBase64)
         val node = EventNode(
             id = tileCanvasId,
             type = NodeType.ELEMENT,

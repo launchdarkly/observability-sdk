@@ -262,8 +262,9 @@ class ExportDiffManagerTest {
 
     private fun mockBase64Android() {
         mockkStatic(Base64::class)
-        every { Base64.encodeToString(any(), Base64.NO_WRAP) } answers {
-            JBase64.getEncoder().encodeToString(firstArg())
+        every { Base64.encode(any(), any(), any(), Base64.NO_WRAP) } answers {
+            val offset = secondArg<Int>()
+            JBase64.getEncoder().encode(firstArg<ByteArray>().copyOfRange(offset, offset + thirdArg<Int>()))
         }
     }
 

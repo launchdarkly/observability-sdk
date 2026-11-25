@@ -242,6 +242,23 @@ class JsonByteWriterTest {
         }
 
         @Test
+        fun `ASCII bytes are written as one string after their prefix`() {
+            val prefix = "data:image/jpeg;base64,".toByteArray(Charsets.US_ASCII)
+            val base64 = "AQ+/=".toByteArray(Charsets.US_ASCII)
+            assertEquals(
+                """[1,"data:image/jpeg;base64,AQ+/=",2]""",
+                write { beginArray().value(1).asciiValue(prefix, base64).value(2).endArray() }
+            )
+        }
+
+        @Test
+        fun `ASCII bytes grow the buffer to fit`() {
+            val writer = JsonByteWriter(initialCapacity = 1)
+            writer.asciiValue(ByteArray(0), ByteArray(100_000) { 'A'.code.toByte() })
+            assertEquals(100_002, writer.size)
+        }
+
+        @Test
         fun `reset starts a new document in the same buffer`() {
             val writer = JsonByteWriter()
             writer.beginArray().value(1).endArray()

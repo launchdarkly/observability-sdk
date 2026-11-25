@@ -377,8 +377,9 @@ class RawFramesRRWebEventGeneratorTest {
 
     private fun mockBase64Android() {
         mockkStatic(Base64::class)
-        every { Base64.encodeToString(any(), Base64.NO_WRAP) } answers {
-            JBase64.getEncoder().encodeToString(firstArg())
+        every { Base64.encode(any(), any(), any(), Base64.NO_WRAP) } answers {
+            val offset = secondArg<Int>()
+            JBase64.getEncoder().encode(firstArg<ByteArray>().copyOfRange(offset, offset + thirdArg<Int>()))
         }
     }
 
@@ -435,7 +436,7 @@ class RawFramesRRWebEventGeneratorTest {
             val data = (event.data as? EventDataUnion.StandardEventData)?.data ?: continue
             data.node?.let { markers += markersFromNodes(it.childNodes) }
             data.adds?.forEach { add ->
-                markerFromDataURL(add.node.attributes?.get("src"))?.let { markers += it }
+                markerFromDataURL(add.node.attributes?.get("src")?.toString())?.let { markers += it }
             }
         }
         return markers
@@ -484,7 +485,7 @@ class RawFramesRRWebEventGeneratorTest {
         val markers = mutableListOf<Int>()
         for (node in nodes) {
             if (node.tagName == "img") {
-                markerFromDataURL(node.attributes?.get("src"))?.let { markers += it }
+                markerFromDataURL(node.attributes?.get("src")?.toString())?.let { markers += it }
             }
             markers += markersFromNodes(node.childNodes)
         }
@@ -512,8 +513,8 @@ class RawFramesRRWebEventGeneratorTest {
     private fun sizeFromNode(node: EventNode): IntSize? {
         if (node.tagName != "img") return null
         val attrs = node.attributes ?: return null
-        val width = attrs["width"]?.toIntOrNull() ?: return null
-        val height = attrs["height"]?.toIntOrNull() ?: return null
+        val width = attrs["width"]?.toString()?.toIntOrNull() ?: return null
+        val height = attrs["height"]?.toString()?.toIntOrNull() ?: return null
         return IntSize(width, height)
     }
 
