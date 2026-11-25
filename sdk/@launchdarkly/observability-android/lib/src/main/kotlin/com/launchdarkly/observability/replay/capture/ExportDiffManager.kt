@@ -116,7 +116,7 @@ private fun Bitmap.asExportedImage(
     rect: IntRect,
     imageSignature: ImageSignature?,
 ): ExportFrame.AddImage? {
-    val outputStream = ByteArrayOutputStream()
+    val outputStream = CompressedImageStream()
     return try {
         val compressionOk = when (format) {
             ExportFrame.ExportFormat.Png -> compress(Bitmap.CompressFormat.PNG, 100, outputStream)
@@ -134,13 +134,17 @@ private fun Bitmap.asExportedImage(
         if (!compressionOk) {
             return null
         }
-        val compressedImage = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
         ExportFrame.AddImage(
-            imageBase64 = compressedImage,
+            imageBase64 = outputStream.toBase64(),
             rect = rect,
             imageSignature = imageSignature,
         )
     } finally {
         outputStream.close()
     }
+}
+
+private class CompressedImageStream : ByteArrayOutputStream() {
+    /** The bytes written so far as base64 ASCII, encoded from the stream's own buffer rather than a copy of it. */
+    fun toBase64(): ByteArray = Base64.encode(buf, 0, count, Base64.NO_WRAP)
 }

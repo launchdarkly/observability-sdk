@@ -95,6 +95,24 @@ internal class JsonByteWriter(initialCapacity: Int = DEFAULT_CAPACITY) {
         return this
     }
 
+    /**
+     * Writes a string value whose characters are [prefix] then [ascii], given as bytes and copied straight
+     * into the payload. Every byte must be printable ASCII other than `"` and `\` (base64 output is), since
+     * nothing is escaped: checking would cost the pass over the bytes this exists to avoid.
+     */
+    fun asciiValue(prefix: ByteArray, ascii: ByteArray): JsonByteWriter {
+        separate()
+        ensure(prefix.size + ascii.size + 2)
+        bytes[size++] = QUOTE
+        prefix.copyInto(bytes, size)
+        size += prefix.size
+        ascii.copyInto(bytes, size)
+        size += ascii.size
+        bytes[size++] = QUOTE
+        needsSeparator = true
+        return this
+    }
+
     fun value(value: Boolean): JsonByteWriter {
         separate()
         append(if (value) TRUE else FALSE)

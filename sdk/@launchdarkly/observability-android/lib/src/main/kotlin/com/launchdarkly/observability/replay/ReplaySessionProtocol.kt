@@ -116,7 +116,8 @@ data class EventNode(
     val type: NodeType,
     val name: String? = null,
     val tagName: String? = null,
-    val attributes: Map<String, String>? = null,
+    /** Values are text; an image's `src` is a [Base64DataUrl], whose base64 stays in bytes. */
+    val attributes: Map<String, CharSequence>? = null,
     /** Always written, even when empty: rrweb replay expects every node to carry it. */
     val childNodes: List<EventNode> = emptyList(),
     val rootId: Int? = null,

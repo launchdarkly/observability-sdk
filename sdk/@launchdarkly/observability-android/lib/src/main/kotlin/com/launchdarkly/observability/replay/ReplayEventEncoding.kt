@@ -83,7 +83,14 @@ private fun JsonByteWriter.write(node: EventNode) {
     name("type").value(node.type.value)
     optional("name", node.name)
     optional("tagName", node.tagName)
-    node.attributes?.let { stringMap("attributes", it) }
+    node.attributes?.let { attributes ->
+        name("attributes").beginObject()
+        for ((key, value) in attributes) {
+            name(key)
+            if (value is JsonWritable) value.writeJson(this) else value(value.toString())
+        }
+        endObject()
+    }
     name("childNodes").beginArray()
     for (child in node.childNodes) write(child)
     endArray()

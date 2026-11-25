@@ -15,7 +15,7 @@ data class ImageItemPayload(
         get() = SessionReplayExporter::class.java
 
     /**
-     * Queue cost derived from the base64 string length; it is a cost unit, not exact bytes.
+     * Queue cost derived from the base64 length; it is a cost unit, not exact bytes.
      */
-    override fun cost(): Int = capture.addImages.firstOrNull()?.imageBase64?.length ?: 0
+    override fun cost(): Int = capture.addImages.firstOrNull()?.imageBase64?.size ?: 0
 }
