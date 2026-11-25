@@ -103,8 +103,13 @@ public final class NestedMaskingDemo {
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent e) {
-                replay.stop();
-                System.exit(0);
+                // Off the event dispatch thread, as the dashboard does: replay captures Swing
+                // frames on it, and closing the client sends what is still queued.
+                Thread closer = new Thread(() -> {
+                    replay.stop();
+                    System.exit(0);
+                }, "nested-masking-shutdown");
+                closer.start();
             }
         });
         frame.getContentPane().add(new JScrollPane(content), BorderLayout.CENTER);
