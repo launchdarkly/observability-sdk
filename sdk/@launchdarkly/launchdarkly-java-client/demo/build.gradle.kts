@@ -89,6 +89,14 @@ tasks.register<JavaExec>("runDashboard") {
     environment(dotEnv())
 }
 
+tasks.register<JavaExec>("runNestedMaskingDemo") {
+    group = "application"
+    description = "Runs the Swing screen that checks a container's mask or unmask reaches what is inside it."
+    mainClass = "com.launchdarkly.example.clientdemo.replay.NestedMaskingDemo"
+    classpath = sourceSets["main"].runtimeClasspath
+    environment(dotEnv())
+}
+
 /**
  * One runnable jar holding both demos and every dependency, including the
  * unreleased SDK, so it runs on any machine with Java 21:

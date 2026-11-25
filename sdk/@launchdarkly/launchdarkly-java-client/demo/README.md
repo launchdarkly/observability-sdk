@@ -107,6 +107,27 @@ The **Save** button is named `save`, so its clicks are reported as `save`: by
 its id in JavaFX, its data under `"name"` in SWT, its name in Pivot, and
 `Modifier.ldId("save")` in Compose.
 
+### Nested Masking
+
+```bash
+./gradlew runNestedMaskingDemo
+```
+
+A Swing screen for checking that `LDReplay.mask` and `LDReplay.unmask` on a
+container reach what is inside it, the desktop counterparts of `ldMask()` and
+`ldUnmask()`. Sections 1 to 4 match the nested masking screens in the iOS test
+app and the Android e2e app; 5 and 6 add a mark inside the opposite mark. Each
+section says what the recording should show:
+
+| Section | Recording |
+| --- | --- |
+| 1. Baseline | The field is masked by the default profile. |
+| 2. Ancestor unmask | The field in the unmasked panel shows. |
+| 3. Ancestor mask | The whole panel is covered, the plain label too. |
+| 4. Deep unmask | A field two panels under the unmask shows. |
+| 5. Unmask inside a mask | The whole outer panel is covered: the outer mask wins. |
+| 6. Mask inside an unmask | Only the inner panel is covered; the rest of the outer panel shows. |
+
 Set `REPLAY_DEBUG=true` to log each batch of frames the plugin sends. On macOS
 SWT runs only on the main thread, which the SWT demo's run task asks for.
 [ReplayDemo.java](src/main/java/com/launchdarkly/example/clientdemo/replay/ReplayDemo.java)
