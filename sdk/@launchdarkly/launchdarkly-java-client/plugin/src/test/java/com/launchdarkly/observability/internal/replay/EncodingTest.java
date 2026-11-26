@@ -4,6 +4,7 @@ import com.launchdarkly.sdk.LDValue;
 
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -20,8 +21,18 @@ public class EncodingTest {
     return new ExportFrame.Signature(n, n);
   }
 
+  /** Test image data, as the ASCII bytes base64 is held in. */
+  static byte[] ascii(String s) {
+    return s.getBytes(StandardCharsets.US_ASCII);
+  }
+
+  /** An event's JSON as text. */
+  static String text(EventGenerator.Event event) {
+    return new String(event.json, StandardCharsets.UTF_8);
+  }
+
   static ExportFrame.AddImage tile(String data, int left, int top, long signature) {
-    return new ExportFrame.AddImage(data, left, top, 10, 20, sig(signature));
+    return new ExportFrame.AddImage(ascii(data), left, top, 10, 20, sig(signature));
   }
 
   static ExportFrame frame(int keyFrameId, boolean keyframe, List<ExportFrame.AddImage> adds,
@@ -30,14 +41,14 @@ public class EncodingTest {
   }
 
   static LDValue json(EventGenerator.Event event) {
-    return LDValue.parse(event.json);
+    return LDValue.parse(text(event));
   }
 
   // -- the writer --
 
   @Test
   public void writesNestedValuesWithCommas() {
-    String json = new JsonWriter().beginObject()
+    String json = new JsonByteWriter().beginObject()
         .name("a").value(1)
         .name("b").beginArray().value("x").value(true).value((String) null).raw("{\"r\":1}").endArray()
         .name("c").beginObject().endObject()
@@ -50,21 +61,21 @@ public class EncodingTest {
   @Test
   public void escapesWhatJsonNeedsEscaped() {
     String s = "q\" b\\ n\n r\r t\t c\u0001 l  p  é";
-    String json = new JsonWriter().value(s).toString();
+    String json = new JsonByteWriter().value(s).toString();
     assertEquals(s, LDValue.parse(json).stringValue());
     assertEquals("\"q\\\" b\\\\ n\\n r\\r t\\t c\\u0001 l\\u2028 p\\u2029 é\"", json);
-    assertEquals("\"plain\"", JsonWriter.quoted("plain"));
+    assertEquals("\"plain\"", JsonByteWriter.quoted("plain"));
   }
 
   @Test
   public void writesNumbers() {
-    assertEquals("[3,2.5,null,null,-7,1.0E20]", new JsonWriter().beginArray().value(3.0).value(2.5)
+    assertEquals("[3,2.5,null,null,-7,1.0E20]", new JsonByteWriter().beginArray().value(3.0).value(2.5)
         .value(Double.NaN).value(Double.POSITIVE_INFINITY).value(-7L).value(1e20).endArray().toString());
   }
 
   @Test
   public void nestsDeeperThanItsFirstGuess() {
-    JsonWriter w = new JsonWriter();
+    JsonByteWriter w = new JsonByteWriter();
     for (int i = 0; i < 40; i++) {
       w.beginArray().value(i);
     }
@@ -83,7 +94,46 @@ public class EncodingTest {
     Map<String, String> map = new LinkedHashMap<>();
     map.put("b", "2");
     map.put("a", "1");
-    assertEquals("{\"b\":\"2\",\"a\":\"1\"}", new JsonWriter().stringMap(map).toString());
+    assertEquals("{\"b\":\"2\",\"a\":\"1\"}", new JsonByteWriter().stringMap(map).toString());
+  }
+
+  @Test
+  public void writesBase64BytesAsAStringWithoutEscapingThem() {
+    String json = new JsonByteWriter().beginObject()
+        .name("src").asciiValue("data:image/jpeg;base64,", ascii("AB+/="))
+        .name("next").value(1)
+        .endObject().toString();
+    assertEquals("{\"src\":\"data:image/jpeg;base64,AB+/=\",\"next\":1}", json);
+  }
+
+  @Test
+  public void encodesTextAsUtf8InOnePass() {
+    String s = "é 中 😀 lone\uD800";
+    byte[] bytes = new JsonByteWriter().value(s).toByteArray();
+    assertEquals("a lone surrogate becomes ?, as String.getBytes makes it",
+        "\"" + s.replace("\uD800", "?") + "\"", new String(bytes, StandardCharsets.UTF_8));
+    assertTrue(Arrays.equals(("\"" + s + "\"").getBytes(StandardCharsets.UTF_8), bytes));
+  }
+
+  @Test
+  public void growsPastItsFirstGuessAndGzipsWhatItHolds() throws Exception {
+    JsonByteWriter w = new JsonByteWriter(16).beginArray();
+    StringBuilder expected = new StringBuilder("[");
+    for (int i = 0; i < 2000; i++) {
+      w.value("item " + i);
+      expected.append(i == 0 ? "" : ",").append("\"item ").append(i).append('"');
+    }
+    w.endArray();
+    expected.append(']');
+    assertEquals(expected.toString(), w.toString());
+    try (java.io.InputStream in = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(w.gzip()))) {
+      java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+      byte[] buf = new byte[4096];
+      for (int n; (n = in.read(buf)) > 0; ) {
+        out.write(buf, 0, n);
+      }
+      assertEquals(expected.toString(), new String(out.toByteArray(), StandardCharsets.UTF_8));
+    }
   }
 
   // -- frames --
@@ -184,7 +234,7 @@ public class EncodingTest {
   @Test
   public void aTileWithoutASignatureIsNeverRemoved() {
     EventGenerator g = new EventGenerator("App", 0);
-    g.fullSnapshot(frame(1, true, Collections.singletonList(new ExportFrame.AddImage("A", 0, 0, 1, 1, null)),
+    g.fullSnapshot(frame(1, true, Collections.singletonList(new ExportFrame.AddImage(ascii("A"), 0, 0, 1, 1, null)),
         Collections.emptyList(), "s"));
     assertEquals(0, json(g.incremental(frame(1, false, Collections.emptyList(), Collections.singletonList(sig(0)),
         "s")).get(0)).get("data").get("removes").size());
@@ -195,11 +245,11 @@ public class EncodingTest {
     EventGenerator g = new EventGenerator("App", 0);
     g.fullSnapshot(frame(1, true, Collections.singletonList(tile("A", 0, 0, 1)), Collections.emptyList(), "s"));
     EventGenerator.State saved = g.getState();
-    String first = g.incremental(frame(1, false, Collections.singletonList(tile("B", 0, 0, 2)),
-        Collections.singletonList(sig(1)), "s")).get(0).json;
+    String first = text(g.incremental(frame(1, false, Collections.singletonList(tile("B", 0, 0, 2)),
+        Collections.singletonList(sig(1)), "s")).get(0));
     g.restoreState(saved);
-    String again = g.incremental(frame(1, false, Collections.singletonList(tile("B", 0, 0, 2)),
-        Collections.singletonList(sig(1)), "s")).get(0).json;
+    String again = text(g.incremental(frame(1, false, Collections.singletonList(tile("B", 0, 0, 2)),
+        Collections.singletonList(sig(1)), "s")).get(0));
     assertEquals(first, again);
   }
 

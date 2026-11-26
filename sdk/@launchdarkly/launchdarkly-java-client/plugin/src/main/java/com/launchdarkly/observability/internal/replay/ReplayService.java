@@ -443,7 +443,7 @@ public final class ReplayService implements ObservabilityListener {
     if (isRunning()) {
       Map<String, String> flat = new LinkedHashMap<>();
       data.forEach((k, v) -> flat.put(k.getKey(), String.valueOf(v)));
-      queue.offer(EventGenerator.track(key, metricValue, new JsonWriter().stringMap(flat).toString(),
+      queue.offer(EventGenerator.track(key, metricValue, new JsonByteWriter().stringMap(flat).toString(),
           System.currentTimeMillis(), sessions.get()));
     }
   }

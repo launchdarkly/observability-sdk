@@ -115,11 +115,15 @@ public class ReplayApiTest {
     assertEquals("Jane", body.get("variables").get("user_object").get("key").stringValue());
   }
 
+  private static EventGenerator.Event event(long timestamp, String json) {
+    return new EventGenerator.Event(timestamp, json.getBytes(StandardCharsets.UTF_8));
+  }
+
   @Test
   public void pushPayloadSendsEventsInTimeOrder() throws Exception {
     server.enqueue(new MockResponse().setBody(ok("pushPayload")));
-    api.pushPayload("abc", 7, Arrays.asList(new EventGenerator.Event(20, "{\"n\":2}"),
-        new EventGenerator.Event(10, "{\"n\":1}"), new EventGenerator.Event(20, "{\"n\":3}")));
+    api.pushPayload("abc", 7, Arrays.asList(event(20, "{\"n\":2}"), event(10, "{\"n\":1}"),
+        event(20, "{\"n\":3}")));
     LDValue v = body(server.takeRequest()).get("variables");
     assertEquals("7", v.get("payload_id").stringValue());
     LDValue events = v.get("events").get("events");

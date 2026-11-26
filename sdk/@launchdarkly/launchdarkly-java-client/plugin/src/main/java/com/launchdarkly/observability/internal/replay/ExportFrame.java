@@ -36,7 +36,8 @@ final class ExportFrame {
 
   /** A JPEG tile, placed at its position on the screen. */
   static final class AddImage {
-    final String base64;
+    /** The JPEG as base64, in ASCII bytes: it is written into the JSON as it is, never as a string. */
+    final byte[] base64;
     final int left;
     final int top;
     final int width;
@@ -44,7 +45,7 @@ final class ExportFrame {
     /** The tile's signature, for removing it later; null when it is never removed alone. */
     final Signature signature;
 
-    AddImage(String base64, int left, int top, int width, int height, Signature signature) {
+    AddImage(byte[] base64, int left, int top, int width, int height, Signature signature) {
       this.base64 = base64;
       this.left = left;
       this.top = top;
@@ -79,7 +80,7 @@ final class ExportFrame {
   int cost() {
     int cost = 0;
     for (AddImage image : addImages) {
-      cost += image.base64.length();
+      cost += image.base64.length;
     }
     return cost;
   }

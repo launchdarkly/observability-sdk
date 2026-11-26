@@ -91,7 +91,7 @@ abstract class ReplayItem {
     final Map<String, String> attributes;
 
     Identify(Map<String, String> attributes, long timestamp, String sessionId) {
-      super(RRWeb.TAG_IDENTIFY, JsonWriter.quoted(new JsonWriter().stringMap(attributes).toString()), timestamp,
+      super(RRWeb.TAG_IDENTIFY, JsonByteWriter.quoted(new JsonByteWriter().stringMap(attributes).toString()), timestamp,
           sessionId);
       this.attributes = Collections.unmodifiableMap(new LinkedHashMap<>(attributes));
     }

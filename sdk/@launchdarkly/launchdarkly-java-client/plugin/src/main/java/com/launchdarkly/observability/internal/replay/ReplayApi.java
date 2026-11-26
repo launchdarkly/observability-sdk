@@ -3,15 +3,12 @@ package com.launchdarkly.observability.internal.replay;
 import com.launchdarkly.sdk.LDValue;
 import com.launchdarkly.sdk.LDValueType;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.zip.GZIPOutputStream;
 
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -96,7 +93,7 @@ class ReplayApi {
   /** Starts a session on the backend, which must happen before anything is pushed to it. */
   void initializeSession(String credential, String sessionId, String serviceName, String serviceVersion,
       String clientVersion) throws Failure {
-    execute("initializeSession", INITIALIZE_SESSION, new JsonWriter().beginObject()
+    JsonByteWriter out = request(INITIALIZE_SESSION, 1024).beginObject()
         .name("session_secure_id").value(sessionId)
         .name("organization_verbose_id").value(credential)
         .name("enable_strict_privacy").value(false)
@@ -112,40 +109,45 @@ class ReplayApi {
         // Masking happens on the device, before anything is sent, so the backend has none to do.
         .name("privacy_setting").value("none")
         .name("id").value("")
-        .endObject().toString());
+        .endObject();
+    execute("initializeSession", out);
   }
 
   /** Says who a session belongs to. */
   void identifySession(String sessionId, ReplayItem.Identify identify) throws Failure {
-    execute("identifySession", IDENTIFY_SESSION, new JsonWriter().beginObject()
+    JsonByteWriter out = request(IDENTIFY_SESSION, 1024).beginObject()
         .name("session_secure_id").value(sessionId)
         .name("user_identifier").value(identify.userIdentifier())
         .name("user_object").stringMap(identify.attributes)
-        .endObject().toString());
+        .endObject();
+    execute("identifySession", out);
   }
 
-  /** Pushes events to a session, sorted by time as the backend expects. */
+  /**
+   * Pushes events to a session, sorted by time as the backend expects. Each event's bytes are copied
+   * once, into the request.
+   */
   void pushPayload(String sessionId, int payloadId, List<EventGenerator.Event> events) throws Failure {
     List<EventGenerator.Event> sorted = new java.util.ArrayList<>(events);
     sorted.sort((a, b) -> Long.compare(a.timestamp, b.timestamp));
     long size = 0;
     for (EventGenerator.Event event : sorted) {
-      size += event.json.length() + 1;
+      size += event.json.length + 1;
     }
-    JsonWriter variables = new JsonWriter((int) Math.min(Integer.MAX_VALUE - 4096L, size + 512)).beginObject()
+    JsonByteWriter out = request(PUSH_PAYLOAD, size + 512).beginObject()
         .name("session_secure_id").value(sessionId)
         .name("payload_id").value(Integer.toString(payloadId))
         .name("events").beginObject().name("events").beginArray();
     for (EventGenerator.Event event : sorted) {
-      variables.raw(event.json);
+      out.raw(event.json);
     }
-    variables.endArray().endObject()
+    out.endArray().endObject()
         .name("messages").value("{\"messages\":[]}")
         .name("resources").value("{\"resources\":[]}")
         .name("web_socket_events").value("{\"webSocketEvents\":[]}")
         .name("errors").beginArray().endArray()
         .endObject();
-    execute("pushPayload", PUSH_PAYLOAD, variables.toString());
+    execute("pushPayload", out);
   }
 
   /** Releases the client's connections and threads. */
@@ -154,15 +156,23 @@ class ReplayApi {
     http.connectionPool().evictAll();
   }
 
-  private void execute(String operation, String query, String variablesJson) throws Failure {
-    byte[] body = gzip(new JsonWriter(variablesJson.length() + query.length() + 64).beginObject()
+  /**
+   * Starts a request's body, sized for {@code variablesSize} bytes of variables: the query, then the
+   * name of the variables, which the caller writes as one object.
+   */
+  private static JsonByteWriter request(String query, long variablesSize) {
+    return new JsonByteWriter(variablesSize + query.length() + 64).beginObject()
         .name("query").value(query)
-        .name("variables").raw(variablesJson)
-        .endObject().toString().getBytes(StandardCharsets.UTF_8));
+        .name("variables");
+  }
+
+  /** Sends a body begun by {@link #request}, gzipped straight from the writer. */
+  private void execute(String operation, JsonByteWriter body) throws Failure {
+    body.endObject();
     Request.Builder request = new Request.Builder()
         .url(endpoint)
         .header("Content-Encoding", "gzip")
-        .post(RequestBody.create(body, JSON));
+        .post(RequestBody.create(body.gzip(), JSON));
     headers.forEach(request::header);
 
     int status;
@@ -222,15 +232,5 @@ class ReplayApi {
       }
     }
     return verdict;
-  }
-
-  private static byte[] gzip(byte[] data) {
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream(Math.max(64, data.length / 4));
-    try (GZIPOutputStream gzip = new GZIPOutputStream(bytes)) {
-      gzip.write(data);
-    } catch (IOException e) {
-      throw new IllegalStateException(e); // writing to memory does not fail
-    }
-    return bytes.toByteArray();
   }
 }

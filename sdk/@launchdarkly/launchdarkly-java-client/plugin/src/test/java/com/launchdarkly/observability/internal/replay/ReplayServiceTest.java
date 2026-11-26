@@ -126,7 +126,7 @@ public class ReplayServiceTest {
     List<String> tags = new ArrayList<>();
     for (List<EventGenerator.Event> push : api.pushes) {
       for (EventGenerator.Event event : push) {
-        LDValue json = LDValue.parse(event.json);
+        LDValue json = LDValue.parse(EncodingTest.text(event));
         if (json.get("type").intValue() == RRWeb.CUSTOM) {
           tags.add(json.get("data").get("tag").stringValue());
         }

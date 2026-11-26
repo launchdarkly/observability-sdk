@@ -89,12 +89,12 @@ public class ExporterTest {
   static ReplayItem frameItem(int keyFrameId, boolean keyframe, String session, int width, String data,
       long signature) {
     return new ReplayItem.Frame(new ExportFrame(keyFrameId, Collections.singletonList(
-        new ExportFrame.AddImage(data, 0, 0, width, 10, EncodingTest.sig(signature))), Collections.emptyList(), width,
+        new ExportFrame.AddImage(EncodingTest.ascii(data), 0, 0, width, 10, EncodingTest.sig(signature))), Collections.emptyList(), width,
         10, 1000 + signature, keyframe, session));
   }
 
   private static int type(EventGenerator.Event event) {
-    return LDValue.parse(event.json).get("type").intValue();
+    return LDValue.parse(EncodingTest.text(event)).get("type").intValue();
   }
 
   private static List<Integer> types(List<EventGenerator.Event> events) {
@@ -145,7 +145,7 @@ public class ExporterTest {
     assertThat(api.calls.subList(5, api.calls.size()), contains("init s2 mob-key svc 1.2 0.1.0",
         "identify s2 anonymous", "push s2 4 3", "push s2 5 3"));
     exporter.export(Collections.singletonList(new ReplayItem.Frame(new ExportFrame(4, Collections.singletonList(
-        new ExportFrame.AddImage("D", 0, 0, 100, 10, EncodingTest.sig(4))), Collections.emptyList(), 120, 30, 5, true,
+        new ExportFrame.AddImage(EncodingTest.ascii("D"), 0, 0, 100, 10, EncodingTest.sig(4))), Collections.emptyList(), 120, 30, 5, true,
         "s2"))));
     assertEquals("a resize in the same session: no new start or wake-up", "push s2 6 3",
         api.calls.get(api.calls.size() - 1));
@@ -224,7 +224,7 @@ public class ExporterTest {
     assertEquals("the retry reuses payload id 1", "s:1", throwing.payloadIds.get(0));
     assertEquals("the failed push and its retry were both payload 1", 2,
         throwing.calls.stream().filter(c -> c.startsWith("push s 1 ")).count());
-    String retried = throwing.pushes.get(0).get(0).json;
+    String retried = EncodingTest.text(throwing.pushes.get(0).get(0));
     assertEquals("the same sequence ids", 1, LDValue.parse(retried).get("_sid").intValue());
     assertTrue("a full snapshot again, not an incremental one",
         types(throwing.pushes.get(0)).contains(RRWeb.FULL_SNAPSHOT));
@@ -246,7 +246,7 @@ public class ExporterTest {
     }
     exporter.export(items);
     assertThat(api.payloadIds, contains("s:1", "s:2"));
-    String retried = api.pushes.get(0).get(0).json;
+    String retried = EncodingTest.text(api.pushes.get(0).get(0));
     assertEquals("the same sequence ids", 1, LDValue.parse(retried).get("_sid").intValue());
     assertFalse(exporter.isRefused());
   }

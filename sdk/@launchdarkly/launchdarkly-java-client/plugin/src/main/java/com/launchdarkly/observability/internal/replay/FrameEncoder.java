@@ -136,7 +136,8 @@ final class FrameEncoder {
     incremental = 0;
   }
 
-  String jpeg(BufferedImage image) {
+  /** The image as a JPEG, base64 encoded into ASCII bytes. */
+  byte[] jpeg(BufferedImage image) {
     ByteArrayOutputStream bytes = new ByteArrayOutputStream(Math.max(1024, image.getWidth() * image.getHeight() / 8));
     ImageWriteParam param = writer.getDefaultWriteParam();
     param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
@@ -149,7 +150,7 @@ final class FrameEncoder {
     } finally {
       writer.reset();
     }
-    return Base64.getEncoder().encodeToString(bytes.toByteArray());
+    return Base64.getEncoder().encode(bytes.toByteArray());
   }
 
   void dispose() {
