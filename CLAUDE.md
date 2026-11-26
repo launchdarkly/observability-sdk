@@ -54,6 +54,7 @@ yarn publish:highlight    # highlight.run + @highlight-run/* packages
 | `observability-dotnet` | .NET SDK |
 | `observability-android` | Android SDK |
 | `observability-java` | Java SDK |
+| `launchdarkly-java-client` | Client-side Java SDK (desktop): plugin with session replay, and a demo app |
 
 ### Core packages
 

@@ -1,0 +1,18 @@
+<configuration>
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- Flush every event, so log lines stay ordered against the demo's own
+         System.out output. -->
+    <immediateFlush>true</immediateFlush>
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %-5level %logger{0} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- The SDK logs under LaunchDarklySdk and its sub-loggers (LaunchDarklySdk.DataSource,
+       LaunchDarklySdk.Events and so on). Set this to DEBUG to see every request. -->
+  <logger name="LaunchDarklySdk" level="INFO"/>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+</configuration>

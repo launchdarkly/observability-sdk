@@ -1,0 +1,150 @@
+// Modifier.ldMask(), ldUnmask() and ldId() for Compose for Desktop: the same semantics keys as the
+// Android plugin's, which the plugin reads when it records a Compose window. The application has
+// Compose and Kotlin, so this library depends on neither; its tests run the plugin on real Compose
+// windows, and count toward the plugin's coverage.
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '2.1.21'
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.1.21'
+    id 'org.jetbrains.compose' version '1.8.2'
+    id 'jacoco'
+    id 'maven-publish'
+    id 'signing'
+}
+
+group = rootProject.group
+version = rootProject.version
+
+base {
+    archivesName = 'launchdarkly-java-client-sdk-observability-compose'
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+repositories {
+    mavenLocal() // the client-side Java SDK, for the tests, as for the plugin
+    mavenCentral()
+    google()
+}
+
+def versions = rootProject.ext.versions
+
+dependencies {
+    compileOnly "org.jetbrains.compose.ui:ui:${versions.composeApi}"
+    compileOnly 'org.jetbrains.kotlin:kotlin-stdlib:2.1.21'
+
+    testImplementation project(':')
+    testImplementation "com.launchdarkly:launchdarkly-java-client-sdk:${versions.ldClientSdk}"
+    testImplementation compose.desktop.currentOs
+    testImplementation compose.material
+    testImplementation compose.desktop.uiTestJUnit4
+    testImplementation 'org.jetbrains.kotlin:kotlin-stdlib:2.1.21'
+    testImplementation "junit:junit:${versions.junit}"
+    testImplementation "org.hamcrest:hamcrest:${versions.hamcrest}"
+}
+
+kotlin {
+    explicitApi()
+    compilerOptions {
+        // Compose for Desktop runs on Java 11 and later.
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+        allWarningsAsErrors = true
+    }
+}
+
+// Kotlin 2.0 metadata, which Kotlin 1.9 and later can read, so an application need not be on the
+// Kotlin the library is built with.
+tasks.named('compileKotlin') {
+    compilerOptions {
+        languageVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0
+        apiVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 11
+}
+
+def testJavaVersion = rootProject.findProperty('testJavaVersion')
+test {
+    // Compose for Desktop does not run on Java 8, so there the tests run on Gradle's own JDK: they
+    // cover the plugin's Compose code, which only ever runs on Java 11 and later.
+    if (testJavaVersion && testJavaVersion != '8') {
+        javaLauncher = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(testJavaVersion as int)
+        }
+    }
+    systemProperty 'apple.awt.UIElement', 'true'
+    // Skiko's software renderer, which needs no GPU, so the tests run under xvfb too.
+    systemProperty 'skiko.renderApi', 'SOFTWARE'
+    testLogging {
+        events 'failed'
+        exceptionFormat = 'full'
+    }
+}
+
+jacoco {
+    toolVersion = '0.8.13'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifactId = 'launchdarkly-java-client-sdk-observability-compose'
+            pom {
+                name = 'LaunchDarkly Observability for Compose for Desktop'
+                description = 'Session replay masking and click ids for Compose for Desktop, for the LaunchDarkly Observability plugin for the client-side Java SDK'
+                url = 'https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/launchdarkly-java-client'
+                organization {
+                    name = 'LaunchDarkly'
+                    url = 'https://launchdarkly.com/'
+                }
+                developers {
+                    developer {
+                        id = 'sdks'
+                        name = 'LaunchDarkly SDK Team'
+                        email = 'sdks@launchdarkly.com'
+                    }
+                }
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/launchdarkly/observability-sdk.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/launchdarkly/observability-sdk.git'
+                    url = 'https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/launchdarkly-java-client'
+                }
+            }
+        }
+    }
+}
+
+signing {
+    required = { gradle.taskGraph.allTasks.any { it.name.toLowerCase().contains('sonatype') } }
+    sign publishing.publications.mavenJava
+}
+
+// The application brings Compose and Kotlin, so the POM must depend on nothing.
+tasks.register('checkPublishedPom') {
+    group = 'verification'
+    description = 'Checks the published POM has no dependencies.'
+    dependsOn 'generatePomFileForMavenJavaPublication'
+    def pomFile = layout.buildDirectory.file('publications/mavenJava/pom-default.xml')
+    doLast {
+        def deps = new groovy.xml.XmlSlurper(false, false).parse(pomFile.get().asFile).dependencies.dependency
+        if (deps.size() != 0) {
+            throw new GradleException('The POM must have no dependencies, found: '
+                    + deps.collect { "${it.groupId.text()}:${it.artifactId.text()}" }.join(', '))
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'checkPublishedPom'
+}

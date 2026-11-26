@@ -5,6 +5,7 @@
 	"sdk/@launchdarkly/observability-next": "0.3.7",
 	"sdk/@launchdarkly/observability-android": "0.70.0",
 	"sdk/@launchdarkly/observability-java": "0.2.0",
+	"sdk/@launchdarkly/launchdarkly-java-client/plugin": "0.1.0",
 	"sdk/flutter/packages/observability": "1.0.3",
 	"sdk/@launchdarkly/observability-dotnet": "1.2.1",
 	"sdk/@launchdarkly/observability-node": "1.5.0",

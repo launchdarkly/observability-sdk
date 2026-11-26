@@ -1,0 +1,4 @@
+rootProject.name = 'launchdarkly-java-client-sdk-observability'
+
+// Modifier.ldMask() and friends for Compose for Desktop.
+include 'compose'

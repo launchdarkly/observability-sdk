@@ -1,0 +1,100 @@
+name: 'Java Client Observability'
+
+on:
+    push:
+        branches: ['main']
+        paths:
+            - 'sdk/@launchdarkly/launchdarkly-java-client/**'
+            - '.github/workflows/java-client-observability.yml'
+            - '.github/actions/publish-java-client-sdk/**'
+    pull_request:
+        types: [opened, synchronize]
+        paths:
+            - 'sdk/@launchdarkly/launchdarkly-java-client/**'
+            - '.github/workflows/java-client-observability.yml'
+            - '.github/actions/publish-java-client-sdk/**'
+
+permissions:
+    contents: read
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+jobs:
+    test:
+        # The plugin targets Java 8, as the client-side Java SDK does, so it is
+        # tested on every LTS from 8. Gradle runs on 17; the tests run on the
+        # matrix JDK through a Gradle toolchain.
+        name: Plugin (JDK ${{ matrix.java }})
+        runs-on: ubuntu-22.04-8core-32gb
+        strategy:
+            fail-fast: false
+            matrix:
+                java: [8, 11, 17, 21]
+        defaults:
+            run:
+                working-directory: ./sdk/@launchdarkly/launchdarkly-java-client/plugin
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up JDK ${{ matrix.java }} and 17
+              uses: actions/setup-java@v4
+              with:
+                  distribution: 'temurin'
+                  java-version: |
+                      ${{ matrix.java }}
+                      17
+                  cache: 'gradle'
+
+            # check runs the unit, Compose and SWT tests, the coverage gate,
+            # and the guards on what is published: the plugin's POM depends
+            # only on OpenTelemetry and OkHttp 4, the Compose library's on
+            # nothing, both carry the metadata Maven Central requires, and no
+            # OkHttp 5 reaches the runtime classpath. The desktop tests build
+            # real windows, so they need a display.
+            - name: Build, test, and check coverage and the POMs
+              run: >
+                  xvfb-run --auto-servernum
+                  ./gradlew check javadoc --no-daemon --console=plain
+                  -PtestJavaVersion=${{ matrix.java }}
+                  -Porg.gradle.java.installations.fromEnv=JAVA_HOME_${{ matrix.java }}_X64
+
+            - name: Upload test and coverage reports
+              if: always() && matrix.java == 17
+              uses: actions/upload-artifact@v4
+              with:
+                  name: java-client-test-reports
+                  path: |
+                      sdk/@launchdarkly/launchdarkly-java-client/plugin/build/reports/tests
+                      sdk/@launchdarkly/launchdarkly-java-client/plugin/build/reports/jacoco/test/html
+                      sdk/@launchdarkly/launchdarkly-java-client/plugin/compose/build/reports/tests
+                  retention-days: 7
+
+    demo:
+        # Builds the demos against the plugin from source, then runs the
+        # console demo offline, which needs no credentials and adds no
+        # observability plugin.
+        name: Demo app
+        runs-on: ubuntu-22.04-8core-32gb
+        defaults:
+            run:
+                working-directory: ./sdk/@launchdarkly/launchdarkly-java-client/demo
+        steps:
+            - uses: actions/checkout@v4
+
+            # 17 runs Gradle for the plugin's included build; the demos build with 21.
+            - name: Set up JDK 17 and 21
+              uses: actions/setup-java@v4
+              with:
+                  distribution: 'temurin'
+                  java-version: |
+                      17
+                      21
+                  cache: 'gradle'
+
+            - name: Build
+              run: ./gradlew build --no-daemon --console=plain
+
+            - name: Smoke test - diagnostics
+              run: ./gradlew doctor --no-daemon --console=plain
+
+            - name: Smoke test - run and quit cleanly
+              run: printf 'q\n' | ./gradlew run --args="--interval 1" --no-daemon --console=plain

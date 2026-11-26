@@ -1,0 +1,30 @@
+# Gradle
+.gradle/
+build/
+
+# Eclipse JDT output, created by the VS Code Java language server
+bin/
+
+# Note: gradle/wrapper/gradle-wrapper.jar is intentionally committed, so that
+# ./gradlew works on a fresh clone. There is deliberately no blanket *.jar rule.
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Local configuration and secrets. .env.example is committed; .env is not.
+.env
+.env.*
+!.env.example
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*

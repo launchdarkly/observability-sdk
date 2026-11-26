@@ -1,0 +1,16 @@
+# Gradle and build output
+.gradle/
+build/
+out/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+
