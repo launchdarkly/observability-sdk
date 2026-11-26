@@ -143,6 +143,25 @@ public class ReplayApiTest {
   }
 
   @Test
+  public void anUncheckedExceptionFromTheNetworkLayerIsARecoverableFailure() {
+    okhttp3.OkHttpClient throwing = new okhttp3.OkHttpClient.Builder()
+        .addInterceptor(chain -> {
+          throw new IllegalStateException("network layer bug");
+        })
+        .build();
+    ReplayApi broken = new ReplayApi(server.url("/").toString(), Collections.emptyMap(), throwing);
+    try {
+      broken.pushPayload("s", 1, Collections.emptyList());
+      fail("expected a failure");
+    } catch (ReplayApi.Failure e) {
+      assertTrue(e.recoverable);
+      assertTrue(e.getCause() instanceof IllegalStateException);
+    } finally {
+      broken.close();
+    }
+  }
+
+  @Test
   public void otherClientErrorsAreNot() throws Exception {
     assertFalse(failureOf(new MockResponse().setResponseCode(401)).recoverable);
     assertFalse(failureOf(new MockResponse().setResponseCode(404)).recoverable);

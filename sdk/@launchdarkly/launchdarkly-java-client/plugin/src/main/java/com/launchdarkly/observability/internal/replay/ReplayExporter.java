@@ -129,7 +129,9 @@ final class ReplayExporter {
         pushedCanvasSize = generator.canvasSize;
         wakeUp(session, entry.getValue());
       }
-    } catch (ReplayApi.Failure e) {
+    } catch (ReplayApi.Failure | RuntimeException e) {
+      // The worker retries the batch after either, so put back what encoding it moved on: a retry
+      // must send the same nodes under the same payload id, or the backend keeps both copies.
       lastSession = lastSessionSnapshot;
       lastWidth = widthSnapshot;
       lastHeight = heightSnapshot;
@@ -139,9 +141,13 @@ final class ReplayExporter {
       wokenSessions.addAll(wokenSnapshot);
       launch = launchSnapshot;
       generator.restoreState(generatorSnapshot);
-      refuseIfUnrecoverable(e);
+      if (e instanceof RuntimeException) {
+        throw (RuntimeException) e;
+      }
+      ReplayApi.Failure failure = (ReplayApi.Failure) e;
+      refuseIfUnrecoverable(failure);
       if (!refused) {
-        throw e;
+        throw failure;
       }
       // A refusal is not something to retry; returning lets the queue drain.
     }

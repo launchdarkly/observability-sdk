@@ -194,6 +194,44 @@ public class ExporterTest {
   }
 
   @Test
+  public void anExportThatThrowsUncheckedRetriesTheSameEventsToo() throws Exception {
+    FakeApi throwing = new FakeApi() {
+      private boolean thrown;
+
+      @Override
+      void pushPayload(String sessionId, int payloadId, List<EventGenerator.Event> events) throws Failure {
+        if (!thrown) {
+          thrown = true;
+          calls.add("push " + sessionId + " " + payloadId + " " + events.size());
+          throw new IllegalStateException("network layer bug");
+        }
+        super.pushPayload(sessionId, payloadId, events);
+      }
+    };
+    ReplayExporter exporter = new ReplayExporter(throwing, "mob-key", "svc", "1.2", "0.1.0", "Demo",
+        new ReplayItem.Identify(Collections.singletonMap("key", "anonymous"), 0, null), LDLogger.none(),
+        refusals::add, ReplayExporter.CANVAS_LIMIT);
+    List<ReplayItem> items = Arrays.asList(frameItem(1, true, "s", 100, "A", 1),
+        new ReplayItem.Pointer(ReplayItem.Pointer.Action.UP, Collections.singletonList(new ReplayItem.Position(1, 1, 3)),
+            null));
+    try {
+      exporter.export(items);
+      fail("expected the exception to reach the worker");
+    } catch (IllegalStateException e) {
+      assertEquals("network layer bug", e.getMessage());
+    }
+    exporter.export(items);
+    assertEquals("the retry reuses payload id 1", "s:1", throwing.payloadIds.get(0));
+    assertEquals("the failed push and its retry were both payload 1", 2,
+        throwing.calls.stream().filter(c -> c.startsWith("push s 1 ")).count());
+    String retried = throwing.pushes.get(0).get(0).json;
+    assertEquals("the same sequence ids", 1, LDValue.parse(retried).get("_sid").intValue());
+    assertTrue("a full snapshot again, not an incremental one",
+        types(throwing.pushes.get(0)).contains(RRWeb.FULL_SNAPSHOT));
+    assertFalse(exporter.isRefused());
+  }
+
+  @Test
   public void aFailedExportRetriesTheSameEvents() throws Exception {
     ReplayExporter exporter = exporter();
     api.failNext("push", true);

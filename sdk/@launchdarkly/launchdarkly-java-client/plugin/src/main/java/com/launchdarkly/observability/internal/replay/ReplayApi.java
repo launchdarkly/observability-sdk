@@ -172,7 +172,9 @@ class ReplayApi {
       // A response from execute() always has a body.
       ResponseBody responseBody = response.body();
       text = responseBody.string();
-    } catch (IOException e) {
+    } catch (IOException | RuntimeException e) {
+      // OkHttp, or an interceptor, can throw unchecked too; to the caller it is the same
+      // retryable failure.
       throw new Failure(operation + " failed: " + e, true, e);
     }
 
